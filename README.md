@@ -8,3 +8,6 @@
 - cargo binstall cargo-watch
 - cargo binstall dioxus-cli@0.6.1
 - cargo binstall cargo-nextest
+- run ./test.sh
+- run ./migrate.sh
+- run ./start_client.sh
