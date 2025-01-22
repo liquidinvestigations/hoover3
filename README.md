@@ -1,5 +1,8 @@
 # hoover3 - search tools
 
-## todo
-- create/list/details/delete collection
-- create/list/details/delete datasource
+## installation
+
+- install docker
+- run ./start_docker.sh
+- cargo install cargo-binstall
+- cargo binstall cargo-watch
