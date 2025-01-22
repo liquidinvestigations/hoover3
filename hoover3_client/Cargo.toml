@@ -13,7 +13,7 @@ hoover3_database = {path="../hoover3_database",optional=true}
 hoover3_tasks = {path="../hoover3_tasks",optional=true}
 hoover3_types  = {path="../hoover3_types"}
 
-dioxus = { workspace = true}
+dioxus = { workspace = true, features = ["router", "fullstack"] }
 # dioxus-lazy = { workspace = true}
 tokio = { workspace = true, optional=true}
 anyhow = {workspace = true}

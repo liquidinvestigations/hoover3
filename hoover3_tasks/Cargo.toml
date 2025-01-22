@@ -6,9 +6,6 @@ authors = {workspace = true}
 edition = {workspace = true}
 publish  = {workspace = true}
 
-[lib]
-name = "hoover3_tasks"
-crate-type = ["lib", "dylib"]
 
 [dependencies]
 # common

@@ -1,5 +1,5 @@
 [build]
-rustflags=["-Clink-args=-Wl,--build-id"]
+# rustflags=["-Clink-args=-Wl,--build-id"]
 
 [toolchain]
 channel = "stable"
