@@ -1,0 +1,37 @@
+[package]
+name = "hoover3_client"
+repository = {workspace = true}
+version = {workspace = true}
+authors = {workspace = true}
+edition = {workspace = true}
+publish  = {workspace = true}
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+hoover3_database = {path="../hoover3_database",optional=true}
+hoover3_tasks = {path="../hoover3_tasks",optional=true}
+hoover3_types  = {path="../hoover3_types"}
+
+dioxus = { workspace = true}
+# dioxus-lazy = { workspace = true}
+tokio = { workspace = true, optional=true}
+anyhow = {workspace = true}
+
+paste = "1.0"
+web-time = { version = "1.1.0", features = ["serde"] }
+dioxus-sdk = { version = "0.6.0", features = ["storage"] }
+serde = { workspace = true, features = ["derive"] }
+dioxus-logger = "0.6.1"
+serde-aux = "4.5.0"
+serde_json = "1.0.136"
+chrono.workspace = true
+base64 = "0.22.1"
+ciborium = "0.2.2"
+
+[features]
+default = []
+web = ["dioxus/web"]
+desktop = ["dioxus/desktop"]
+mobile = ["dioxus/mobile"]
+server = ["dioxus/server", "dep:tokio","dep:hoover3_database", "dep:hoover3_tasks"]

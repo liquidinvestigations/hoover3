@@ -1,0 +1,13 @@
+[package]
+name = "hoover3_types"
+repository.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde = {workspace=true, features = ["serde_derive"]}
+regex = "1.11.1"
+anyhow.workspace = true
+chrono.workspace = true

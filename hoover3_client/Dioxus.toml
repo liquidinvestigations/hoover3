@@ -1,0 +1,28 @@
+[application]
+
+# App (Project) Name
+name = "hoover3_client"
+
+[web.app]
+
+# HTML title tag content
+title = "hoover3_client"
+
+# include `assets` in web platform
+[web.resource]
+
+# Additional CSS style files
+style = ["/assets/libs/pico.min.css", "/assets/main.css"]
+
+# Additional JavaScript files
+script = []
+
+[web.resource.dev]
+
+# Javascript code file
+# serve: [dev-server] only
+script = []
+
+[web.watcher]
+
+watch_path = ["src", "../hoover3_tasks/src", "../hoover3_database/src", "../hoover3_types/src"]

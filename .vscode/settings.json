@@ -1,0 +1,13 @@
+{
+    "rust-analyzer.cargo.targetDir": "target/_rust_analyzer_",
+    "rust-analyzer.cargo.features": ["hoover3_client/server"],
+    "files.autoSave": "afterDelay",
+    "terminal.integrated.enableMultiLinePasteWarning": "never",
+    "explorer.confirmDelete": false,
+    // "editor.wordWrapColumn": 99,
+    // "editor.wordWrap": "bounded",
+    "editor.wrappingIndent": "deepIndent",
+    "[rust]": {
+        "editor.inlayHints.enabled": "on",
+    },
+}

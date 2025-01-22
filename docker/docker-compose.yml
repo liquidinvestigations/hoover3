@@ -1,0 +1,702 @@
+services:
+  # ========================
+  #         CLICKHOUSE
+  # ========================
+  clickhouse:
+    container_name: clickhouse
+    image: clickhouse/clickhouse-server
+    ulimits:
+      nofile:
+        soft: "262144"
+        hard: "262144"
+    networks:
+      - hoover3
+    ports:
+      - 8123:8123
+      - 9000:9000
+    volumes:
+      - /var/lib/clickhouse
+    healthcheck:
+      test: wget --no-verbose --tries=1 http://127.0.0.1:8123/ping || exit 1
+      interval: 13s
+      timeout: 15s
+      retries: 6
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 5000M
+    restart: unless-stopped
+
+  clickhouse-monitoring:
+    container_name: clickhouse-monitoring
+    image: ghcr.io/duyet/clickhouse-monitoring:2cc8058
+    environment:
+      - "CLICKHOUSE_HOST=http://clickhouse:8123"
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    networks:
+      - hoover3
+    ports:
+      - 3000:3000
+    volumes:
+      - /var/lib/clickhouse-monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 5000M
+    restart: unless-stopped
+
+
+
+  # ========================
+  #         TEMPORAL
+  # ========================
+  temporal-cassandra:
+    container_name: temporal-cassandra
+    image: cassandra:${CASSANDRA_VERSION}
+    # image: scylladb/scylla -- SLOWER
+    networks:
+      - hoover3
+    ports:
+      - 9042:9042
+    environment:
+      - MAX_HEAP_SIZE=4G
+      - HEAP_NEWSIZE=512M
+      #- disk_access_mode="mmap_index_only" -- is default
+    volumes:
+      - /var/lib/cassandra
+    healthcheck:
+      test: cqlsh -u cassandra -p cassandra -e 'describe cluster'
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 5000M
+    restart: unless-stopped
+
+  temporal-elasticsearch:
+    container_name: temporal-elasticsearch
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms1024m -Xmx1024m
+      - xpack.security.enabled=false
+    image: elasticsearch:${ELASTICSEARCH_VERSION}
+    networks:
+      - hoover3
+    ports:
+      - 9200:9200
+    volumes:
+      - /var/lib/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2048M
+        reservations:
+          cpus: '1'
+          memory: 1500M
+    restart: unless-stopped
+
+  temporal:
+    container_name: temporal
+    depends_on:
+      temporal-elasticsearch:
+        condition: service_healthy
+      temporal-cassandra:
+        condition: service_healthy
+    environment:
+      - CASSANDRA_SEEDS=temporal-cassandra
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-cass.yaml
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-elasticsearch
+      - ES_VERSION=v7
+    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+    networks:
+      - hoover3
+    ports:
+      - 7233:7233
+    volumes:
+      - ./docker/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
+    labels:
+      kompose.volume.type: configMap
+    healthcheck:
+      test: ['CMD-SHELL', 'tctl --address temporal:7233 workflow list --pagesize 1']
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 500M
+    restart: unless-stopped
+
+  temporal-admin-tools:
+    container_name: temporal-admin-tools
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    image: temporalio/admin-tools:${TEMPORAL_VERSION}
+    networks:
+      - hoover3
+    stdin_open: true
+    tty: true
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 500M
+    restart: unless-stopped
+
+  temporal-ui:
+    container_name: temporal-ui
+    depends_on:
+      temporal:
+        condition: service_healthy
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000
+    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+    networks:
+      - hoover3
+    # ports:
+      # - 8081:8080
+    healthcheck:
+      test: ['CMD-SHELL', 'curl --silent --fail http://temporal-ui:8080/api/v1/settings? || exit 1']
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 500M
+    restart: unless-stopped
+
+
+  # ========================
+  #          S3
+  # ========================
+
+  seaweed-s3:
+    container_name:  seaweed-s3
+    image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION}
+    ports:
+      - 8333:8333
+      # - 8082:8080
+      # - 8083:9333
+    entrypoint: /bin/sh -c
+    command: |
+      "echo '{
+        \"identities\": [
+          {
+            \"name\": \"anonymous\",
+            \"actions\": [
+              \"Read\"
+            ]
+          },
+          {
+            \"name\": \"some_admin_user\",
+            \"credentials\": [
+              {
+                \"accessKey\": \"some_access_key1\",
+                \"secretKey\": \"some_secret_key1\"
+              }
+            ],
+            \"actions\": [
+              \"Admin\",
+              \"Read\",
+              \"List\",
+              \"Tagging\",
+              \"Write\"
+            ]
+          }
+        ]
+      }' > /etc/seaweedfs/config.json && \
+      weed server -s3 -s3.config /etc/seaweedfs/config.json"
+    networks:
+      - hoover3
+    volumes:
+      - /data
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 500M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "seaweed-s3:8080/healthz"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    restart: unless-stopped
+
+  minio-s3:
+    container_name: minio-s3
+    image: minio/minio:${MINIO_VERSION}
+    volumes:
+      - /data
+    networks:
+      - hoover3
+    # ports:
+      # - "8084:8084"
+    environment:
+      # MINIO_ACCESS_KEY: minio123
+      # MINIO_SECRET_KEY: minio123
+      MINIO_BROWSER_REDIRECT_URL: "http://localhost:8084"
+    command: server /data  --console-address :8084
+    healthcheck:
+      test: ["CMD-SHELL", "mc ready local"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 500M
+    restart: unless-stopped
+
+
+  # ========================
+  #    SCYLLADB + EXPLORER
+  # ========================
+  scylla:
+    container_name: scylla
+    image:  scylladb/scylla:${SCYLLADB_VERSION}
+    volumes:
+      - /var/lib/scylla
+    command: --smp 4 --memory 4G  --api-address 0.0.0.0 --overprovisioned 1
+    ports:
+      - '6642:9042'
+    networks:
+      - hoover3
+    deploy:
+      resources:
+        limits:
+          memory: 6000M
+        reservations:
+          memory: 500M
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    restart: unless-stopped
+
+
+  nf-data-explorer:
+    image: gesellix/nf-data-explorer@sha256:c1f36d28c00c5bb562fd275122e866b65e00a4df0c3046b35a7f3f8700c2a177
+    hostname: nf-data-explorer
+    container_name: nf-data-explorer
+    # ports:
+      # - '8086:80'
+    command: yarn start
+    environment:
+      - CASSANDRA_HOST=scylla
+      - REDIS_HOST=redis
+      - DATA_EXPLORER_CONFIG_NAME=a
+    volumes:
+      - /apps/nf-data-explorer/data
+    networks:
+      - hoover3
+    depends_on:
+      scylla:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 4000M
+        reservations:
+          memory: 400M
+    restart: unless-stopped
+
+
+  nf-data-explorer-cass2:
+    image: gesellix/nf-data-explorer@sha256:c1f36d28c00c5bb562fd275122e866b65e00a4df0c3046b35a7f3f8700c2a177
+    hostname: nf-data-explorer-cass2
+    container_name: nf-data-explorer-cass2
+    ports:
+      - '8088:80'
+    command: yarn start
+    environment:
+      - CASSANDRA_HOST=temporal-cassandra
+      - REDIS_HOST=redis
+      - DATA_EXPLORER_CONFIG_NAME=b
+    volumes:
+      - /apps/nf-data-explorer/data
+    networks:
+      - hoover3
+    depends_on:
+      scylla:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 4000M
+        reservations:
+          memory: 400M
+    restart: unless-stopped
+
+  redis:
+    image: redis:6.0.9
+    hostname: redis
+    container_name: redis
+    command: ["redis-server", "--appendonly", "no", "--maxmemory", "3000mb", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - '6379:6379'
+    networks:
+      - hoover3
+    deploy:
+      resources:
+        limits:
+          memory: 4000M
+        reservations:
+          memory: 300M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    restart: unless-stopped
+
+
+  # ========================
+  #        MILISEARCH
+  # ========================
+  meilisearch:
+    container_name: meilisearch
+    image: getmeili/meilisearch:${MEILISEARCH_VERSION}
+    environment:
+      - MEILI_MASTER_KEY=1234
+      - MEILI_NO_ANALYTICS=true
+      - MEILI_ENV=development
+      - MEILI_LOG_LEVEL=info
+      - MEILI_DB_PATH=/data.ms
+      - MEILI_MAX_INDEXING_MEMORY=4Gb
+      - MEILI_MAX_INDEXING_THREADS=4
+    ports:
+      - 7700:7700
+    networks:
+      - hoover3
+    volumes:
+      - /data.ms
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:7700/health || exit 1"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 4000M
+    restart: unless-stopped
+
+
+
+
+  # ========================
+  #        NGINX
+  # ========================
+  nginx:
+    container_name: nginx
+    image: nginx
+    networks:
+      - hoover3
+    volumes:
+      - ./docker/nginx/nginx.conf:/local/nginx.conf
+    command:         nginx -c /local/nginx.conf
+
+    depends_on:
+      temporal:
+        condition: service_healthy
+      temporal-ui:
+        condition: service_healthy
+      scylla:
+        condition: service_healthy
+      # nf-data-explorer:
+        # condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+      minio-s3:
+        condition: service_healthy
+      seaweed-s3:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail http://localhost:8079/_ping || exit 1"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 3000M
+        reservations:
+          cpus: '1'
+          memory: 2000M
+    ports:
+      - 8079:8079
+      # - 8080:8080
+      - 8081:8081
+      - 8082:8082
+      - 8083:8083
+      - 8084:8084
+      - 8085:8085
+      - 8086:8086
+    restart: unless-stopped
+
+
+# ============================
+# NEBULA GRAPH
+# ============================
+
+
+  metad0:
+    image: docker.io/vesoft/nebula-metad:${NEBULA_VERSION}
+    environment:
+      USER: root
+      TZ:   "${TZ}"
+    command:
+      - --meta_server_addrs=metad0:9559
+      - --local_ip=metad0
+      - --ws_ip=metad0
+      - --port=9559
+      - --ws_http_port=19559
+      - --data_path=/data/meta
+      - --log_dir=/logs
+      - --v=0
+      - --minloglevel=0
+      - --redirect_stdout=false
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://metad0:19559/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    ports:
+      - 9559:9559
+      - 19559
+      - 19560
+    volumes:
+      - nebula-data-metad0:/data/meta
+      - nebula-logs-metad0:/logs
+    networks:
+      - hoover3
+    cap_add:
+      - SYS_PTRACE
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+
+  storaged0:
+    image: docker.io/vesoft/nebula-storaged:${NEBULA_VERSION}
+    environment:
+      USER: root
+      TZ:   "${TZ}"
+    command:
+      - --meta_server_addrs=metad0:9559
+      - --local_ip=storaged0
+      - --ws_ip=storaged0
+      - --port=9779
+      - --ws_http_port=19779
+      - --data_path=/data/storage
+      - --log_dir=/logs
+      - --v=0
+      - --minloglevel=0
+      - --redirect_stdout=false
+    depends_on:
+      - metad0
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://storaged0:19779/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    ports:
+      - 9779
+      - 19779
+      - 19780
+    volumes:
+      - nebula-data-storage0:/data/storage
+      - nebula-logs-storage0:/logs
+    networks:
+      - hoover3
+    cap_add:
+      - SYS_PTRACE
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+
+
+  graphd:
+    image: docker.io/vesoft/nebula-graphd:${NEBULA_VERSION}
+    environment:
+      USER: root
+      TZ:   "${TZ}"
+    command:
+      - --meta_server_addrs=metad0:9559
+      - --port=9669
+      - --local_ip=graphd
+      - --ws_ip=graphd
+      - --ws_http_port=19669
+      - --log_dir=/logs
+      - --v=0
+      - --minloglevel=0
+      - --redirect_stdout=false
+      - --client_idle_timeout_secs=600
+      - --session_idle_timeout_secs=600
+    depends_on:
+      - storaged0
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://graphd:19669/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    ports:
+      - "9669:9669"
+      - 19669
+      - 19670
+    volumes:
+      - nebula-logs-graph:/logs
+    networks:
+      - hoover3
+    cap_add:
+      - SYS_PTRACE
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+
+
+  console:
+    image: docker.io/vesoft/nebula-console:v3.8
+    entrypoint: ""
+    command:
+      - sh
+      - -c
+      - |
+        for i in `seq 1 60`;do
+          var=`nebula-console -addr graphd -port 9669 -u root -p nebula -e 'ADD HOSTS "storaged0":9779,"storaged1":9779,"storaged2":9779'`;
+          if [[ $$? == 0 ]];then
+            break;
+          fi;
+          sleep 1;
+          echo "retry to add hosts.";
+        done && tail -f /dev/null;
+
+    depends_on:
+      - graphd
+    networks:
+      - hoover3
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+
+  nebula-web:
+    image: vesoft/nebula-graph-studio:v3.10
+    build: ./nebula-studio
+    environment:
+      USER: root
+    ports:
+      - 7001:7001
+    networks:
+      - hoover3
+    depends_on:
+      graphd:
+        condition: service_healthy
+      storaged0:
+        condition: service_healthy
+      metad0:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4096M
+
+
+
+
+# ====================
+# NETWORKS, VOLUMES
+# ====================
+
+volumes:
+  nebula-data-metad0:
+  nebula-data-storage0:
+  nebula-logs-metad0:
+  nebula-logs-storage0:
+  nebula-logs-graph:
+
+networks:
+  hoover3:
+    driver: bridge
+    name: hoover3

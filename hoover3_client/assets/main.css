@@ -1,0 +1,83 @@
+.page-wrapper {
+    display:flex;
+    flex-direction:column;
+    height:99%;
+    overflow:hidden;
+}
+#main {
+    height: 99.0svh;
+    width:99.0svw;
+    /* border:  .1rem solid black; */
+    margin: .1rem;
+    padding: .1rem;
+}
+.full-height {
+    height:99%;
+}
+
+.search-grid-container {
+    height: calc(99%);
+    display: grid;
+    grid-template-columns: 0.6fr 1.4fr 0.7fr;
+    grid-template-rows: 0.9fr 1.2fr 0.7fr;
+    gap: 0px 0px;
+    grid-template-areas:
+      "sidebar-left search-main sidebar-right"
+      "sidebar-left search-main sidebar-right"
+      "sidebar-left sidebar-bottom sidebar-bottom";
+}
+.sidebar-left {
+    grid-area: sidebar-left;
+    overflow:scroll;
+}
+.sidebar-right {
+    grid-area: sidebar-right;
+    overflow:scroll;
+}
+.sidebar-bottom {
+    grid-area: sidebar-bottom;
+    overflow:scroll;
+}
+.search-main {
+    grid-area: search-main;
+    overflow:scroll;
+}
+
+.debug-border {
+    border:  0.08rem solid black;
+    margin: 0;
+    padding: -.08rem;
+}
+
+
+button {
+    padding: 0px; width:15%;
+}
+nav {
+    height: 3rem;
+}
+.loading_box {
+    height: 3rem;
+    width: 15rem;
+}
+.loading_box > img {
+    height:100%;
+}
+button {
+    min-width: 5rem;
+    min-height: 2rem;
+}
+
+input {
+    max-width: 60%;
+}
+
+td {
+    max-width: 25rem;
+    max-height: 10rem;
+    overflow: scroll;
+}
+
+td > pre {
+    max-height:10rem;
+}
