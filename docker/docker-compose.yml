@@ -90,52 +90,52 @@ services:
           memory: 5000M
     restart: unless-stopped
 
-  # temporal-elasticsearch:
-  #   container_name: temporal-elasticsearch
-  #   environment:
-  #     - cluster.routing.allocation.disk.threshold_enabled=true
-  #     - cluster.routing.allocation.disk.watermark.low=512mb
-  #     - cluster.routing.allocation.disk.watermark.high=256mb
-  #     - cluster.routing.allocation.disk.watermark.flood_stage=128mb
-  #     - discovery.type=single-node
-  #     - ES_JAVA_OPTS=-Xms2048m -Xmx2048m
-  #     - xpack.security.enabled=false
-  #   image: elasticsearch:${ELASTICSEARCH_VERSION}
-  #   networks:
-  #     - hoover3
-  #   ports:
-  #     - 9200:9200
-  #   volumes:
-  #     - /var/lib/elasticsearch/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
-  #     interval: 15s
-  #     timeout: 13s
-  #     retries: 6
-  #     start_period: 4s
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         cpus: '4'
-  #         memory: 12048M
-  #       reservations:
-  #         cpus: '1'
-  #         memory: 1500M
-  #   restart: unless-stopped
+  temporal-elasticsearch:
+    container_name: temporal-elasticsearch
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms2048m -Xmx2048m
+      - xpack.security.enabled=false
+    image: elasticsearch:${ELASTICSEARCH_VERSION}
+    networks:
+      - hoover3
+    ports:
+      - 9200:9200
+    volumes:
+      - /var/lib/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 12048M
+        reservations:
+          cpus: '1'
+          memory: 1500M
+    restart: unless-stopped
 
   temporal:
     container_name: temporal
     depends_on:
-      # temporal-elasticsearch:
-      #   condition: service_healthy
+      temporal-elasticsearch:
+        condition: service_healthy
       temporal-cassandra:
         condition: service_healthy
     environment:
       - CASSANDRA_SEEDS=temporal-cassandra
       - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-cass.yaml
-      # - ENABLE_ES=true
-      # - ES_SEEDS=temporal-elasticsearch
-      # - ES_VERSION=v7
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-elasticsearch
+      - ES_VERSION=v7
     image: temporalio/auto-setup:${TEMPORAL_VERSION}
     networks:
       - hoover3
