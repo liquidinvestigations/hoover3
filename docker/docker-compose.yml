@@ -133,9 +133,9 @@ services:
     environment:
       - CASSANDRA_SEEDS=temporal-cassandra
       - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/config/dynamicconfig/development-cass.yaml
-      - ENABLE_ES=true
+      # - ENABLE_ES=true
       # - ES_SEEDS=temporal-elasticsearch
-      - ES_VERSION=v7
+      # - ES_VERSION=v7
     image: temporalio/auto-setup:${TEMPORAL_VERSION}
     networks:
       - hoover3
