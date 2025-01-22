@@ -29,6 +29,7 @@ pub trait TemporalioDescriptorRegister {
     fn register(worker: &mut Worker) -> anyhow::Result<()>;
 }
 
+
 /// If T1 and T2 can be registered, then so can (T1,T2) and (T1, (T2, T3))
 macro_rules! impl_tuple_register {
     ($($T:ident),+) => {
@@ -403,6 +404,7 @@ pub mod test {
     make_workflow!(sample_workflow2, u32, u32);
     pub async fn sample_workflow2(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
         println!("sample_workflow T={:?}", std::thread::current().id());
+        test_function_async(arg).await?;
         let act1 = test_function_async_activity::run(&ctx, arg).await?;
         let act2 = test_function_sync_activity::run(&ctx, arg).await?;
         println!("sample_workflow 2  T={:?}", std::thread::current().id());
@@ -427,6 +429,7 @@ pub mod test {
             test_function_sync_activity,
             sample_workflow2_workflow,
         )>(task_queue);
+        println!("{}", test_function_async_activity::name());
 
         let workflow_id = format!(
             "test_client_and_worker_workflow_id_1_{:?}",

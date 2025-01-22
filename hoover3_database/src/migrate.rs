@@ -26,6 +26,12 @@ pub(crate) fn get_package_dir() -> PathBuf {
     if p.parent().unwrap().file_name().unwrap().to_str().unwrap() == package_name {
         return p.parent().unwrap().to_path_buf();
     }
+    if let Some(parent) = p.parent() {
+        if parent.join(package_name).is_dir() {
+            return parent.join(package_name);
+        }
+    }
+    info!("get_package_dir: {:?}", p);
     panic!("could not find package dir");
 }
 

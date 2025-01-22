@@ -1,6 +1,7 @@
 use charybdis::macros::charybdis_model;
 use charybdis::types::{Text, Timestamp};
 
+
 #[charybdis_model(
     table_name = collections,
     partition_keys = [collection_id],
