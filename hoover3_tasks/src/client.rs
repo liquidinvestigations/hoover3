@@ -1,10 +1,10 @@
-use log::info;
 use std::str::FromStr;
 use std::sync::Arc;
 pub use temporal_client::{Client, RetryClient};
 use temporal_sdk::sdk_client_options;
 use temporal_sdk_core::Url;
 use tokio::sync::OnceCell;
+use tracing::info;
 
 pub type TemporalioClient = Arc<RetryClient<Client>>;
 

@@ -13,9 +13,7 @@ tokio = {workspace = true}
 futures= {workspace = true}
 anyhow = {workspace = true}
 futures-util = {workspace = true}
-log = {workspace = true}
 once_cell= {workspace = true}
-simple_logger= {workspace = true}
 
 # temporal
 temporal-client = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e" }
@@ -26,6 +24,6 @@ temporal-sdk-core-protos = { git = "https://github.com/temporalio/sdk-core" , re
 prost-wkt-types = "0.6.0"
 tracing.workspace = true
 serde.workspace = true
-serde_json = "1.0.137"
-paste = "1.0.15"
+serde_json.workspace = true
+paste.workspace = true
 buildid = "1.0.3"
