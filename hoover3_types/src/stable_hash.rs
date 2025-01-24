@@ -1,4 +1,3 @@
-
 pub fn stable_hash<K>(key: &K) -> anyhow::Result<String>
 where
     K: serde::Serialize + 'static + Send + for<'a> serde::Deserialize<'a>,

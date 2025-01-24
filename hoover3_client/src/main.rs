@@ -5,17 +5,14 @@ fn main() {
     dioxus_logger::init(Level::INFO).expect("failed to init logger");
     info!("dioxus main()...");
 
-
     #[cfg(feature = "web")]
     dioxus::web::launch::launch_cfg(App, dioxus::web::Config::new().hydrate(true));
-
 
     #[cfg(feature = "server")]
     {
         tokio::runtime::Runtime::new()
             .unwrap()
             .block_on(async move {
-
                 // migrate
                 hoover3_database::migrate::migrate_all().await.unwrap();
 
@@ -34,10 +31,9 @@ fn main() {
                 axum::serve(listener, app.into_make_service())
                     .await
                     .unwrap();
-        });
+            });
     }
 
     // dioxus::launch(App);
     // info!("dioxus main() exit.");
 }
-

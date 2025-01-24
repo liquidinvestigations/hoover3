@@ -1,7 +1,7 @@
 use hoover3_database::tracing::init_tracing;
 
 #[tokio::main]
-async fn main() -> Result<(), String> {
+async fn main() -> anyhow::Result<()> {
     init_tracing();
     println!(
         "DOCKER HEALTH STATUS\n{:#?}\nDONE",

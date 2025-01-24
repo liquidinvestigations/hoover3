@@ -4,19 +4,8 @@ use std::path::PathBuf;
 use crate::{db_management::redis::with_redis_cache, migrate::get_package_dir};
 
 /// Client API method for generating health check dashboard. Connects to docker using CLI.
-pub async fn get_container_status(c: ()) -> Result<Vec<ContainerHealthUi>, String> {
-    with_redis_cache(
-        "get_container_status",
-        60,
-        move |c| async move {
-            _get_container_status(c)
-                .await
-                .map_err(|e| format!("_get_container_status: {e}"))
-        },
-        &c,
-    )
-    .await
-    .map_err(|e| format!("with_redis_cache: {e}"))?
+pub async fn get_container_status(c: ()) -> anyhow::Result<Vec<ContainerHealthUi>> {
+    with_redis_cache("get_container_status", 60, _get_container_status, &c).await
 }
 
 async fn _get_container_status(_c: ()) -> anyhow::Result<Vec<ContainerHealthUi>> {

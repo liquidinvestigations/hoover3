@@ -13,6 +13,32 @@ pub struct FsMetadata {
     pub path: PathBuf,
 }
 
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct FsScanDatasourceResult {
+    pub file_count: u64,
+    pub dir_count: u64,
+    pub file_size_bytes: u64,
+    pub errors: u64,
+}
+
+impl std::ops::Add<FsScanDatasourceResult> for FsScanDatasourceResult {
+    type Output = FsScanDatasourceResult;
+    fn add(self, rhs: FsScanDatasourceResult) -> Self::Output {
+        FsScanDatasourceResult {
+            file_count: self.file_count + rhs.file_count,
+            dir_count: self.dir_count + rhs.dir_count,
+            file_size_bytes: self.file_size_bytes + rhs.file_size_bytes,
+            errors: self.errors + rhs.errors,
+        }
+    }
+}
+
+impl std::ops::AddAssign<FsScanDatasourceResult> for FsScanDatasourceResult {
+    fn add_assign(&mut self, rhs: FsScanDatasourceResult) {
+        *self = *self + rhs;
+    }
+}
+
 // This does not work on
 // mod serialize_path {
 //     use std::ffi::OsStr;

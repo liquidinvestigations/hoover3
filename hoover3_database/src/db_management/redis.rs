@@ -48,8 +48,8 @@ where
     info!("lockmanager init OK for {redis_lock_id}");
 
     let mut retry_count = 0;
-    let acq_retry_wait_secs = 1.0;
-    let max_acq_retry = 60; // 1 min
+    let mut acq_retry_wait_secs = 0.016;
+    let max_acq_retry = 12; // 1 min
     let lock = loop {
         if let Ok(lock) = rl
             .lock(redis_lock_id.as_bytes(), Duration::from_secs_f64(lock_ttl))
@@ -59,11 +59,9 @@ where
         }
         tokio::time::sleep(Duration::from_secs_f64(acq_retry_wait_secs)).await;
         retry_count += 1;
+        acq_retry_wait_secs *= 2.0;
         if retry_count >= max_acq_retry {
-            anyhow::bail!(
-                "could not acquire lock in {} seconds",
-                retry_count as f64 * acq_retry_wait_secs
-            );
+            anyhow::bail!("could not acquire lock after 1min",);
         }
     };
 
@@ -133,7 +131,34 @@ where
     Ok(())
 }
 
-pub async fn with_redis_cache<K, F>(
+pub async fn with_redis_cache<K, F, T>(
+    redis_cache_id: &str,
+    ttl_sec: u32,
+    func: impl FnOnce(K) -> F + Send + 'static,
+    key: &K,
+) -> anyhow::Result<T>
+where
+    K: serde::Serialize + 'static + Send + for<'a> serde::Deserialize<'a> + Clone,
+    F: Future<Output = anyhow::Result<T>> + 'static + Send,
+    T: 'static + Send + Sync,
+    T: serde::Serialize,
+    T: for<'a> serde::Deserialize<'a>,
+{
+    _with_redis_cache(
+        redis_cache_id,
+        ttl_sec,
+        move |c| async move {
+            func(c)
+                .await
+                .map_err(|e| format!("_get_all_collections: {e}"))
+        },
+        key,
+    )
+    .await?
+    .map_err(|e| anyhow::anyhow!("{redis_cache_id}: {e}"))
+}
+
+async fn _with_redis_cache<K, F>(
     redis_cache_id: &str,
     ttl_sec: u32,
     func: impl FnOnce(K) -> F + Send + 'static,
@@ -209,8 +234,8 @@ where
 
 #[tokio::test]
 async fn test_redis_exp_cache() {
-    async fn test_fn(i: u32) -> u32 {
-        i
+    async fn test_fn(i: u32) -> anyhow::Result<u32> {
+        Ok(i)
     }
     let x = with_redis_cache("test_fn", 1, test_fn, &6).await.unwrap();
     assert_eq!(x, 6);
@@ -240,8 +265,8 @@ async fn test_redis_exp_cache() {
 
 #[tokio::test]
 async fn test_redis_drop_cache() {
-    async fn test_fn2(i: u32) -> u32 {
-        i
+    async fn test_fn2(i: u32) -> anyhow::Result<u32> {
+        Ok(i)
     }
 
     let x = with_redis_cache("test_fn2", 3, test_fn2, &6).await.unwrap();

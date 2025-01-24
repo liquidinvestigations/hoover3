@@ -3321,6 +3321,7 @@ dependencies = [
 name = "hoover3_filesystem_scanner"
 version = "0.1.0"
 dependencies = [
+ "futures 0.3.31",
  "hoover3_database",
  "hoover3_taskdef",
  "hoover3_types",

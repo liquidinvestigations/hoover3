@@ -2,9 +2,7 @@ use std::path::PathBuf;
 
 use crate::identifier::{CollectionId, DatabaseIdentifier};
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct DatasourceUiRow {
     pub collection_id: CollectionId,
     pub datasource_id: DatabaseIdentifier,

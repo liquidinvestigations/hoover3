@@ -1,28 +1,29 @@
 use crate::client::get_client;
-pub use futures::Future;
 pub use anyhow;
+pub use futures::Future;
+pub use serde;
+use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{warn, info};
-use serde::{Deserialize, Serialize};
-pub use serde;
+use tracing::{info, warn};
 
-pub use prost_wkt_types::Duration as ProstDuration;
 pub use crate::client::TemporalioClient;
+pub use prost_wkt_types::Duration as ProstDuration;
 pub use temporal_client::WorkflowClientTrait;
 pub use temporal_client::WorkflowOptions;
-pub use temporal_sdk::ActivityError;
-pub use temporal_sdk::Worker;
 pub use temporal_sdk::ActContext;
+pub use temporal_sdk::ActivityError;
+pub use temporal_sdk::StartedChildWorkflow;
+pub use temporal_sdk::Worker;
 pub use temporal_sdk::{ActivityOptions, WfContext, WfExitValue, WorkflowResult};
 pub use temporal_sdk_core::protos::coresdk::activity_result::activity_resolution::Status;
 pub use temporal_sdk_core::protos::coresdk::activity_result::ActivityResolution;
 pub use temporal_sdk_core::protos::temporal::api::common::v1::RetryPolicy;
 pub use temporal_sdk_core::{init_worker, CoreRuntime};
 pub use temporal_sdk_core_protos::coresdk::AsJsonPayloadExt;
-pub use temporal_sdk_core_protos::temporal::api::workflowservice::v1::StartWorkflowExecutionResponse;
 pub use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowExecutionStatus;
-
+pub use temporal_sdk_core_protos::temporal::api::workflowservice::v1::StartWorkflowExecutionResponse;
 
 pub const TASK_QUEUE_NAME: &str = "hoover3";
 pub const TEMPORALIO_NAMESPACE: &str = "default";
@@ -36,6 +37,10 @@ pub trait TemporalioDescriptorRegister {
     fn register(worker: &mut Worker) -> anyhow::Result<()>;
 }
 
+pub trait TemporalioDescriptorValueTypes {
+    type Arg: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize + Clone;
+    type Ret: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize;
+}
 
 /// If T1 and T2 can be registered, then so can (T1,T2) and (T1, (T2, T3))
 macro_rules! impl_tuple_register {
@@ -63,11 +68,8 @@ impl_tuple_register!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
 
 /// implemented by the `make_activity` macro
 pub trait TemporalioActivityDescriptor:
-    TemporalioDescriptorName + TemporalioDescriptorRegister
+    TemporalioDescriptorName + TemporalioDescriptorRegister + TemporalioDescriptorValueTypes
 {
-    type Arg: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize;
-    type Ret: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize;
-
     fn func(arg: Self::Arg) -> impl Future<Output = Result<Self::Ret, anyhow::Error>> + Send;
 
     fn register(worker: &mut Worker) -> anyhow::Result<()> {
@@ -134,10 +136,11 @@ macro_rules! make_activity {
                     <Self as $crate::TemporalioActivityDescriptor>::register(worker)
                 }
             }
-            impl $crate::TemporalioActivityDescriptor for [<$id _activity>] {
+            impl $crate::TemporalioDescriptorValueTypes for [<$id _activity>] {
                 type Arg = $arg;
                 type Ret = $ret;
-
+            }
+            impl $crate::TemporalioActivityDescriptor for [<$id _activity>] {
                 async fn func(arg: Self::Arg) -> Result<Self::Ret, anyhow::Error> {
                     $id(arg).await
                 }
@@ -162,9 +165,11 @@ macro_rules! make_activity_sync {
                     <Self as $crate::TemporalioActivityDescriptor>::register(worker)
                 }
             }
-            impl $crate::TemporalioActivityDescriptor for [<$id _activity>] {
+            impl $crate::TemporalioDescriptorValueTypes for [<$id _activity>] {
                 type Arg = $arg;
                 type Ret = $ret;
+            }
+            impl $crate::TemporalioActivityDescriptor for [<$id _activity>] {
 
                 async fn func(arg: Self::Arg) -> Result<Self::Ret, anyhow::Error> {
                     tokio::task::spawn_blocking(move || $id(arg)).await?
@@ -175,13 +180,47 @@ macro_rules! make_activity_sync {
 }
 pub use make_activity_sync;
 
+pub enum ChildWorkflowFuture<T: Sized + TemporalioWorkflowDescriptor> {
+    Running(StartedChildWorkflow),
+    AlreadyCompleted(T::Arg, PhantomData<T>),
+}
+
+impl<T: Sized + TemporalioWorkflowDescriptor> ChildWorkflowFuture<T> {
+    pub fn result(self) -> impl Future<Output = Result<T::Ret, anyhow::Error>> {
+        use anyhow::Context;
+        use temporal_sdk_core_protos::coresdk::child_workflow::child_workflow_result::Status as ChildWorkflowStatus;
+
+        async move {
+            match self {
+                ChildWorkflowFuture::Running(started) => {
+                    let child_result = started.result().await;
+                    let child_result_status = (&child_result.status)
+                        .as_ref()
+                        .context("no child result status")?;
+                    match child_result_status {
+                        ChildWorkflowStatus::Completed(r) => {
+                            let result_payload = r.result.as_ref().context("no result payload")?;
+                            let result: T::Ret = serde_json::from_slice(&result_payload.data)?;
+                            Ok(result)
+                        }
+                        _ => anyhow::bail!("child workflow failed: {:?}", child_result_status),
+                    }
+                }
+                ChildWorkflowFuture::AlreadyCompleted(arg, _) => {
+                    let wf_id = T::workflow_id(&arg);
+                    let payload = query_workflow_execution_result(&wf_id).await?;
+                    let result: T::Ret = serde_json::from_slice(&payload)?;
+                    Ok(result)
+                }
+            }
+        }
+    }
+}
+
 /// implemented by the `make_workflow` macro
 pub trait TemporalioWorkflowDescriptor:
-    TemporalioDescriptorName + TemporalioDescriptorRegister
+    TemporalioDescriptorName + TemporalioDescriptorRegister + TemporalioDescriptorValueTypes
 {
-    type Arg: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize;
-    type Ret: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize;
-
     fn wf_func(
         ctx: WfContext,
         arg: Self::Arg,
@@ -198,12 +237,14 @@ pub trait TemporalioWorkflowDescriptor:
     }
 
     fn workflow_id(arg: &Self::Arg) -> String {
-        format!("{}_{}", Self::name(), hoover3_types::stable_hash::stable_hash(arg).unwrap())
+        format!(
+            "{}_{}",
+            Self::name(),
+            hoover3_types::stable_hash::stable_hash(arg).unwrap()
+        )
     }
 
-    fn client_start(
-        arg: &Self::Arg,
-    ) -> impl Future<Output = Result<(), anyhow::Error>> {
+    fn client_start(arg: &Self::Arg) -> impl Future<Output = Result<(), anyhow::Error>> {
         async move {
             let workflow_id = Self::workflow_id(arg);
             let input = vec![arg.as_json_payload()?.into()];
@@ -214,9 +255,9 @@ pub trait TemporalioWorkflowDescriptor:
             let _handle1 = client
                 .start_workflow(
                     input,
-                    TASK_QUEUE_NAME.to_owned(),   // task queue
-                    workflow_id.to_string(), // workflow id
-                    Self::name().to_owned(), // workflow type
+                    TASK_QUEUE_NAME.to_owned(), // task queue
+                    workflow_id.to_string(),    // workflow id
+                    Self::name().to_owned(),    // workflow type
                     None,
                     WorkflowOptions {
                         id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
@@ -226,15 +267,121 @@ pub trait TemporalioWorkflowDescriptor:
                 )
                 .await;
             match _handle1 {
-                Ok(h) => {
+                Ok(_resp) => {
                     return Ok(());
-                },
+                }
                 Err(e) => {
                     if e.code() == tonic::Code::AlreadyExists {
                         return Ok(());
                     }
                     warn!("error starting workflow {:?}", e);
                     anyhow::bail!("error starting workflow {:?}", e);
+                }
+            };
+        }
+    }
+    fn run_as_child(
+        wf_ctx: &WfContext,
+        arg: Self::Arg,
+    ) -> impl Future<Output = Result<Self::Ret, anyhow::Error>>
+    where
+        Self: Sized,
+    {
+        async move { Self::start_as_child(wf_ctx, arg).await?.result().await }
+    }
+
+    fn run_parallel(
+        wf_ctx: &WfContext,
+        args: Vec<Self::Arg>,
+    ) -> impl Future<Output = anyhow::Result<Vec<(Self::Arg, anyhow::Result<Self::Ret>)>>>
+    where
+        Self: Sized,
+    {
+        use futures::StreamExt;
+        async move {
+            let mut fut_1 = futures::stream::FuturesUnordered::new();
+            for arg in args.into_iter() {
+                fut_1.push(async move {
+                    (
+                        arg.clone(),
+                        Self::start_as_child(
+                            &wf_ctx,
+                            arg,
+                        )
+                        .await,
+                    )
+                });
+            }
+
+            let mut fut_2 = futures::stream::FuturesUnordered::new();
+            while let Some((arg, res)) = fut_1.next().await {
+                fut_2.push(async move {
+                    (arg, match res {
+                        Ok(res) => res.result().await,
+                        Err(e) => Err(e),
+                    })
+                });
+            }
+
+            let mut results = Vec::new();
+            while let Some((arg, res)) = fut_2.next().await {
+                results.push((arg, res));
+            }
+            Ok(results)
+        }
+    }
+
+    fn start_as_child(
+        wf_ctx: &WfContext,
+        arg: Self::Arg,
+    ) -> impl Future<Output = Result<ChildWorkflowFuture<Self>, anyhow::Error>>
+    where
+        Self: Sized,
+    {
+        let arg = arg.clone();
+        let wf_ctx = wf_ctx.clone();
+        async move {
+            let arg = arg.clone();
+            let wf_ctx = wf_ctx.clone();
+
+            let workflow_id = Self::workflow_id(&arg);
+            let input = vec![arg.as_json_payload()?.into()];
+
+            use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowIdConflictPolicy;
+            use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowIdReusePolicy;
+            use temporal_sdk::ChildWorkflowOptions;
+            use temporal_sdk_core_protos::coresdk::workflow_activation::resolve_child_workflow_execution_start::Status as ChildWorkflowStartStatus;
+
+            use temporal_sdk_core_protos::coresdk::child_workflow::StartChildWorkflowExecutionFailedCause;
+
+            let child_wf = wf_ctx.child_workflow(ChildWorkflowOptions {
+                workflow_id: workflow_id.to_string(),
+                workflow_type: Self::name().to_string(),
+                task_queue: None, // inherit
+                input: input,
+                options: WorkflowOptions {
+                    id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
+                    id_conflict_policy: WorkflowIdConflictPolicy::UseExisting,
+                    ..Default::default()
+                },
+                ..Default::default()
+            });
+            let start_result = child_wf.start(&wf_ctx).await;
+            match &start_result.status {
+                ChildWorkflowStartStatus::Succeeded(_run_id) => {
+                    return Ok(ChildWorkflowFuture::Running(
+                        start_result.into_started().unwrap(),
+                    ))
+                }
+                ChildWorkflowStartStatus::Failed(s) => match s.cause() {
+                    StartChildWorkflowExecutionFailedCause::WorkflowAlreadyExists => {
+                        let arg: Self::Arg = arg.clone();
+                        return Ok(ChildWorkflowFuture::AlreadyCompleted(arg, PhantomData));
+                    }
+                    _e => anyhow::bail!("child workflow start failed: {:?} : {:?}", _e, s),
+                },
+                _ => {
+                    anyhow::bail!("child workflow start failed: {:?}", start_result.status);
                 }
             };
         }
@@ -277,10 +424,11 @@ macro_rules! make_workflow {
                     <Self as $crate::TemporalioWorkflowDescriptor>::register(worker)
                 }
             }
-            impl $crate::TemporalioWorkflowDescriptor for [<$id _workflow>] {
+            impl $crate::TemporalioDescriptorValueTypes for [<$id _workflow>] {
                 type Arg = $arg;
                 type Ret = $ret;
-
+            }
+            impl $crate::TemporalioWorkflowDescriptor for [<$id _workflow>] {
                 async fn wf_func(ctx: $crate::WfContext, arg: Self::Arg) -> $crate::WorkflowResult<Self::Ret> {
                     $id(ctx, arg).await
                 }
@@ -289,7 +437,6 @@ macro_rules! make_workflow {
     };
 }
 pub use make_workflow;
-
 
 fn bytes_to_hex_string(bytes: &[u8]) -> String {
     bytes
@@ -341,9 +488,7 @@ async fn query_workflow_execution_status(
 }
 
 /// fetch history from client and return last result payload
-async fn query_workflow_execution_result(
-    workflow_id: &str,
-) -> anyhow::Result<Vec<u8>> {
+async fn query_workflow_execution_result(workflow_id: &str) -> anyhow::Result<Vec<u8>> {
     let client = get_client().await?;
     use temporal_sdk_core_protos::temporal::api::enums::v1::EventType::WorkflowExecutionCompleted;
     use temporal_sdk_core_protos::temporal::api::history::v1::history_event::Attributes::WorkflowExecutionCompletedEventAttributes;
@@ -368,9 +513,7 @@ async fn query_workflow_execution_result(
     anyhow::bail!("Workflow execution result not found");
 }
 
-
 pub fn spawn_worker_on_thread<T: TemporalioDescriptorRegister>() -> std::thread::JoinHandle<()> {
-
     std::thread::spawn(move || {
         tracing::info!(
             "_run_on_new_thread_forever INSIDE  T={:?}",
@@ -414,7 +557,7 @@ pub mod test {
         let act1 = test_function_async_activity::run(&ctx, arg).await?;
         println!("sample_workflow 2 T={:?}", std::thread::current().id());
         let act2 = test_function_sync_activity::run(&ctx, arg).await?;
-        println!("sample_workflow 3  T={:?}", std::thread::current().id());
+        println!("sample_workflow 3 T={:?}", std::thread::current().id());
         Ok(WfExitValue::Normal(act1 + act2))
     }
 
@@ -437,13 +580,11 @@ pub mod test {
         )>();
         println!("{}", test_function_async_activity::name());
 
-        let handle1 = sample_workflow2_workflow::client_start( &x).await?;
-        let rv2 =
-            sample_workflow2_workflow::client_wait_for_completion(&x)
-                .await?;
+        let handle1 = sample_workflow2_workflow::client_start(&x).await?;
+        let rv2 = sample_workflow2_workflow::client_wait_for_completion(&x).await?;
         assert!(rv2 == x + x);
 
-        let handle2 = sample_workflow2_workflow::client_start( &x).await?;
+        let handle2 = sample_workflow2_workflow::client_start(&x).await?;
         assert_eq!(handle1, handle2);
         Ok(())
     }

@@ -47,19 +47,8 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
 
 /// Client API method, returns list of all collections in system.
 /// Cached for 1min. Cache gets dumped on CREATE, DELETE, MODIFY.
-pub async fn get_all_collections(c: ()) -> Result<Vec<CollectionUiRow>, String> {
-    with_redis_cache(
-        "get_all_collections",
-        60,
-        move |c| async move {
-            _get_all_collections(c)
-                .await
-                .map_err(|e| format!("_get_all_collections: {e}"))
-        },
-        &c,
-    )
-    .await
-    .map_err(|e| format!("with_redis_cache: {e}"))?
+pub async fn get_all_collections(c: ()) -> Result<Vec<CollectionUiRow>> {
+    with_redis_cache("get_all_collections", 60, _get_all_collections, &c).await
 }
 
 async fn _get_all_collections(_c: ()) -> Result<Vec<CollectionUiRow>> {
@@ -101,6 +90,11 @@ pub async fn update_collection(updated: CollectionUiRow) -> Result<CollectionUiR
 
 /// Client API method used to drop a collection, all databases and entries.
 pub async fn drop_collection(c: CollectionId) -> Result<()> {
+    use crate::client_query::datasources::drop_datasource;
+    use crate::client_query::datasources::get_all_datasources;
+    for ds in get_all_datasources(c.clone()).await? {
+        drop_datasource((c.clone(), ds.datasource_id)).await?;
+    }
     crate::migrate::drop_collection(&c).await?;
 
     let session = ScyllaDatabaseHandle::global_session().await?;

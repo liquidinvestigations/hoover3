@@ -1,8 +1,8 @@
 use charybdis::macros::charybdis_model;
-use charybdis::types::{Text, Timestamp, BigInt};
+use charybdis::types::{BigInt, Text, Timestamp};
 use hoover3_types::datasource::DatasourceUiRow;
-use hoover3_types::identifier::CollectionId;
 use hoover3_types::filesystem::FsMetadata;
+use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 
 #[charybdis_model(
@@ -44,7 +44,6 @@ impl FsDirectoryDbRow {
         }
     }
 }
-
 
 #[charybdis_model(
     table_name = filesystem_file,
