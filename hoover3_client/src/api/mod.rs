@@ -3,14 +3,12 @@ use std::path::PathBuf;
 use crate::routes::nav_push_server_call_event;
 use crate::time::current_time;
 use dioxus::prelude::*;
-use dioxus_logger::tracing::warn;
 use hoover3_types::collection::*;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadata;
 use hoover3_types::identifier::*;
-use hoover3_types::tasks::DatasourceScanRequest;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub struct ServerCallEvent {
@@ -184,4 +182,11 @@ server_wrapper!(
     get_datasource,
     (CollectionId, DatabaseIdentifier),
     DatasourceUiRow
+);
+
+server_wrapper!(
+    hoover3_filesystem_scanner,
+    start_scan,
+    (CollectionId, DatabaseIdentifier),
+    ()
 );

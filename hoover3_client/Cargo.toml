@@ -10,9 +10,11 @@ publish  = {workspace = true}
 
 [dependencies]
 hoover3_database = {path="../hoover3_database",optional=true}
-hoover3_tasks = {path="../hoover3_tasks",optional=true}
+hoover3_taskdef = {path="../hoover3_taskdef",optional=true}
 hoover3_types  = {path="../hoover3_types"}
+hoover3_filesystem_scanner = {path="../tasks/filesystem_scanner",optional=true}
 
+axum = {workspace = true, optional=true}
 dioxus = { workspace = true, features = ["router", "fullstack"] }
 # dioxus-lazy = { workspace = true}
 tokio = { workspace = true, optional=true}
@@ -22,7 +24,7 @@ paste.workspace = true
 web-time = { version = "1.1.0", features = ["serde"] }
 dioxus-sdk = { version = "0.6.0", features = ["storage"] }
 serde = { workspace = true, features = ["derive"] }
-dioxus-logger = "0.6.1"
+dioxus-logger.workspace = true
 serde-aux = "4.5.0"
 serde_json.workspace = true
 chrono.workspace = true
@@ -34,4 +36,4 @@ default = []
 web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 mobile = ["dioxus/mobile"]
-server = ["dioxus/server", "dep:tokio","dep:hoover3_database", "dep:hoover3_tasks"]
+server = ["dioxus/server", "dep:tokio","dep:hoover3_database", "dep:axum", "dep:hoover3_taskdef", "dep:hoover3_filesystem_scanner"]

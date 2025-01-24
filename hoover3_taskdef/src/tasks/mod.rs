@@ -1,24 +1,31 @@
 use crate::client::get_client;
-use crate::client::TemporalioClient;
-use futures::Future;
-use prost_wkt_types::Duration as ProstDuration;
-use serde::{Deserialize, Serialize};
+pub use futures::Future;
+pub use anyhow;
 use std::sync::Arc;
 use std::time::Duration;
-use temporal_client::WorkflowClientTrait;
-use temporal_client::WorkflowOptions;
-use temporal_sdk::ActivityError;
-use temporal_sdk::Worker;
-use temporal_sdk::ActContext;
-use temporal_sdk::{ActivityOptions, WfContext, WfExitValue, WorkflowResult};
-use temporal_sdk_core::protos::coresdk::activity_result::{
-    activity_resolution::Status::Completed, ActivityResolution,
-};
-use temporal_sdk_core::protos::temporal::api::common::v1::RetryPolicy;
-use temporal_sdk_core::{init_worker, CoreRuntime};
-use temporal_sdk_core_api::{telemetry::TelemetryOptionsBuilder, worker::WorkerConfigBuilder};
-use temporal_sdk_core_protos::coresdk::AsJsonPayloadExt;
+use tracing::{warn, info};
+use serde::{Deserialize, Serialize};
+pub use serde;
 
+pub use prost_wkt_types::Duration as ProstDuration;
+pub use crate::client::TemporalioClient;
+pub use temporal_client::WorkflowClientTrait;
+pub use temporal_client::WorkflowOptions;
+pub use temporal_sdk::ActivityError;
+pub use temporal_sdk::Worker;
+pub use temporal_sdk::ActContext;
+pub use temporal_sdk::{ActivityOptions, WfContext, WfExitValue, WorkflowResult};
+pub use temporal_sdk_core::protos::coresdk::activity_result::activity_resolution::Status;
+pub use temporal_sdk_core::protos::coresdk::activity_result::ActivityResolution;
+pub use temporal_sdk_core::protos::temporal::api::common::v1::RetryPolicy;
+pub use temporal_sdk_core::{init_worker, CoreRuntime};
+pub use temporal_sdk_core_protos::coresdk::AsJsonPayloadExt;
+pub use temporal_sdk_core_protos::temporal::api::workflowservice::v1::StartWorkflowExecutionResponse;
+pub use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowExecutionStatus;
+
+
+pub const TASK_QUEUE_NAME: &str = "hoover3";
+pub const TEMPORALIO_NAMESPACE: &str = "default";
 /// Global name for this Temporalio thing (activity, workflow)
 pub trait TemporalioDescriptorName {
     fn name() -> &'static str;
@@ -98,7 +105,7 @@ pub trait TemporalioActivityDescriptor:
 
             let resolution: ActivityResolution = wf_ctx.activity(opt).await;
             if resolution.completed_ok() {
-                if let Some(Completed(result)) = &resolution.status {
+                if let Some(Status::Completed(result)) = &resolution.status {
                     if let Some(payload) = &result.result {
                         let result: Self::Ret = serde_json::from_slice(&payload.data)?;
                         return Ok(result);
@@ -113,46 +120,49 @@ pub trait TemporalioActivityDescriptor:
 }
 
 /// Create an activity descriptor struct called $id_activity
+#[macro_export]
 macro_rules! make_activity {
     ($id:ident,$arg:ty,$ret:ty) => {
-        ::paste::paste! {
+        $crate::paste! {
             #[allow(non_camel_case_types)]
             pub struct [<$id _activity>];
-            impl TemporalioDescriptorName for [<$id _activity>] {
+            impl $crate::TemporalioDescriptorName for [<$id _activity>] {
                 fn name() -> &'static str { stringify!($id) }
             }
-            impl TemporalioDescriptorRegister for [<$id _activity>] {
-                fn register(worker: &mut Worker) -> anyhow::Result<()> {
-                    <Self as TemporalioActivityDescriptor>::register(worker)
+            impl $crate::TemporalioDescriptorRegister for [<$id _activity>] {
+                fn register(worker: &mut $crate::Worker) -> anyhow::Result<()> {
+                    <Self as $crate::TemporalioActivityDescriptor>::register(worker)
                 }
             }
-            impl TemporalioActivityDescriptor for [<$id _activity>] {
+            impl $crate::TemporalioActivityDescriptor for [<$id _activity>] {
                 type Arg = $arg;
                 type Ret = $ret;
 
                 async fn func(arg: Self::Arg) -> Result<Self::Ret, anyhow::Error> {
-                    tokio::task::spawn( async move { $id(arg).await }).await?
+                    $id(arg).await
                 }
             }
         }
     };
 }
+pub use make_activity;
 
 /// Create an activity descriptor struct called $id_activity
+#[macro_export]
 macro_rules! make_activity_sync {
     ($id:ident,$arg:ty,$ret:ty) => {
-        ::paste::paste! {
+        $crate::paste! {
             #[allow(non_camel_case_types)]
             pub struct [<$id _activity>];
-            impl TemporalioDescriptorName for [<$id _activity>] {
+            impl $crate::TemporalioDescriptorName for [<$id _activity>] {
                 fn name() -> &'static str { stringify!($id) }
             }
-            impl TemporalioDescriptorRegister for [<$id _activity>] {
-                fn register(worker: &mut Worker) -> anyhow::Result<()> {
-                    <Self as TemporalioActivityDescriptor>::register(worker)
+            impl $crate::TemporalioDescriptorRegister for [<$id _activity>] {
+                fn register(worker: &mut $crate::Worker) -> anyhow::Result<()> {
+                    <Self as $crate::TemporalioActivityDescriptor>::register(worker)
                 }
             }
-            impl TemporalioActivityDescriptor for [<$id _activity>] {
+            impl $crate::TemporalioActivityDescriptor for [<$id _activity>] {
                 type Arg = $arg;
                 type Ret = $ret;
 
@@ -163,8 +173,7 @@ macro_rules! make_activity_sync {
         }
     };
 }
-
-use temporal_sdk_core_protos::temporal::api::workflowservice::v1::StartWorkflowExecutionResponse;
+pub use make_activity_sync;
 
 /// implemented by the `make_workflow` macro
 pub trait TemporalioWorkflowDescriptor:
@@ -188,21 +197,24 @@ pub trait TemporalioWorkflowDescriptor:
         Ok(())
     }
 
+    fn workflow_id(arg: &Self::Arg) -> String {
+        format!("{}_{}", Self::name(), hoover3_types::stable_hash::stable_hash(arg).unwrap())
+    }
+
     fn client_start(
-        task_queue: &str,
-        workflow_id: &str,
-        arg: Self::Arg,
-    ) -> impl Future<Output = Result<StartWorkflowExecutionResponse, anyhow::Error>> {
+        arg: &Self::Arg,
+    ) -> impl Future<Output = Result<(), anyhow::Error>> {
         async move {
+            let workflow_id = Self::workflow_id(arg);
             let input = vec![arg.as_json_payload()?.into()];
             let client = get_client().await?;
 
             use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowIdConflictPolicy;
             use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowIdReusePolicy;
-            let _handle1: StartWorkflowExecutionResponse = client
+            let _handle1 = client
                 .start_workflow(
                     input,
-                    task_queue.to_owned(),   // task queue
+                    TASK_QUEUE_NAME.to_owned(),   // task queue
                     workflow_id.to_string(), // workflow id
                     Self::name().to_owned(), // workflow type
                     None,
@@ -212,25 +224,38 @@ pub trait TemporalioWorkflowDescriptor:
                         ..Default::default()
                     },
                 )
-                .await?;
-            Ok(_handle1)
+                .await;
+            match _handle1 {
+                Ok(h) => {
+                    return Ok(());
+                },
+                Err(e) => {
+                    if e.code() == tonic::Code::AlreadyExists {
+                        return Ok(());
+                    }
+                    warn!("error starting workflow {:?}", e);
+                    anyhow::bail!("error starting workflow {:?}", e);
+                }
+            };
         }
     }
 
     fn client_wait_for_completion(
-        workflow_id: &str,
-        run_id: &str,
+        arg: &Self::Arg,
     ) -> impl Future<Output = Result<Self::Ret, anyhow::Error>> {
         async move {
-            let mut status = query_workflow_execution_status(workflow_id, run_id).await?;
+            let workflow_id = Self::workflow_id(arg);
+            let mut status = query_workflow_execution_status(&workflow_id).await?;
+            let mut dt = 0.1;
             while status == WorkflowExecutionStatus::Running {
-                tokio::time::sleep(Duration::from_secs_f32(0.1)).await;
-                status = query_workflow_execution_status(workflow_id, run_id).await?;
+                tokio::time::sleep(Duration::from_secs_f32(dt)).await;
+                dt = dt * 1.1 + 0.1;
+                status = query_workflow_execution_status(&workflow_id).await?;
             }
             if status != WorkflowExecutionStatus::Completed {
                 anyhow::bail!("Workflow execution failed with status={:?}", status);
             }
-            let result = query_workflow_execution_result(workflow_id, run_id).await?;
+            let result = query_workflow_execution_result(&workflow_id).await?;
             let result: Self::Ret = serde_json::from_slice(&result)?;
             Ok(result)
         }
@@ -238,30 +263,33 @@ pub trait TemporalioWorkflowDescriptor:
 }
 
 /// Create a workflow descriptor struct called $id_workflow
+#[macro_export]
 macro_rules! make_workflow {
     ($id:ident,$arg:ty,$ret:ty) => {
-        ::paste::paste! {
+        $crate::paste! {
             #[allow(non_camel_case_types)]
             pub struct [<$id _workflow>];
-            impl TemporalioDescriptorName for [<$id _workflow>] {
+            impl $crate::TemporalioDescriptorName for [<$id _workflow>] {
                 fn name() -> &'static str { stringify!($id) }
             }
-            impl TemporalioDescriptorRegister for [<$id _workflow>] {
-                fn register(worker: &mut Worker) -> anyhow::Result<()> {
-                    <Self as TemporalioWorkflowDescriptor>::register(worker)
+            impl $crate::TemporalioDescriptorRegister for [<$id _workflow>] {
+                fn register(worker: &mut $crate::Worker) -> $crate::anyhow::Result<()> {
+                    <Self as $crate::TemporalioWorkflowDescriptor>::register(worker)
                 }
             }
-            impl TemporalioWorkflowDescriptor for [<$id _workflow>] {
+            impl $crate::TemporalioWorkflowDescriptor for [<$id _workflow>] {
                 type Arg = $arg;
                 type Ret = $ret;
 
-                async fn wf_func(ctx: WfContext, arg: Self::Arg) -> WorkflowResult<Self::Ret> {
+                async fn wf_func(ctx: $crate::WfContext, arg: Self::Arg) -> $crate::WorkflowResult<Self::Ret> {
                     $id(ctx, arg).await
                 }
             }
         }
     };
 }
+pub use make_workflow;
+
 
 fn bytes_to_hex_string(bytes: &[u8]) -> String {
     bytes
@@ -276,36 +304,34 @@ fn build_id() -> String {
 }
 
 /// build new worker using given activity list, workflow , client, etc.
-pub fn create_worker<T: TemporalioDescriptorRegister>(
+fn create_worker<T: TemporalioDescriptorRegister>(
     client: TemporalioClient,
-    task_queue: &str,
 ) -> anyhow::Result<Worker> {
+    use temporal_sdk_core_api::{telemetry::TelemetryOptionsBuilder, worker::WorkerConfigBuilder};
     let telemetry_options = TelemetryOptionsBuilder::default().build()?;
     let runtime = CoreRuntime::new_assume_tokio(telemetry_options)?;
-    let worker_build_id = format!("{task_queue}__{}", build_id());
-    println!("build_id: {:?}", worker_build_id);
+    let worker_build_id = format!("{TASK_QUEUE_NAME}__{}", build_id());
+    info!("worker build_id: {:?}", worker_build_id);
 
     let worker_config = WorkerConfigBuilder::default()
-        .namespace("default")
-        .task_queue(task_queue)
+        .namespace(TEMPORALIO_NAMESPACE)
+        .task_queue(TASK_QUEUE_NAME)
         .worker_build_id(worker_build_id)
         .build()?;
 
     let core_worker = init_worker(&runtime, worker_config, client)?;
-    let mut worker = Worker::new_from_core(Arc::new(core_worker), task_queue);
+    let mut worker = Worker::new_from_core(Arc::new(core_worker), TASK_QUEUE_NAME);
     T::register(&mut worker)?;
     Ok(worker)
 }
 
-use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowExecutionStatus;
 /// fetch status from client
-pub async fn query_workflow_execution_status(
+async fn query_workflow_execution_status(
     workflow_id: &str,
-    run_id: &str,
 ) -> anyhow::Result<WorkflowExecutionStatus> {
     let client = get_client().await?;
     let describe = client
-        .describe_workflow_execution(workflow_id.to_string(), Some(run_id.to_string()))
+        .describe_workflow_execution(workflow_id.to_string(), None)
         .await?;
     use anyhow::Context;
     Ok(describe
@@ -315,15 +341,14 @@ pub async fn query_workflow_execution_status(
 }
 
 /// fetch history from client and return last result payload
-pub async fn query_workflow_execution_result(
+async fn query_workflow_execution_result(
     workflow_id: &str,
-    run_id: &str,
 ) -> anyhow::Result<Vec<u8>> {
     let client = get_client().await?;
     use temporal_sdk_core_protos::temporal::api::enums::v1::EventType::WorkflowExecutionCompleted;
     use temporal_sdk_core_protos::temporal::api::history::v1::history_event::Attributes::WorkflowExecutionCompletedEventAttributes;
     let wf_result = client
-        .get_workflow_execution_history(workflow_id.to_string(), Some(run_id.to_string()), vec![])
+        .get_workflow_execution_history(workflow_id.to_string(), None, vec![])
         .await?;
     if let Some(history) = wf_result.history {
         for event in history.events.iter().rev() {
@@ -343,45 +368,26 @@ pub async fn query_workflow_execution_result(
     anyhow::bail!("Workflow execution result not found");
 }
 
-/// single-threaded worker, for testing
-pub fn spawn_worker_on_thread<T: TemporalioDescriptorRegister>(task_queue: &str) {
-    use tokio::task::LocalSet;
-    let task_queue = task_queue.to_string();
-    println!(
-        "_run_on_new_thread_forever OUTSIDE  T={:?}",
-        std::thread::current().id()
-    );
+
+pub fn spawn_worker_on_thread<T: TemporalioDescriptorRegister>() -> std::thread::JoinHandle<()> {
+
     std::thread::spawn(move || {
-        println!(
+        tracing::info!(
             "_run_on_new_thread_forever INSIDE  T={:?}",
             std::thread::current().id()
         );
         use tokio::runtime::Builder;
-        let rt = Builder::new_current_thread().enable_all().build().unwrap();
-
-        let local = LocalSet::new();
-
-        let task_queue = task_queue.to_string();
-        local.spawn_local(async move {
-            println!(
-                "_run_on_new_thread_forever inside spawn_local  T={:?}",
-                std::thread::current().id()
-            );
-            let client = get_client().await.unwrap();
-            let mut worker = create_worker::<T>(client, &task_queue).unwrap();
-            worker.run().await.unwrap();
+        let rt = Builder::new_multi_thread().enable_all().build().unwrap();
+        rt.block_on(async move {
+            run_worker::<T>().await.unwrap();
         });
-
-        // This will return once all senders are dropped and all
-        // spawned tasks have returned.
-        rt.block_on(local);
-    });
+    })
 }
 
 /// for execution directly in main thread; cannot be passed to tokio::task::spawn
-pub async fn run_worker<T: TemporalioDescriptorRegister>(task_queue: &str) -> anyhow::Result<()> {
+pub async fn run_worker<T: TemporalioDescriptorRegister>() -> anyhow::Result<()> {
     let client = get_client().await?;
-    let mut worker = create_worker::<T>(client, task_queue)?;
+    let mut worker = create_worker::<T>(client)?;
     worker.run().await?;
     Ok(())
 }
@@ -403,43 +409,42 @@ pub mod test {
 
     make_workflow!(sample_workflow2, u32, u32);
     pub async fn sample_workflow2(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
-        println!("sample_workflow T={:?}", std::thread::current().id());
-        test_function_async(arg).await?;
+        println!("sample_workflow 1 T={:?}", std::thread::current().id());
+        // test_function_async(arg).await?;
         let act1 = test_function_async_activity::run(&ctx, arg).await?;
+        println!("sample_workflow 2 T={:?}", std::thread::current().id());
         let act2 = test_function_sync_activity::run(&ctx, arg).await?;
-        println!("sample_workflow 2  T={:?}", std::thread::current().id());
+        println!("sample_workflow 3  T={:?}", std::thread::current().id());
         Ok(WfExitValue::Normal(act1 + act2))
     }
 
     #[tokio::test]
-    async fn test_client_works() {
+    async fn test_task_client_works() {
         let _client = get_client().await.unwrap();
         let _namespaces = _client.list_namespaces().await.unwrap();
         // println!("namespaces: {:#?}", _namespaces.len());
     }
 
     #[tokio::test]
-    async fn test_client_and_worker() -> anyhow::Result<()> {
+    async fn test_task_client_and_worker() -> anyhow::Result<()> {
         let x = 4_u32;
-        let task_queue = "test_client_and_worker";
 
         println!("running on main thread 1");
         spawn_worker_on_thread::<(
             test_function_async_activity,
             test_function_sync_activity,
             sample_workflow2_workflow,
-        )>(task_queue);
+        )>();
         println!("{}", test_function_async_activity::name());
 
-        let workflow_id = format!(
-            "test_client_and_worker_workflow_id_1_{:?}",
-            std::time::SystemTime::now()
-        );
-        let handle2 = sample_workflow2_workflow::client_start(task_queue, &workflow_id, x).await?;
+        let handle1 = sample_workflow2_workflow::client_start( &x).await?;
         let rv2 =
-            sample_workflow2_workflow::client_wait_for_completion(&workflow_id, &handle2.run_id)
+            sample_workflow2_workflow::client_wait_for_completion(&x)
                 .await?;
         assert!(rv2 == x + x);
+
+        let handle2 = sample_workflow2_workflow::client_start( &x).await?;
+        assert_eq!(handle1, handle2);
         Ok(())
     }
 }

@@ -115,21 +115,11 @@ where
     Ok(v?)
 }
 
-fn redis_hash_key<K>(key: &K) -> anyhow::Result<String>
-where
-    K: serde::Serialize + 'static + Send + for<'a> serde::Deserialize<'a> + Clone,
-{
-    let key_bytes = bincode::serialize(key)?;
-    let key_hash = stable_hash::fast_stable_hash(&key_bytes);
-    let key_hash = format!("{:X}", key_hash);
-    Ok(key_hash)
-}
-
 pub async fn drop_redis_cache<K>(redis_cache_id: &str, key: &K) -> anyhow::Result<()>
 where
     K: serde::Serialize + 'static + Send + for<'a> serde::Deserialize<'a> + Clone,
 {
-    let key_hash = redis_hash_key(key)?;
+    let key_hash = hoover3_types::stable_hash::stable_hash(key)?;
     let redis_cache_id = format!("hoover3_cache_data__{}__{}", redis_cache_id, key_hash);
     let mut conn = redis_connection().await?;
     let empty = Vec::<u8>::new();
@@ -157,7 +147,7 @@ where
     F::Output: for<'a> serde::Deserialize<'a>,
 {
     const MAX_CACHE_LINE_SIZE: usize = 1024 * 1024 * 64; // 64MB limit; redis limit is 512MB
-    let key_hash = redis_hash_key(key)?;
+    let key_hash = hoover3_types::stable_hash::stable_hash(key)?;
     let redis_lock_id = format!("cache__{}__{}", redis_cache_id, key_hash);
     let redis_cache_id = format!("hoover3_cache_data__{}__{}", redis_cache_id, key_hash);
 
@@ -169,7 +159,7 @@ where
         .await
     {
         if let Ok(_cache_hit) = bincode::deserialize::<F::Output>(&_cache_hit) {
-            println!("CACHE HIT 1: {redis_cache_id}!");
+            info!("CACHE HIT 1: {redis_cache_id}!");
             return Ok(_cache_hit);
         }
     }
@@ -186,11 +176,11 @@ where
             .await
         {
             if let Ok(_cache_hit) = bincode::deserialize::<F::Output>(&_cache_hit) {
-                println!("CACHE HIT 2: {redis_cache_id}!");
+                info!("CACHE HIT 2: {redis_cache_id}!");
                 return Ok(_cache_hit);
             }
         }
-        println!("CACHE MISS: {redis_cache_id}!");
+        info!("CACHE MISS: {redis_cache_id}!");
         // We're sure there is not cached value. We can compute it now.
         let f = tokio::spawn(func(key.clone()));
         let rv = f.await?;
@@ -204,7 +194,7 @@ where
             return Ok(rv);
         }
 
-        println!("CACHE SET: {redis_cache_id}!");
+        info!("CACHE SET: {redis_cache_id}!");
         redis::cmd("SET")
             .arg(redis_cache_id)
             .arg(bytes_to_cache)
@@ -232,7 +222,7 @@ async fn test_redis_exp_cache() {
         .arg("hoover3_cache_data__test_fn__F8CAF7A1A0BE51BF2A0A21FCF196AB04")
         .query_async::<Vec<u8>>(&mut conn)
         .await;
-    println!("{:#?}", x);
+    info!("{:#?}", x);
     assert_eq!(x.unwrap(), bincode::serialize(&6_u32).unwrap());
 
     // sleep 2s -- ensure expired from redis
@@ -243,7 +233,7 @@ async fn test_redis_exp_cache() {
         .arg("hoover3_cache_data__test_fn__F8CAF7A1A0BE51BF2A0A21FCF196AB04")
         .query_async::<Vec<u8>>(&mut conn)
         .await;
-    println!("{:#?}", x);
+    info!("{:#?}", x);
 
     assert!(x.is_err() || x.unwrap().is_empty());
 }
@@ -262,7 +252,7 @@ async fn test_redis_drop_cache() {
         .arg("hoover3_cache_data__test_fn2__F8CAF7A1A0BE51BF2A0A21FCF196AB04")
         .query_async::<Vec<u8>>(&mut conn)
         .await;
-    println!("{:#?}", x);
+    info!("{:#?}", x);
     assert_eq!(x.unwrap(), bincode::serialize(&6_u32).unwrap());
 
     // DROP CACHE HERE
@@ -273,7 +263,7 @@ async fn test_redis_drop_cache() {
         .arg("hoover3_cache_data__test_fn2__F8CAF7A1A0BE51BF2A0A21FCF196AB04")
         .query_async::<Vec<u8>>(&mut conn)
         .await;
-    println!("{:#?}", x);
+    info!("{:#?}", x);
 
     assert!(x.is_err() || x.unwrap().is_empty());
 }

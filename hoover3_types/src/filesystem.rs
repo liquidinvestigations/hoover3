@@ -11,7 +11,6 @@ pub struct FsMetadata {
     pub created: Option<DateTime<Utc>>,
     // #[serde(with = "serialize_path")]
     pub path: PathBuf,
-    pub path_string: String,
 }
 
 // This does not work on

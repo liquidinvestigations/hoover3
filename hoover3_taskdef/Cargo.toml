@@ -1,5 +1,5 @@
 [package]
-name = "hoover3_tasks"
+name = "hoover3_taskdef"
 repository = {workspace = true}
 version = {workspace = true}
 authors = {workspace = true}
@@ -14,7 +14,7 @@ futures= {workspace = true}
 anyhow = {workspace = true}
 futures-util = {workspace = true}
 once_cell= {workspace = true}
-
+hoover3_types = {path = "../hoover3_types"}
 # temporal
 temporal-client = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e" }
 temporal-sdk = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e"}
@@ -27,3 +27,4 @@ serde.workspace = true
 serde_json.workspace = true
 paste.workspace = true
 buildid = "1.0.3"
+tonic = "0.12.3"

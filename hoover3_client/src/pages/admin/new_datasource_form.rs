@@ -7,7 +7,6 @@ use crate::routes::UrlParam;
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
 use hoover3_types::datasource::DatasourceSettings;
-use hoover3_types::tasks::DatasourceScanRequest;
 use hoover3_types::{filesystem::FsMetadata, identifier::DatabaseIdentifier};
 use std::path::PathBuf;
 fn display_path(path: &PathBuf) -> String {
@@ -129,13 +128,14 @@ fn _NewDatasourceFormPage(
                             spawn(async move {
                                 if let Ok(d) = DatabaseIdentifier::new(&name) {
                                     if let Ok(r) = create_datasource((collection_id.clone(), d.clone(), settings.clone())).await {
-                                        navigator().push(Route::DatasourceAdminDetailsPage {
-                                            collection_id: collection_id_str.clone(),
-                                            datasource_id: r.datasource_id.to_string()
-                                        });
+                                        if let Ok(_) =  crate::api::start_scan((collection_id.clone(), d.clone())).await {
+                                            navigator().push(Route::DatasourceAdminDetailsPage {
+                                                collection_id: collection_id_str.clone(),
+                                                datasource_id: r.datasource_id.to_string()
+                                            });
+                                        }
                                     }
                                 }
-                                dioxus_logger::tracing::warn!("Failed to create datasource");
                             });
                         },
                         disabled: !*can_create_datasource.read(),

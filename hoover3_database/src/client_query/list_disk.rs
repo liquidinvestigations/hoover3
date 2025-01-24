@@ -22,7 +22,7 @@ pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadata> {
         .await
         .context(format!("metadata read failed: {:?}", path))?;
     use chrono::DateTime;
-    let path_string = relative_path
+    let _path_string = relative_path
         .to_str()
         .context("non-utf8 filename")?
         .to_string();
@@ -34,7 +34,6 @@ pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadata> {
         modified: metadata.modified().ok().map(|t| DateTime::from(t)),
         created: metadata.created().ok().map(|t| DateTime::from(t)),
         path: relative_path,
-        path_string,
     })
 }
 

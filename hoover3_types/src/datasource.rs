@@ -1,13 +1,15 @@
 use std::path::PathBuf;
 
+use crate::identifier::{CollectionId, DatabaseIdentifier};
+
 #[derive(
-    Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
 pub struct DatasourceUiRow {
-    pub collection_id: String,
-    pub datasource_id: String,
+    pub collection_id: CollectionId,
+    pub datasource_id: DatabaseIdentifier,
     pub datasource_type: String,
-    pub datasource_settings: String,
+    pub datasource_settings: DatasourceSettings,
     pub time_created: chrono::DateTime<chrono::Utc>,
     pub time_modified: chrono::DateTime<chrono::Utc>,
 }

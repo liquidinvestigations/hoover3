@@ -10,4 +10,6 @@ publish.workspace = true
 serde = {workspace=true, features = ["serde_derive"]}
 regex = "1.11.1"
 anyhow.workspace = true
+stable-hash = "0.4.3"
 chrono.workspace = true
+bincode.workspace = true

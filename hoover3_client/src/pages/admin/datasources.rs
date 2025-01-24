@@ -12,6 +12,9 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
         let datasource_id = d_id.clone();
         async move { get_datasource((collection_id, datasource_id)).await }
     });
+
+    let c_id = CollectionId::new(&collection_id).throw()?;
+    let d_id = DatabaseIdentifier::new(&datasource_id).throw()?;
     rsx! {
         article {
             h1 {
@@ -19,6 +22,17 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
             }
             h2 {
                 "Datasource: {datasource_id}"
+            }
+            button {
+                onclick: move |_| {
+                    let c_id = c_id.clone();
+                    let d_id = d_id.clone();
+                    async move {
+                    if let Ok(_) =  crate::api::start_scan((c_id.clone(), d_id.clone())).await {
+
+                    }
+                }},
+                "Start Scan."
             }
             pre {
                 "{datasource:#?}"

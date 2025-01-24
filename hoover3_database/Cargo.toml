@@ -71,5 +71,4 @@ rust-s3 = "0.35.1"
 ##############################
 redis = {version="0.27.5", features = ["aio", "tokio-comp"] }
 rslock = { version = "0.6.0", features = ["tokio-comp"], default-features = false }
-stable-hash = "0.4.3"
 tracing-subscriber = "0.3.19"

@@ -3263,6 +3263,7 @@ name = "hoover3_client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "base64 0.22.1",
  "chrono",
  "ciborium",
@@ -3270,7 +3271,8 @@ dependencies = [
  "dioxus-logger",
  "dioxus-sdk",
  "hoover3_database",
- "hoover3_tasks",
+ "hoover3_filesystem_scanner",
+ "hoover3_taskdef",
  "hoover3_types",
  "paste",
  "serde",
@@ -3310,20 +3312,31 @@ dependencies = [
  "scylla",
  "serde",
  "serde_json",
- "stable-hash",
  "tokio",
  "tracing",
  "tracing-subscriber",
 ]
 
 [[package]]
-name = "hoover3_tasks"
+name = "hoover3_filesystem_scanner"
+version = "0.1.0"
+dependencies = [
+ "hoover3_database",
+ "hoover3_taskdef",
+ "hoover3_types",
+ "serde",
+ "tokio",
+]
+
+[[package]]
+name = "hoover3_taskdef"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "buildid",
  "futures 0.3.31",
  "futures-util",
+ "hoover3_types",
  "once_cell",
  "paste",
  "prost-wkt-types",
@@ -3335,6 +3348,7 @@ dependencies = [
  "temporal-sdk-core-api",
  "temporal-sdk-core-protos",
  "tokio",
+ "tonic",
  "tracing",
 ]
 
@@ -3343,9 +3357,11 @@ name = "hoover3_types"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "chrono",
  "regex",
  "serde",
+ "stable-hash",
 ]
 
 [[package]]

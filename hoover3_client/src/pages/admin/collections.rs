@@ -224,13 +224,13 @@ impl DataRowDisplay for DatasourceUiRow {
         match header_name {
             "Name" => rsx! { Link {
                 to: Route::DatasourceAdminDetailsPage {
-                    collection_id: self.collection_id.clone(),
-                    datasource_id: self.datasource_id.clone()
+                    collection_id: self.collection_id.name(),
+                    datasource_id: self.datasource_id.to_string()
                 },
-                "{self.datasource_id}"
+                "{self.datasource_id.to_string()}"
             }},
             "Type" => rsx! { "{self.datasource_type}" },
-            "Settings" => rsx! { "{self.datasource_settings}" },
+            "Settings" => rsx! { "{self.datasource_settings:?}" },
             "Time Created" => rsx! { "{self.time_created}" },
             "Time Modified" => rsx! { "{self.time_modified}" },
             _ => panic!("unknown {header_name}"),
@@ -275,7 +275,7 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
                         let c4 = c4.clone();
                         let _ = navigator().push(Route::DatasourceAdminDetailsPage {
                             collection_id: c4.name().clone(),
-                            datasource_id: row.datasource_id.clone()
+                            datasource_id: row.datasource_id.to_string()
                         });
                     },
                     "View"
