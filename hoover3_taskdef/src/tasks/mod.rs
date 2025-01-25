@@ -25,7 +25,6 @@ pub use temporal_sdk_core_protos::coresdk::AsJsonPayloadExt;
 pub use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowExecutionStatus;
 pub use temporal_sdk_core_protos::temporal::api::workflowservice::v1::StartWorkflowExecutionResponse;
 
-pub const TASK_QUEUE_NAME: &str = "hoover3";
 pub const TEMPORALIO_NAMESPACE: &str = "default";
 /// Global name for this Temporalio thing (activity, workflow)
 pub trait TemporalioDescriptorName {
@@ -34,6 +33,7 @@ pub trait TemporalioDescriptorName {
 
 /// Trait to register a Temporalio thing (activity, workflow) into a worker
 pub trait TemporalioDescriptorRegister {
+    fn queue_name() -> &'static str;
     fn register(worker: &mut Worker) -> anyhow::Result<()>;
 }
 
@@ -51,6 +51,15 @@ macro_rules! impl_tuple_register {
                     $T::register(worker)?;
                 )+
                 Ok(())
+            }
+            fn queue_name() -> &'static str {
+                let mut q = vec![];
+                $(
+                    q.push($T::queue_name());
+                )+
+                q.dedup();
+                assert!(q.len() == 1, "all activities and workflows under a worker must have the same queue name");
+                q[0]
             }
         }
     };
@@ -93,6 +102,7 @@ pub trait TemporalioActivityDescriptor:
             let opt = ActivityOptions {
                 activity_type: Self::name().to_string(),
                 input: input,
+                task_queue: Some(Self::queue_name().to_string()),
                 retry_policy: Some(RetryPolicy {
                     initial_interval: Some(ProstDuration {
                         seconds: 1,
@@ -124,7 +134,7 @@ pub trait TemporalioActivityDescriptor:
 /// Create an activity descriptor struct called $id_activity
 #[macro_export]
 macro_rules! make_activity {
-    ($id:ident,$arg:ty,$ret:ty) => {
+    ($queue_name:expr,$id:ident,$arg:ty,$ret:ty) => {
         $crate::paste! {
             #[allow(non_camel_case_types)]
             pub struct [<$id _activity>];
@@ -135,6 +145,7 @@ macro_rules! make_activity {
                 fn register(worker: &mut $crate::Worker) -> anyhow::Result<()> {
                     <Self as $crate::TemporalioActivityDescriptor>::register(worker)
                 }
+                fn queue_name() -> &'static str { $queue_name }
             }
             impl $crate::TemporalioDescriptorValueTypes for [<$id _activity>] {
                 type Arg = $arg;
@@ -153,7 +164,7 @@ pub use make_activity;
 /// Create an activity descriptor struct called $id_activity
 #[macro_export]
 macro_rules! make_activity_sync {
-    ($id:ident,$arg:ty,$ret:ty) => {
+    ($queue_name:expr,$id:ident,$arg:ty,$ret:ty) => {
         $crate::paste! {
             #[allow(non_camel_case_types)]
             pub struct [<$id _activity>];
@@ -164,6 +175,7 @@ macro_rules! make_activity_sync {
                 fn register(worker: &mut $crate::Worker) -> anyhow::Result<()> {
                     <Self as $crate::TemporalioActivityDescriptor>::register(worker)
                 }
+                fn queue_name() -> &'static str { $queue_name }
             }
             impl $crate::TemporalioDescriptorValueTypes for [<$id _activity>] {
                 type Arg = $arg;
@@ -255,7 +267,7 @@ pub trait TemporalioWorkflowDescriptor:
             let _handle1 = client
                 .start_workflow(
                     input,
-                    TASK_QUEUE_NAME.to_owned(), // task queue
+                    Self::queue_name().to_owned(), // task queue
                     workflow_id.to_string(),    // workflow id
                     Self::name().to_owned(),    // workflow type
                     None,
@@ -412,7 +424,7 @@ pub trait TemporalioWorkflowDescriptor:
 /// Create a workflow descriptor struct called $id_workflow
 #[macro_export]
 macro_rules! make_workflow {
-    ($id:ident,$arg:ty,$ret:ty) => {
+    ($queue_name:expr,$id:ident,$arg:ty,$ret:ty) => {
         $crate::paste! {
             #[allow(non_camel_case_types)]
             pub struct [<$id _workflow>];
@@ -423,6 +435,7 @@ macro_rules! make_workflow {
                 fn register(worker: &mut $crate::Worker) -> $crate::anyhow::Result<()> {
                     <Self as $crate::TemporalioWorkflowDescriptor>::register(worker)
                 }
+                fn queue_name() -> &'static str { $queue_name }
             }
             impl $crate::TemporalioDescriptorValueTypes for [<$id _workflow>] {
                 type Arg = $arg;
@@ -457,17 +470,18 @@ fn create_worker<T: TemporalioDescriptorRegister>(
     use temporal_sdk_core_api::{telemetry::TelemetryOptionsBuilder, worker::WorkerConfigBuilder};
     let telemetry_options = TelemetryOptionsBuilder::default().build()?;
     let runtime = CoreRuntime::new_assume_tokio(telemetry_options)?;
-    let worker_build_id = format!("{TASK_QUEUE_NAME}__{}", build_id());
+    let queue_name = T::queue_name();
+    let worker_build_id = format!("{queue_name}__{}", build_id());
     info!("worker build_id: {:?}", worker_build_id);
 
     let worker_config = WorkerConfigBuilder::default()
         .namespace(TEMPORALIO_NAMESPACE)
-        .task_queue(TASK_QUEUE_NAME)
+        .task_queue(queue_name)
         .worker_build_id(worker_build_id)
         .build()?;
 
     let core_worker = init_worker(&runtime, worker_config, client)?;
-    let mut worker = Worker::new_from_core(Arc::new(core_worker), TASK_QUEUE_NAME);
+    let mut worker = Worker::new_from_core(Arc::new(core_worker), queue_name);
     T::register(&mut worker)?;
     Ok(worker)
 }
@@ -538,22 +552,21 @@ pub async fn run_worker<T: TemporalioDescriptorRegister>() -> anyhow::Result<()>
 pub mod test {
     use super::*;
 
-    make_activity!(test_function_async, u32, u32);
+    make_activity!("taskdef_test_internal", test_function_async, u32, u32);
     async fn test_function_async(_payload: u32) -> Result<u32, anyhow::Error> {
         println!("test_function_async T={:?}", std::thread::current().id());
         Ok(_payload)
     }
 
-    make_activity_sync!(test_function_sync, u32, u32);
+    make_activity_sync!("taskdef_test_internal", test_function_sync, u32, u32);
     fn test_function_sync(_payload: u32) -> Result<u32, anyhow::Error> {
         println!("test_function_sync T={:?}", std::thread::current().id());
         Ok(_payload)
     }
 
-    make_workflow!(sample_workflow2, u32, u32);
+    make_workflow!("taskdef_test_internal", sample_workflow2, u32, u32);
     pub async fn sample_workflow2(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
         println!("sample_workflow 1 T={:?}", std::thread::current().id());
-        // test_function_async(arg).await?;
         let act1 = test_function_async_activity::run(&ctx, arg).await?;
         println!("sample_workflow 2 T={:?}", std::thread::current().id());
         let act2 = test_function_sync_activity::run(&ctx, arg).await?;
@@ -565,7 +578,6 @@ pub mod test {
     async fn test_task_client_works() {
         let _client = get_client().await.unwrap();
         let _namespaces = _client.list_namespaces().await.unwrap();
-        // println!("namespaces: {:#?}", _namespaces.len());
     }
 
     #[tokio::test]

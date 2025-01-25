@@ -248,7 +248,7 @@ async fn test_redis_exp_cache() {
         .query_async::<Vec<u8>>(&mut conn)
         .await;
     info!("{:#?}", x);
-    assert_eq!(x.unwrap(), bincode::serialize(&6_u32).unwrap());
+    assert_eq!(x.unwrap(), bincode::serialize(&Result::<u32, String>::Ok(6_u32)).unwrap());
 
     // sleep 2s -- ensure expired from redis
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -278,7 +278,7 @@ async fn test_redis_drop_cache() {
         .query_async::<Vec<u8>>(&mut conn)
         .await;
     info!("{:#?}", x);
-    assert_eq!(x.unwrap(), bincode::serialize(&6_u32).unwrap());
+    assert_eq!(x.unwrap(), bincode::serialize(&Result::<u32, String>::Ok(6_u32)).unwrap());
 
     // DROP CACHE HERE
     drop_redis_cache("test_fn2", &6_u32).await.unwrap();

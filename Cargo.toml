@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "hoover3_client", "hoover3_database", "hoover3_taskdef", "hoover3_types", "tasks/filesystem_scanner",
+    "hoover3_client", "hoover3_database", "hoover3_taskdef", "hoover3_macro", "hoover3_types", "tasks/filesystem_scanner", "hoover3_macro2",
 ]
 
 [workspace.package]
@@ -48,4 +48,4 @@ opt-level = 3
 [profile.dev.build-override]
 opt-level = 3
 codegen-units = 16
-debug = false # when possible
+debug = false

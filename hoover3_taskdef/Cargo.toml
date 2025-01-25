@@ -6,7 +6,6 @@ authors = {workspace = true}
 edition = {workspace = true}
 publish  = {workspace = true}
 
-
 [dependencies]
 # common
 tokio = {workspace = true}
@@ -14,7 +13,13 @@ futures= {workspace = true}
 anyhow = {workspace = true}
 futures-util = {workspace = true}
 once_cell= {workspace = true}
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+paste.workspace = true
 hoover3_types = {path = "../hoover3_types"}
+hoover3_macro = {path = "../hoover3_macro"}
+buildid = "1.0.3"
 # temporal
 temporal-client = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e" }
 temporal-sdk = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e"}
@@ -22,9 +27,4 @@ temporal-sdk-core = { git = "https://github.com/temporalio/sdk-core" , rev = "6e
 temporal-sdk-core-api = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e"}
 temporal-sdk-core-protos = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e"}
 prost-wkt-types = "0.6.0"
-tracing.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-paste.workspace = true
-buildid = "1.0.3"
 tonic = "0.12.3"

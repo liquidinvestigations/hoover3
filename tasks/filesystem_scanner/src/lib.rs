@@ -8,7 +8,7 @@ use hoover3_database::models::collection::filesystem::FsFileDbRow;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
     anyhow, make_activity, make_activity_sync, make_workflow, TemporalioActivityDescriptor,
-    WfContext, WfExitValue, WorkflowResult,
+    WfContext, WfExitValue, WorkflowResult, workflow, activity
 };
 use hoover3_types::datasource::{DatasourceSettings, DatasourceUiRow};
 use hoover3_types::filesystem::FsScanDatasourceResult;
@@ -16,6 +16,8 @@ use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+const FILESYSTEM_SCANNER_TASK_QUEUE: &'static str = "filesystem_scanner";
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ScanDatasourceArgs {
@@ -38,11 +40,7 @@ pub async fn start_scan(
     Ok(())
 }
 
-make_workflow!(
-    fs_scan_datasource,
-    ScanDatasourceArgs,
-    FsScanDatasourceResult
-);
+#[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_scan_datasource(
     wf_ctx: WfContext,
     args: ScanDatasourceArgs,
@@ -82,11 +80,7 @@ async fn fs_scan_datasource(
 }
 
 
-make_workflow!(
-    fs_scan_datasource_group,
-    Vec<ScanDatasourceArgs>,
-    FsScanDatasourceResult
-);
+#[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_scan_datasource_group(
     wf_ctx: WfContext,
     args: Vec<ScanDatasourceArgs>,
@@ -103,14 +97,10 @@ async fn fs_scan_datasource_group(
     Ok(WfExitValue::Normal(scan_result))
 }
 
-make_activity!(
-    fs_do_scan_datasource,
-    ScanDatasourceArgs,
-    (FsScanDatasourceResult, Vec<PathBuf>)
-);
+#[activity(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_do_scan_datasource(
     arg: ScanDatasourceArgs,
-) -> Result<(FsScanDatasourceResult, Vec<PathBuf>), anyhow::Error> {
+) -> anyhow::Result<(FsScanDatasourceResult, Vec<PathBuf>)> {
     let mut file_count = 0;
     let mut dir_count = 0;
     let mut file_size_bytes = 0;
