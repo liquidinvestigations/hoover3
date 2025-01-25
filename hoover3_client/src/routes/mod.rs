@@ -23,8 +23,8 @@ use crate::pages::ServerCallLogPage;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
-#[clippy::ignore(clippy::empty_line_after_outer_attr)]
-#[clippy::ignore(clippy::empty_line_before_outer_attr)]
+#[allow(clippy::empty_line_after_outer_attr)]
+#[allow(clippy::empty_line_before_outer_attr)]
 pub enum Route {
     #[layout(NavbarLayout)]
 
