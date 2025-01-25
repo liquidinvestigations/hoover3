@@ -304,6 +304,7 @@ pub trait TemporalioWorkflowDescriptor:
         async move { Self::start_as_child(wf_ctx, arg).await?.result().await }
     }
 
+    #[allow(clippy::type_complexity)]
     fn run_parallel(
         wf_ctx: &WfContext,
         args: Vec<Self::Arg>,

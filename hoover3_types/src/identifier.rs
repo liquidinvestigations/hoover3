@@ -39,9 +39,9 @@ impl CollectionId {
     }
 }
 
-impl ToString for CollectionId {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl std::fmt::Display for CollectionId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -96,15 +96,8 @@ impl DatabaseIdentifier {
     }
 }
 
-impl ToString for DatabaseIdentifier {
-    fn to_string(&self) -> String {
-        self.0.clone()
-    }
-}
-
-use std::fmt;
-impl fmt::Display for &DatabaseIdentifier {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for DatabaseIdentifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.0)
     }
 }
