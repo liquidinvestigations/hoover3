@@ -268,8 +268,8 @@ pub trait TemporalioWorkflowDescriptor:
                 .start_workflow(
                     input,
                     Self::queue_name().to_owned(), // task queue
-                    workflow_id.to_string(),    // workflow id
-                    Self::name().to_owned(),    // workflow type
+                    workflow_id.to_string(),       // workflow id
+                    Self::name().to_owned(),       // workflow type
                     None,
                     WorkflowOptions {
                         id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
@@ -313,25 +313,19 @@ pub trait TemporalioWorkflowDescriptor:
         async move {
             let mut fut_1 = futures::stream::FuturesUnordered::new();
             for arg in args.into_iter() {
-                fut_1.push(async move {
-                    (
-                        arg.clone(),
-                        Self::start_as_child(
-                            &wf_ctx,
-                            arg,
-                        )
-                        .await,
-                    )
-                });
+                fut_1.push(async move { (arg.clone(), Self::start_as_child(&wf_ctx, arg).await) });
             }
 
             let mut fut_2 = futures::stream::FuturesUnordered::new();
             while let Some((arg, res)) = fut_1.next().await {
                 fut_2.push(async move {
-                    (arg, match res {
-                        Ok(res) => res.result().await,
-                        Err(e) => Err(e),
-                    })
+                    (
+                        arg,
+                        match res {
+                            Ok(res) => res.result().await,
+                            Err(e) => Err(e),
+                        },
+                    )
                 });
             }
 

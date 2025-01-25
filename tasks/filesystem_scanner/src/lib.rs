@@ -7,8 +7,8 @@ use hoover3_database::models::collection::filesystem::FsDirectoryDbRow;
 use hoover3_database::models::collection::filesystem::FsFileDbRow;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
-    anyhow, make_activity, make_activity_sync, make_workflow, TemporalioActivityDescriptor,
-    WfContext, WfExitValue, WorkflowResult, workflow, activity
+    activity, anyhow, make_activity, make_activity_sync, make_workflow, workflow,
+    TemporalioActivityDescriptor, WfContext, WfExitValue, WorkflowResult,
 };
 use hoover3_types::datasource::{DatasourceSettings, DatasourceUiRow};
 use hoover3_types::filesystem::FsScanDatasourceResult;
@@ -26,7 +26,11 @@ pub struct ScanDatasourceArgs {
     pub path: Option<PathBuf>,
 }
 
-pub type AllTasks = (fs_scan_datasource_workflow, fs_do_scan_datasource_activity, fs_scan_datasource_group_workflow);
+pub type AllTasks = (
+    fs_scan_datasource_workflow,
+    fs_do_scan_datasource_activity,
+    fs_scan_datasource_group_workflow,
+);
 
 pub async fn start_scan(
     (c_id, ds_id): (CollectionId, DatabaseIdentifier),
@@ -48,23 +52,31 @@ async fn fs_scan_datasource(
     let (mut scan_result, next_paths) =
         fs_do_scan_datasource_activity::run(&wf_ctx, args.clone()).await?;
 
-    let args = next_paths.into_iter().map(|p| ScanDatasourceArgs {
-        collection_id: args.collection_id.clone(),
-        datasource_id: args.datasource_id.clone(),
-        path: Some(p),
-    }).collect::<Vec<_>>();
+    let args = next_paths
+        .into_iter()
+        .map(|p| ScanDatasourceArgs {
+            collection_id: args.collection_id.clone(),
+            datasource_id: args.datasource_id.clone(),
+            path: Some(p),
+        })
+        .collect::<Vec<_>>();
 
     let results = if args.len() < 10 {
         fs_scan_datasource_workflow::run_parallel(&wf_ctx, args)
-            .await?.into_iter()
+            .await?
+            .into_iter()
             .map(|r| r.1)
             .collect::<Vec<_>>()
     } else {
         // to avoid large workflow history, break this into smaller chunks
         let chunk_size = ((1.0 + args.len() as f64).sqrt()).ceil() as usize;
-        let groups = args.chunks(chunk_size).map(|c| c.to_vec()).collect::<Vec<_>>();
+        let groups = args
+            .chunks(chunk_size)
+            .map(|c| c.to_vec())
+            .collect::<Vec<_>>();
         fs_scan_datasource_group_workflow::run_parallel(&wf_ctx, groups)
-            .await?.into_iter()
+            .await?
+            .into_iter()
             .map(|r| r.1)
             .collect::<Vec<_>>()
     };
@@ -78,7 +90,6 @@ async fn fs_scan_datasource(
     }
     Ok(WfExitValue::Normal(scan_result))
 }
-
 
 #[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_scan_datasource_group(
