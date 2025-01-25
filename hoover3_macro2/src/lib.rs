@@ -24,7 +24,7 @@ fn extract_activity_arg_type(f: &ItemFn) -> Box<syn::Type> {
     let FnArg::Typed(arg_pattern) = arg else {
         panic!("activity argument must be a type, not self");
     };
-    
+
     arg_pattern.ty.clone()
 }
 
@@ -104,7 +104,7 @@ fn extract_workflow_arg_type(f: &ItemFn) -> Box<syn::Type> {
     let FnArg::Typed(arg_pattern) = arg else {
         panic!("workflow argument must be a type, not self");
     };
-    
+
     arg_pattern.ty.clone()
 }
 
