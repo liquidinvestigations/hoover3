@@ -128,7 +128,7 @@ fn _NewDatasourceFormPage(
                             spawn(async move {
                                 if let Ok(d) = DatabaseIdentifier::new(&name) {
                                     if let Ok(r) = create_datasource((collection_id.clone(), d.clone(), settings.clone())).await {
-                                        if let Ok(_) =  crate::api::start_scan((collection_id.clone(), d.clone())).await {
+                                        if crate::api::start_scan((collection_id.clone(), d.clone())).await.is_ok() {
                                             navigator().push(Route::DatasourceAdminDetailsPage {
                                                 collection_id: collection_id_str.clone(),
                                                 datasource_id: r.datasource_id.to_string()

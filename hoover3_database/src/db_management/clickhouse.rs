@@ -29,7 +29,7 @@ impl DatabaseSpaceManager for ClickhouseDatabaseHandle {
         Ok(Arc::new(c))
     }
     async fn space_exists(&self, name: &DatabaseIdentifier) -> anyhow::Result<bool> {
-        let query = format!("EXISTS DATABASE {}", name.to_string());
+        let query = format!("EXISTS DATABASE {}", name);
         let rv = self.query(&query).fetch_one::<u8>().await?;
         Ok(rv != 0)
     }

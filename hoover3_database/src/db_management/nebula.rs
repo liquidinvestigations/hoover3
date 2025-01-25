@@ -60,7 +60,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
             .collect::<Vec<_>>())
     }
     async fn space_exists(&self, name: &DatabaseIdentifier) -> anyhow::Result<bool> {
-        let query = format!(" SHOW CREATE SPACE `{}`;", name.to_string());
+        let query = format!(" SHOW CREATE SPACE `{}`;", name);
         let query = query.as_bytes().to_vec();
 
         #[derive(Deserialize, Debug)]
@@ -86,7 +86,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
                 return Ok(());
             }
 
-            let query = format!("  CREATE SPACE IF NOT EXISTS  `{}`  (partition_num=64, replica_factor=1, vid_type=FIXED_STRING(64)) ;", name.to_string());
+            let query = format!("  CREATE SPACE IF NOT EXISTS  `{}`  (partition_num=64, replica_factor=1, vid_type=FIXED_STRING(64)) ;", name);
             info!("nebula query: {}", query);
             let query = query.as_bytes().to_vec();
 
@@ -114,7 +114,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
             return Ok(());
         }
 
-        let query = format!("  DROP SPACE IF EXISTS  `{}`  ;", name.to_string());
+        let query = format!("  DROP SPACE IF EXISTS  `{}`  ;", name);
         let query = query.as_bytes().to_vec();
 
         let res = {

@@ -35,7 +35,7 @@ impl CollectionId {
     }
 
     pub fn database_name(&self) -> anyhow::Result<DatabaseIdentifier> {
-        DatabaseIdentifier::new(format!("{}__{}", DEFAULT_KEYSPACE_NAME, self.to_string()))
+        DatabaseIdentifier::new(format!("{}__{}", DEFAULT_KEYSPACE_NAME, self))
     }
 }
 

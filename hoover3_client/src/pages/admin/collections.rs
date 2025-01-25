@@ -180,7 +180,7 @@ pub fn CollectionAdminDetailsPage(collection_id: String) -> Element {
 
 #[component]
 fn CollectionInfoCard(c: CollectionId) -> Element {
-    let c_title = format!("Collection `{}`", c.to_string());
+    let c_title = format!("Collection `{}`", c);
     let c2 = c.clone();
     let mut info_res = use_resource(move || crate::api::get_single_collection(c2.clone()));
     let mut info = use_signal(|| None);
