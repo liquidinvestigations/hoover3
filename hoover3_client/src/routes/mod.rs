@@ -1,7 +1,6 @@
 mod url_param;
 pub use url_param::UrlParam;
 
-use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
