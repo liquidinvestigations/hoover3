@@ -158,13 +158,6 @@ server_wrapper!(
 
 server_wrapper!(
     hoover3_database::client_query::list_disk,
-    get_path_metadata,
-    PathBuf,
-    FsMetadata
-);
-
-server_wrapper!(
-    hoover3_database::client_query::list_disk,
     list_directory,
     PathBuf,
     Vec<FsMetadata>

@@ -7,7 +7,7 @@ use crate::db_management::CollectionId;
 use crate::{db_management::DatabaseSpaceManager, db_management::ScyllaDatabaseHandle};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
-const MIGRATE_LOCK_ID: &'static str = "migrate_lock";
+const MIGRATE_LOCK_ID: &str = "migrate_lock";
 use super::db_management::redis::with_redis_lock;
 
 /// sometimes we run from workspace root. Sometimes we run from package root.
@@ -89,11 +89,11 @@ async fn _migrate_common() -> Result<()> {
 }
 
 pub async fn migrate_common() -> Result<()> {
-    with_redis_lock(&MIGRATE_LOCK_ID, async move { _migrate_common().await }).await?
+    with_redis_lock(MIGRATE_LOCK_ID, async move { _migrate_common().await }).await?
 }
 
 async fn _migrate_collection(c: CollectionId) -> Result<()> {
-    info!("migrate collection {}", c.name());
+    info!("migrate collection {}", c.to_string());
     let space = c.database_name()?;
     let c = c.clone();
     scylla_migrate_collection(&c).await?;
@@ -145,7 +145,7 @@ async fn _migrate_collection(c: CollectionId) -> Result<()> {
 pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
     let c = c.clone();
     with_redis_lock(
-        &MIGRATE_LOCK_ID,
+        MIGRATE_LOCK_ID,
         async move { _migrate_collection(c).await },
     )
     .await?
@@ -153,12 +153,12 @@ pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
 
 async fn _drop_collection(c: CollectionId) -> Result<()> {
     let c = c.clone();
-    info!("dropping collection {}", c.name());
+    info!("dropping collection {}", c.to_string());
     let session = ScyllaDatabaseHandle::global_session().await?;
 
     use crate::models::common::collection::CollectionDbRow;
     // use charybdis::operations::Delete;
-    CollectionDbRow::delete_by_collection_id(c.name())
+    CollectionDbRow::delete_by_collection_id(c.to_string())
         .execute(&session)
         .await
         .context("delete collection from scylla")?;
@@ -203,18 +203,18 @@ async fn _drop_collection(c: CollectionId) -> Result<()> {
     check_db!(ScyllaDatabaseHandle);
     check_db!(S3DatabaseHandle);
 
-    info!("collection {} dropped OK", c.name());
+    info!("collection {} dropped OK", c.to_string());
 
     Ok(())
 }
 
 pub async fn drop_collection(c: &CollectionId) -> Result<()> {
     let c = c.clone();
-    with_redis_lock(&MIGRATE_LOCK_ID, async move { _drop_collection(c).await }).await?
+    with_redis_lock(MIGRATE_LOCK_ID, async move { _drop_collection(c).await }).await?
 }
 
 async fn scylla_migrate_collection(c: &CollectionId) -> Result<()> {
-    info!("scylla_migrate_collection {}", c.name());
+    info!("scylla_migrate_collection {}", c.to_string());
     let session = ScyllaDatabaseHandle::open_session(c.database_name()?).await?;
     let space_name = c.database_name()?.to_string();
 

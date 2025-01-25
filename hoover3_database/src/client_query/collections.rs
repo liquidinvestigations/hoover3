@@ -13,7 +13,7 @@ use tracing::info;
 /// Client API method, returns details for a single collection in the system.
 pub async fn get_single_collection(c: CollectionId) -> Result<CollectionUiRow> {
     let session = ScyllaDatabaseHandle::global_session().await?;
-    Ok(CollectionDbRow::find_by_collection_id(c.name())
+    Ok(CollectionDbRow::find_by_collection_id(c.to_string())
         .execute(&session)
         .await?
         .into())
@@ -25,7 +25,7 @@ pub async fn get_single_collection(c: CollectionId) -> Result<CollectionUiRow> {
 pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
     let session = ScyllaDatabaseHandle::global_session().await?;
 
-    if let Ok(x) = CollectionDbRow::find_by_collection_id(c.name())
+    if let Ok(x) = CollectionDbRow::find_by_collection_id(c.to_string())
         .execute(&session)
         .await
     {
@@ -33,8 +33,8 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
     }
     let now = chrono::offset::Utc::now();
     let new_row = CollectionDbRow {
-        collection_id: c.name(),
-        collection_title: c.name().replace("_", " "),
+        collection_id: c.to_string(),
+        collection_title: c.to_string().replace("_", " "),
         collection_description: "".to_string(),
         time_created: now,
         time_modified: now,
@@ -103,7 +103,7 @@ pub async fn drop_collection(c: CollectionId) -> Result<()> {
     crate::migrate::drop_collection(&c).await?;
 
     let session = ScyllaDatabaseHandle::global_session().await?;
-    CollectionDbRow::delete_by_collection_id(c.name())
+    CollectionDbRow::delete_by_collection_id(c.to_string())
         .execute(&session)
         .await?;
 
@@ -122,7 +122,7 @@ async fn test_collection_query() -> Result<()> {
     // check we can create collections
     let cid = CollectionId::new("test_collection_query")?;
     let mut z = create_new_collection(cid.clone()).await?;
-    assert_eq!(z.collection_id, cid.name());
+    assert_eq!(z.collection_id, cid.to_string());
 
     // check create x2 is ok
     let z1 = create_new_collection(cid.clone()).await?;

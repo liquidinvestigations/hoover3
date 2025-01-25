@@ -5,10 +5,7 @@ use dioxus::prelude::*;
 pub trait DataRowDisplay: serde::Serialize + for<'a> serde::Deserialize<'a> {
     fn get_headers() -> Vec<&'static str> {
         // we have serde so we can poll the field names from there
-        serde_aux::serde_introspection::serde_introspect::<Self>()
-            .iter()
-            .copied()
-            .collect()
+        serde_aux::serde_introspection::serde_introspect::<Self>().to_vec()
     }
     fn render_cell(&self, header_name: &str) -> Element {
         use crate::errors::AnyhowErrorDioxusExt;
@@ -97,7 +94,7 @@ pub fn HtmlTable<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispl
                         tr {
                             for k in T::get_headers().into_iter() {
                                 td {
-                                    {T::render_cell(&item, k)}
+                                    {T::render_cell(item, k)}
                                 }
                             }
                             if let Some((_, cb)) = props.extra {
@@ -144,7 +141,7 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
         .collect::<Vec<_>>();
     let have_editable =
         headers.iter().map(|e| T::can_edit(e)).any(identity) && props.edited_cb.is_some();
-    let mut new_value = use_signal(move || HashMap::new());
+    let mut new_value = use_signal(HashMap::new);
     use_effect(move || {
         new_value.set(
             props
@@ -152,7 +149,7 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
                 .read()
                 .as_ref()
                 .map(|i| i.get_editable_fields())
-                .unwrap_or(HashMap::new()),
+                .unwrap_or_default(),
         );
     });
 

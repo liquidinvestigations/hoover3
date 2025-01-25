@@ -31,8 +31,8 @@ pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadata> {
         is_dir: metadata.is_dir(),
         is_file: metadata.is_file(),
         size_bytes: metadata.len(),
-        modified: metadata.modified().ok().map(|t| DateTime::from(t)),
-        created: metadata.created().ok().map(|t| DateTime::from(t)),
+        modified: metadata.modified().ok().map(DateTime::from),
+        created: metadata.created().ok().map(DateTime::from),
         path: relative_path,
     })
 }

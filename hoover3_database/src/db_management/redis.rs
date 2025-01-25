@@ -34,9 +34,9 @@ pub async fn redis_connection() -> anyhow::Result<redis::aio::MultiplexedConnect
         .clone())
 }
 
-pub async fn with_redis_lock<F: Send>(redis_lock_id: &str, func: F) -> anyhow::Result<F::Output>
+pub async fn with_redis_lock<F>(redis_lock_id: &str, func: F) -> anyhow::Result<F::Output>
 where
-    F: Future + 'static,
+    F: Future + Send + 'static,
     F::Output: 'static + Send + Sync,
 {
     let redis_lock_id = format!("hoover3_lock__{}", redis_lock_id);

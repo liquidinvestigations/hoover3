@@ -5,7 +5,6 @@ cargo run -p nebula-demo-tokio --bin nebula_demo_tokio_v3_bb8_graph_pool 127.0.0
 use std::{env, sync::Arc};
 use tracing::info;
 
-use async_compat::Compat;
 use bb8_nebula::{
     graph::GraphClientConfiguration, impl_tokio::v3::graph::new_graph_connection_manager,
     GraphConnectionManager,
@@ -14,13 +13,8 @@ use fbthrift_transport::AsyncTransportConfiguration;
 
 use bb8::{Pool, PooledConnection};
 use nebula_client::v3::{graph::GraphQueryOutput, GraphQuery as _, GraphTransportResponseHandler};
-use nebula_client::VersionV3;
 use serde::Deserialize;
-use tokio::{
-    net::TcpStream,
-    sync::{Mutex, OnceCell},
-    time::Sleep,
-};
+use tokio::sync::{Mutex, OnceCell};
 
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
@@ -40,7 +34,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
     async fn global_session() -> anyhow::Result<Arc<Self>> {
         use anyhow::Context;
         Ok(Arc::new(Mutex::new(
-            _open_new_session(&DEFAULT_KEYSPACE_NAME)
+            _open_new_session(DEFAULT_KEYSPACE_NAME)
                 .await
                 .context("_open_new_session")?,
         )))
@@ -55,8 +49,8 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
     async fn list_spaces(&self) -> anyhow::Result<Vec<DatabaseIdentifier>> {
         let res = {
             let mut session = self.lock().await;
-            let res = session.show_spaces().await?;
-            res
+
+            session.show_spaces().await?
         };
         info!("show spaces: {res:?}");
         Ok(res
@@ -97,18 +91,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
             let query = query.as_bytes().to_vec();
 
             let res = {
-                let mut session: tokio::sync::MutexGuard<
-                    '_,
-                    PooledConnection<
-                        '_,
-                        GraphConnectionManager<
-                            Compat<TcpStream>,
-                            Sleep,
-                            GraphTransportResponseHandler,
-                            VersionV3,
-                        >,
-                    >,
-                > = self.lock().await;
+                let mut session = self.lock().await;
                 let res: Result<_, _> = session.query(&query).await;
                 res
             };
@@ -190,10 +173,7 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
     let mut session = pool.get().await?;
 
     let sql_use = format!("USE {space}")
-        .as_bytes()
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>();
+        .as_bytes().to_vec();
     // use nebula_fbthrift_common_v3::types::ErrorCode;
     match session.query(&sql_use).await {
         Ok(_) => {}
@@ -211,10 +191,7 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
                     vid_type = FIXED_STRING(64)
                     );"
                     )
-                    .as_bytes()
-                    .iter()
-                    .cloned()
-                    .collect::<Vec<_>>();
+                    .as_bytes().to_vec();
                     session.query(&sql_create).await?;
                     for _ in 0..6 {
                         if session.query(&sql_use).await.is_ok() {

@@ -51,11 +51,11 @@ async fn docker_execute(args: &[&str]) -> anyhow::Result<String> {
 #[tokio::test]
 async fn test_container_status_list() {
     let v = get_container_status(()).await.unwrap();
-    assert!(v.len() > 0, "we assume some containers exist");
+    assert!(!v.is_empty(), "we assume some containers exist");
 }
 
 #[tokio::test]
 async fn test_docker_execute() {
     let v = docker_execute(&["ps", "-qa"]).await.unwrap();
-    assert!(v.len() > 0, "we assume some containers exist");
+    assert!(!v.is_empty(), "we assume some containers exist");
 }

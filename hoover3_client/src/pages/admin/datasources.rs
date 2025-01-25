@@ -28,7 +28,7 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
                     let c_id = c_id.clone();
                     let d_id = d_id.clone();
                     async move {
-                    if let Ok(_) =  crate::api::start_scan((c_id.clone(), d_id.clone())).await {
+                    if crate::api::start_scan((c_id.clone(), d_id.clone())).await.is_ok() {
 
                     }
                 }},

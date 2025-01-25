@@ -53,12 +53,14 @@ macro_rules! impl_tuple_register {
                 Ok(())
             }
             fn queue_name() -> &'static str {
-                let mut q = vec![];
-                $(
-                    q.push($T::queue_name());
-                )+
+                let mut q = vec![
+                    $(
+                        $T::queue_name(),
+                    )+
+                ];
                 q.dedup();
-                assert!(q.len() == 1, "all activities and workflows under a worker must have the same queue name");
+                assert!(q.len() == 1,
+                    "all activities and workflows under a worker must have the same queue name");
                 q[0]
             }
         }
@@ -84,7 +86,7 @@ pub trait TemporalioActivityDescriptor:
     fn register(worker: &mut Worker) -> anyhow::Result<()> {
         let n = Self::name();
         let act_fn = move |_ctx: ActContext, arg: Self::Arg| async move {
-            Ok(Self::func(arg).await.map_err(|e| ActivityError::from(e))?)
+            Self::func(arg).await.map_err(ActivityError::from)
         };
         worker.register_activity(n, act_fn);
         Ok(())
@@ -101,7 +103,7 @@ pub trait TemporalioActivityDescriptor:
             };
             let opt = ActivityOptions {
                 activity_type: Self::name().to_string(),
-                input: input,
+                input,
                 task_queue: Some(Self::queue_name().to_string()),
                 retry_policy: Some(RetryPolicy {
                     initial_interval: Some(ProstDuration {
@@ -206,7 +208,7 @@ impl<T: Sized + TemporalioWorkflowDescriptor> ChildWorkflowFuture<T> {
             match self {
                 ChildWorkflowFuture::Running(started) => {
                     let child_result = started.result().await;
-                    let child_result_status = (&child_result.status)
+                    let child_result_status = child_result.status
                         .as_ref()
                         .context("no child result status")?;
                     match child_result_status {
@@ -259,7 +261,7 @@ pub trait TemporalioWorkflowDescriptor:
     fn client_start(arg: &Self::Arg) -> impl Future<Output = Result<(), anyhow::Error>> {
         async move {
             let workflow_id = Self::workflow_id(arg);
-            let input = vec![arg.as_json_payload()?.into()];
+            let input = vec![arg.as_json_payload()?];
             let client = get_client().await?;
 
             use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowIdConflictPolicy;
@@ -280,7 +282,7 @@ pub trait TemporalioWorkflowDescriptor:
                 .await;
             match _handle1 {
                 Ok(_resp) => {
-                    return Ok(());
+                    Ok(())
                 }
                 Err(e) => {
                     if e.code() == tonic::Code::AlreadyExists {
@@ -289,7 +291,7 @@ pub trait TemporalioWorkflowDescriptor:
                     warn!("error starting workflow {:?}", e);
                     anyhow::bail!("error starting workflow {:?}", e);
                 }
-            };
+            }
         }
     }
     fn run_as_child(
@@ -313,7 +315,7 @@ pub trait TemporalioWorkflowDescriptor:
         async move {
             let mut fut_1 = futures::stream::FuturesUnordered::new();
             for arg in args.into_iter() {
-                fut_1.push(async move { (arg.clone(), Self::start_as_child(&wf_ctx, arg).await) });
+                fut_1.push(async move { (arg.clone(), Self::start_as_child(wf_ctx, arg).await) });
             }
 
             let mut fut_2 = futures::stream::FuturesUnordered::new();
@@ -351,7 +353,7 @@ pub trait TemporalioWorkflowDescriptor:
             let wf_ctx = wf_ctx.clone();
 
             let workflow_id = Self::workflow_id(&arg);
-            let input = vec![arg.as_json_payload()?.into()];
+            let input = vec![arg.as_json_payload()?];
 
             use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowIdConflictPolicy;
             use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowIdReusePolicy;
@@ -364,7 +366,7 @@ pub trait TemporalioWorkflowDescriptor:
                 workflow_id: workflow_id.to_string(),
                 workflow_type: Self::name().to_string(),
                 task_queue: None, // inherit
-                input: input,
+                input,
                 options: WorkflowOptions {
                     id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
                     id_conflict_policy: WorkflowIdConflictPolicy::UseExisting,
@@ -375,21 +377,21 @@ pub trait TemporalioWorkflowDescriptor:
             let start_result = child_wf.start(&wf_ctx).await;
             match &start_result.status {
                 ChildWorkflowStartStatus::Succeeded(_run_id) => {
-                    return Ok(ChildWorkflowFuture::Running(
+                    Ok(ChildWorkflowFuture::Running(
                         start_result.into_started().unwrap(),
                     ))
                 }
                 ChildWorkflowStartStatus::Failed(s) => match s.cause() {
                     StartChildWorkflowExecutionFailedCause::WorkflowAlreadyExists => {
                         let arg: Self::Arg = arg.clone();
-                        return Ok(ChildWorkflowFuture::AlreadyCompleted(arg, PhantomData));
+                        Ok(ChildWorkflowFuture::AlreadyCompleted(arg, PhantomData))
                     }
                     _e => anyhow::bail!("child workflow start failed: {:?} : {:?}", _e, s),
                 },
                 _ => {
                     anyhow::bail!("child workflow start failed: {:?}", start_result.status);
                 }
-            };
+            }
         }
     }
 
@@ -506,12 +508,10 @@ async fn query_workflow_execution_result(workflow_id: &str) -> anyhow::Result<Ve
     if let Some(history) = wf_result.history {
         for event in history.events.iter().rev() {
             if event.event_type() == WorkflowExecutionCompleted {
-                if let Some(attrib) = event.attributes.as_ref() {
-                    if let WorkflowExecutionCompletedEventAttributes(attrib) = attrib {
-                        if let Some(payloads) = &attrib.result {
-                            if payloads.payloads.len() > 0 {
-                                return Ok(payloads.payloads[0].data.clone());
-                            }
+                if let Some(WorkflowExecutionCompletedEventAttributes(attrib)) = event.attributes.as_ref() {
+                    if let Some(payloads) = &attrib.result {
+                        if !payloads.payloads.is_empty() {
+                            return Ok(payloads.payloads[0].data.clone());
                         }
                     }
                 }
@@ -586,12 +586,11 @@ pub mod test {
         )>();
         println!("{}", test_function_async_activity::name());
 
-        let handle1 = sample_workflow2_workflow::client_start(&x).await?;
+        sample_workflow2_workflow::client_start(&x).await?;
         let rv2 = sample_workflow2_workflow::client_wait_for_completion(&x).await?;
         assert!(rv2 == x + x);
 
-        let handle2 = sample_workflow2_workflow::client_start(&x).await?;
-        assert_eq!(handle1, handle2);
+        sample_workflow2_workflow::client_start(&x).await?;
         Ok(())
     }
 }

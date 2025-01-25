@@ -42,10 +42,7 @@ impl DataRowDisplay for CollectionUiRow {
     }
 
     fn can_edit(_header_name: &str) -> bool {
-        match _header_name {
-            "Collection Title" | "Collection Description" => true,
-            _ => false,
-        }
+        matches!(_header_name, "Collection Title" | "Collection Description")
     }
     fn get_editable_fields(&self) -> std::collections::HashMap<String, String> {
         let mut h = HashMap::new();
@@ -60,9 +57,9 @@ impl DataRowDisplay for CollectionUiRow {
         h
     }
     fn set_editable_fields(&mut self, _h: HashMap<String, String>) {
-        self.collection_title = _h.get(&"Collection Title".to_string()).unwrap().to_string();
+        self.collection_title = _h.get("Collection Title").unwrap().to_string();
         self.collection_description = _h
-            .get(&"Collection Description".to_string())
+            .get("Collection Description")
             .unwrap()
             .to_string();
     }
@@ -101,7 +98,7 @@ pub fn CollectionsAdminListPage() -> Element {
                     // c_list.restart();
                     navigator().push(
                         Route::CollectionAdminDetailsPage {
-                            collection_id: c.name().clone() });
+                            collection_id: c.to_string().clone() });
                 });
             }),
         }
@@ -119,7 +116,7 @@ fn ButtonGroup(c: String, do_refresh: Callback) -> Element {
                 onclick: move |_| {
                     navigator().push(
                         Route::CollectionAdminDetailsPage {
-                            collection_id: c2.name()
+                            collection_id: c2.to_string()
                         }
                     );
                 },
@@ -164,7 +161,7 @@ fn CollectionsCreateWidget(cb: Callback<CollectionId>) -> Element {
                             cb.call(c);
                         }
                     },
-                    disabled: !CollectionId::new(&val.read().clone()).is_ok(),
+                    disabled: CollectionId::new(&val.read().clone()).is_err(),
                     "Create Collection"
                 }
             }
@@ -183,7 +180,7 @@ pub fn CollectionAdminDetailsPage(collection_id: String) -> Element {
 
 #[component]
 fn CollectionInfoCard(c: CollectionId) -> Element {
-    let c_title = format!("Collection `{}`", c.name());
+    let c_title = format!("Collection `{}`", c.to_string());
     let c2 = c.clone();
     let mut info_res = use_resource(move || crate::api::get_single_collection(c2.clone()));
     let mut info = use_signal(|| None);
@@ -224,7 +221,7 @@ impl DataRowDisplay for DatasourceUiRow {
         match header_name {
             "Name" => rsx! { Link {
                 to: Route::DatasourceAdminDetailsPage {
-                    collection_id: self.collection_id.name(),
+                    collection_id: self.collection_id.to_string(),
                     datasource_id: self.datasource_id.to_string()
                 },
                 "{self.datasource_id.to_string()}"
@@ -261,7 +258,7 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
                 button {
                     onclick: move |_| {
                         let _ = navigator().push(Route::NewDatasourceFormPage {
-                            collection_id: c3.name().clone(),
+                            collection_id: c3.to_string().clone(),
                             current_path: UrlParam::new(std::path::PathBuf::from("."))
                         });
                     },
@@ -274,7 +271,7 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
                     onclick: move |_| {
                         let c4 = c4.clone();
                         let _ = navigator().push(Route::DatasourceAdminDetailsPage {
-                            collection_id: c4.name().clone(),
+                            collection_id: c4.to_string().clone(),
                             datasource_id: row.datasource_id.to_string()
                         });
                     },

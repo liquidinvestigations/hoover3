@@ -40,11 +40,10 @@ async fn test_task_client_and_worker_integration() -> anyhow::Result<()> {
     )>();
     println!("{}", test_function_async2_activity::name());
 
-    let handle1 = sample_workflow3_workflow::client_start(&x).await?;
+    sample_workflow3_workflow::client_start(&x).await?;
     let rv2 = sample_workflow3_workflow::client_wait_for_completion(&x).await?;
     assert!(rv2 == x + x);
 
-    let handle2 = sample_workflow3_workflow::client_start(&x).await?;
-    assert_eq!(handle1, handle2);
+    sample_workflow3_workflow::client_start(&x).await?;
     Ok(())
 }

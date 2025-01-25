@@ -1,4 +1,3 @@
-use futures::StreamExt;
 use hoover3_database::charybdis::batch::ModelBatch;
 use hoover3_database::client_query;
 use hoover3_database::db_management::DatabaseSpaceManager;
@@ -17,7 +16,7 @@ use hoover3_types::identifier::DatabaseIdentifier;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-const FILESYSTEM_SCANNER_TASK_QUEUE: &'static str = "filesystem_scanner";
+const FILESYSTEM_SCANNER_TASK_QUEUE: &str = "filesystem_scanner";
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ScanDatasourceArgs {
@@ -125,14 +124,14 @@ async fn fs_do_scan_datasource(
     };
     let dir_path = root_path
         .to_path_buf()
-        .join((&arg.path).clone().unwrap_or(PathBuf::from("")));
+        .join(arg.path.clone().unwrap_or(PathBuf::from("")));
     let children = client_query::list_disk::list_directory(dir_path).await?;
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];
 
     children.into_iter().for_each(|mut c| {
-        c.path = c.path.strip_prefix(&root_path).unwrap().to_path_buf();
+        c.path = c.path.strip_prefix(root_path).unwrap().to_path_buf();
         if c.is_file {
             files.push(FsFileDbRow::from_meta(&arg.datasource_id, &c));
             file_count += 1;

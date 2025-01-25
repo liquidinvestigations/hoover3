@@ -71,9 +71,9 @@ fn _NewDatasourceFormPage(
     use crate::errors::AnyhowErrorDioxusExt;
     use hoover3_types::identifier::CollectionId;
 
-    let _collection = CollectionId::new(&collection_id.read().as_str()).throw()?;
-    let mut name = use_signal(|| String::new());
-    let mut children = use_signal(|| Vec::new());
+    let _collection = CollectionId::new(collection_id.read().as_str()).throw()?;
+    let mut name = use_signal(String::new);
+    let mut children = use_signal(Vec::new);
 
     let can_create_datasource = use_memo(move || {
         let name = name.read().clone();
@@ -124,7 +124,7 @@ fn _NewDatasourceFormPage(
                             let path = path.peek().clone();
                             let settings = DatasourceSettings::LocalDisk { path };
                             let collection_id = _collection.clone();
-                            let collection_id_str = collection_id.name();
+                            let collection_id_str = collection_id.to_string();
                             spawn(async move {
                                 if let Ok(d) = DatabaseIdentifier::new(&name) {
                                     if let Ok(r) = create_datasource((collection_id.clone(), d.clone(), settings.clone())).await {
@@ -147,8 +147,8 @@ fn _NewDatasourceFormPage(
         div {
             class: "container",
             DatasourcePathPicker{
-                path: path.clone(),
-                child_list: children.clone(),
+                path: path,
+                child_list: children,
                 collection_id: collection_id.read().clone()
             }
         }

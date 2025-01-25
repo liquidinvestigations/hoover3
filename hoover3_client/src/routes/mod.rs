@@ -23,6 +23,8 @@ use crate::pages::ServerCallLogPage;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
+#[clippy::allow(clippy::empty_line_after_outer_attr)]
+#[clippy::allow(clippy::empty_line_before_outer_attr)]
 pub enum Route {
     #[layout(NavbarLayout)]
 
@@ -38,7 +40,6 @@ pub enum Route {
 
         #[route("/server-call-logs")]
         ServerCallLogPage {},
-
     #[end_nest]
 
     #[nest("/admin")]
@@ -153,7 +154,7 @@ pub fn read_server_call_history() -> ReadOnlySignal<HashMap<String, VecDeque<Ser
 /// Also initializes the component tracking backend server calls.
 #[component]
 fn NavbarLayout() -> Element {
-    let mut currently_loading = use_signal(|| HashSet::new());
+    let mut currently_loading = use_signal(HashSet::new);
     let mut show_pic = use_signal(|| false);
     use_effect(move || {
         show_pic.set(!currently_loading.read().is_empty());

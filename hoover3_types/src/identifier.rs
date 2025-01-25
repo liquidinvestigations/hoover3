@@ -33,11 +33,15 @@ impl CollectionId {
 
         Ok(c)
     }
-    pub fn name(&self) -> String {
-        self.0.clone()
-    }
+
     pub fn database_name(&self) -> anyhow::Result<DatabaseIdentifier> {
-        DatabaseIdentifier::new(format!("{}__{}", DEFAULT_KEYSPACE_NAME, self.name()))
+        DatabaseIdentifier::new(format!("{}__{}", DEFAULT_KEYSPACE_NAME, self.to_string()))
+    }
+}
+
+impl ToString for CollectionId {
+    fn to_string(&self) -> String {
+        self.0.clone()
     }
 }
 
@@ -90,7 +94,10 @@ impl DatabaseIdentifier {
 
         Ok(Self(name))
     }
-    pub fn to_string(&self) -> String {
+}
+
+impl ToString for DatabaseIdentifier {
+    fn to_string(&self) -> String {
         self.0.clone()
     }
 }

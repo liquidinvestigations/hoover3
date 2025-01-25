@@ -57,7 +57,7 @@ impl DatabaseSpaceManager for MeilisearchDatabaseHandle {
             )
             .await;
         match res? {
-            meilisearch_sdk::tasks::Task::Succeeded { content: _ } => return Ok(()),
+            meilisearch_sdk::tasks::Task::Succeeded { content: _ } => Ok(()),
             _x => {
                 anyhow::bail!(
                     "create index task not finished successfully after waiting! {:?}",
@@ -79,7 +79,7 @@ impl DatabaseSpaceManager for MeilisearchDatabaseHandle {
             )
             .await;
         match res? {
-            meilisearch_sdk::tasks::Task::Succeeded { content: _ } => return Ok(()),
+            meilisearch_sdk::tasks::Task::Succeeded { content: _ } => Ok(()),
             _x => {
                 anyhow::bail!(
                     "drop index task not finished successfully after waiting! {:?}",

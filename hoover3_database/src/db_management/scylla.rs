@@ -125,7 +125,7 @@ async fn _open_new_session(space: DatabaseIdentifier) -> anyhow::Result<Arc<Scyl
     info!("connect {}", uri);
 
     let s1 = match SessionBuilder::new()
-        .known_node(uri.to_string())
+        .known_node(uri)
         .use_keyspace(&space, false)
         .compression(Some(scylla::frame::Compression::Lz4))
         .build()
@@ -139,7 +139,7 @@ async fn _open_new_session(space: DatabaseIdentifier) -> anyhow::Result<Arc<Scyl
             info!("creating keyspace {}", &space);
             // keyspace does not exist -- connect without and create it
             let s2 = SessionBuilder::new()
-                .known_node(uri.to_string())
+                .known_node(uri)
                 .build()
                 .await?;
             s2.query_unpaged(
