@@ -34,18 +34,19 @@ pub type NebulaDatabaseHandle = Mutex<TSession>;
 pub trait NebulaDatabaseHandleExt {
     fn execute<T: DeserializeOwned>(
         &self,
-        query: String,
-    ) -> impl futures::Future<Output = Result<GraphQueryOutput<T>, GraphQueryError>>;
+        query: &str,
+    ) -> impl futures::Future<Output = Result<Vec<T>, GraphQueryError>>;
 }
+
 
 impl NebulaDatabaseHandleExt for NebulaDatabaseHandle {
     async fn execute<T: DeserializeOwned>(
         &self,
-        query: String,
-    ) -> Result<GraphQueryOutput<T>, GraphQueryError> {
+        query: &str,
+    ) -> Result<Vec<T>, GraphQueryError> {
         let query = query.as_bytes().to_vec();
         let mut session = self.lock().await;
-        session.query_as::<T>(&query).await
+        Ok(session.query_as::<T>(&query).await?.data_set)
     }
 }
 
@@ -105,7 +106,14 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
                 return Ok(());
             }
 
-            let query = format!("  CREATE SPACE IF NOT EXISTS  `{}`  (partition_num=64, replica_factor=1, vid_type=FIXED_STRING(64)) ;", name);
+            let query = format!(
+                "
+                CREATE SPACE IF NOT EXISTS  `{}`
+                (partition_num=64, replica_factor=1,
+                vid_type=FIXED_STRING(64)) ;
+                ",
+                name
+            );
             info!("nebula query: {}", query);
             let query = query.as_bytes().to_vec();
 
@@ -163,9 +171,7 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
                 .unwrap();
 
             let username = env::var("NEBULA_USERNAME").unwrap_or_else(|_| "root".to_owned());
-
             let password = env::var("NEBULA_PASSWORD").unwrap_or_else(|_| "password".to_owned());
-
             let space = env::var("NEBULA_DEFAULT_SPACE").ok();
 
             info!("nebula connection pool: {domain} {port} {username} {password} {space:?}",);
@@ -203,11 +209,12 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
                     info!("nebula space not found ; creating...");
                     let sql_create = format!(
                         "
-                    CREATE SPACE IF NOT EXISTS {space}
-                    (partition_num = 16,
-                    replica_factor = 1,
-                    vid_type = FIXED_STRING(64)
-                    );"
+                        CREATE SPACE IF NOT EXISTS {space}
+                        (partition_num = 16,
+                        replica_factor = 1,
+                        vid_type = FIXED_STRING(64)
+                        );
+                        "
                     )
                     .as_bytes()
                     .to_vec();

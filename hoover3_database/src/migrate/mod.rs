@@ -1,5 +1,5 @@
 mod nebula;
-use nebula::_migrate_nebula_collection;
+pub use nebula::{_migrate_nebula_collection,nebula_get_tags_schema};
 
 pub mod schema;
 

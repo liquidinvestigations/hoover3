@@ -1,23 +1,97 @@
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::NebulaDatabaseHandle;
 use crate::db_management::NebulaDatabaseHandleExt;
-use crate::migrate::schema::get_scylla_schema;
+use crate::migrate::schema::get_scylla_schema_primary;
 use crate::migrate::schema::{DatabaseColumn, DatabaseSchema, DatabaseTable};
+use serde::Deserialize;
 
 use anyhow::Result;
 use hoover3_types::identifier::CollectionId;
+use hoover3_types::identifier::DatabaseIdentifier;
 use tracing::info;
 
 pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     info!("migrating nebula collection {}...", c);
-    let qs = nebula_create_tags_query(&get_scylla_schema(c).await?);
+    let scylla_schema = get_scylla_schema_primary(c).await?;
+    // if we already have all the tags, skip the create
     let session = NebulaDatabaseHandle::collection_session(c).await?;
+    if let Ok(nebula_schema) = nebula_get_tags_schema(c).await {
+        if let Ok(_) = check_nebula_schema(&scylla_schema, &nebula_schema) {
+            info!("nebula collection {} already has all the tags, skipping create", c);
+            return Ok(());
+        }
+    }
+
+    let qs = nebula_create_tags_query(&scylla_schema);
     for s in qs {
         info!("nebula create tags query: \n  {}", s);
-        session.execute::<()>(s).await?;
+        session.execute::<()>(&s).await?;
     }
+    let nebula_schema = nebula_get_tags_schema(c).await?;
+    check_nebula_schema(&scylla_schema, &nebula_schema)?;
     info!("migrating nebula collection {} OK.", c);
     Ok(())
+}
+
+fn check_nebula_schema(scylla_schema: &DatabaseSchema, nebula_schema: &DatabaseSchema) -> Result<()> {
+    if scylla_schema.tables.len() != nebula_schema.tables.len() {
+        anyhow::bail!("scylla schema and nebula schema have different number of tables");
+    }
+    for (scylla_table, nebula_table) in scylla_schema.tables.iter().zip(nebula_schema.tables.iter()) {
+        if scylla_table.name != nebula_table.name {
+            anyhow::bail!("scylla table {} and nebula table {} have different names", scylla_table.name, nebula_table.name);
+        }
+        if scylla_table.columns.len() != nebula_table.columns.len() {
+            anyhow::bail!("scylla table {} and nebula table {} have different number of columns", scylla_table.name, nebula_table.name);
+        }
+        for (scylla_column, nebula_column) in scylla_table.columns.iter().zip(nebula_table.columns.iter()) {
+            if scylla_column.name != nebula_column.name {
+                anyhow::bail!("scylla column {} and nebula column {} have different names", scylla_column.name, nebula_column.name);
+            }
+        }
+    }
+    Ok(())
+}
+
+pub async fn nebula_get_tags_schema(c: &CollectionId) -> Result<DatabaseSchema> {
+    let session = NebulaDatabaseHandle::collection_session(c).await?;
+    let mut schema = DatabaseSchema { tables: vec![] };
+    for tag in session.execute::<String>("SHOW TAGS;").await? {
+        schema.tables.push(DatabaseTable {
+            name: DatabaseIdentifier::new(&tag)?,
+            columns: nebula_describe_tag(session.clone(), &tag).await?,
+        });
+    }
+    Ok(schema)
+}
+
+async fn nebula_describe_tag(session: std::sync::Arc<NebulaDatabaseHandle>, tag: &str) -> Result<Vec<DatabaseColumn>> {
+    let mut columns = vec![];
+
+    #[derive(Deserialize, Debug)]
+    pub struct DescribeTagResponse {
+        #[serde(rename(deserialize = "Field"))]
+        pub _field_name: String,
+        #[serde(rename(deserialize = "Type"))]
+        pub _field_type: String,
+        #[serde(rename(deserialize = "Null"))]
+        pub _field_null: String,
+        #[serde(rename(deserialize = "Default"))]
+        pub _field_default: String,
+        #[serde(rename(deserialize = "Comment"))]
+        pub _field_comment: String,
+    }
+
+    for field in session.execute::<DescribeTagResponse>(&format!("DESCRIBE TAG `{}`;", tag)).await? {
+        columns.push(DatabaseColumn {
+            name: DatabaseIdentifier::new(&field._field_name)?,
+            _type: field._field_type,
+            primary: true,
+        });
+    }
+    columns.sort_by_key(|c| c.name.clone());
+
+    Ok(columns)
 }
 
 fn nebula_create_tags_query(schema: &DatabaseSchema) -> Vec<String> {

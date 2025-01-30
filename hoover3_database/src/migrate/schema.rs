@@ -23,7 +23,7 @@ pub struct DatabaseColumn {
     pub primary: bool,
 }
 
-pub async fn get_scylla_schema(c: &CollectionId) -> Result<DatabaseSchema> {
+pub async fn get_scylla_schema_primary(c: &CollectionId) -> Result<DatabaseSchema> {
     let session = ScyllaDatabaseHandle::global_session().await?;
     let mut schema = DatabaseSchema { tables: vec![] };
     let ks_name = c.database_name()?.to_string();
@@ -41,16 +41,17 @@ pub async fn get_scylla_schema(c: &CollectionId) -> Result<DatabaseSchema> {
     {
         let name = row?.0;
         if let Ok(name) = DatabaseIdentifier::new(&name) {
-            schema.tables.push(get_scylla_table_schema(c, &name).await?);
+            schema.tables.push(get_scylla_table_schema_primary(c, &name).await?);
         } else {
             info!("skipped scylla table {}", name);
         }
     }
+    schema.tables.sort_by_key(|t| t.name.clone());
 
     Ok(schema)
 }
 
-async fn get_scylla_table_schema(
+async fn get_scylla_table_schema_primary(
     c: &CollectionId,
     table_name: &DatabaseIdentifier,
 ) -> Result<DatabaseTable> {
@@ -103,11 +104,14 @@ async fn get_scylla_table_schema(
 
     for (column_name, column_kind, _column_position, column_type) in rows {
         if let Ok(column_name) = DatabaseIdentifier::new(&column_name) {
-            table.columns.push(DatabaseColumn {
-                name: column_name,
-                _type: column_type,
-                primary: matches!(column_kind.as_str(), "partition_key" | "clustering"),
-            });
+            let primary = matches!(column_kind.as_str(), "partition_key" | "clustering");
+            if primary {
+                table.columns.push(DatabaseColumn {
+                    name: column_name,
+                    _type: column_type,
+                    primary,
+                });
+            }
         } else {
             info!("skipped scylla column {}", column_name);
         }
