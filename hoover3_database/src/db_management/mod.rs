@@ -9,6 +9,7 @@ pub use meilisearch::MeilisearchDatabaseHandle;
 
 mod nebula;
 pub use nebula::NebulaDatabaseHandle;
+pub use nebula::NebulaDatabaseHandleExt;
 
 mod scylla;
 pub use scylla::ScyllaDatabaseHandle;

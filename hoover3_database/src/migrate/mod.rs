@@ -1,3 +1,8 @@
+mod nebula;
+use nebula::_migrate_nebula_collection;
+
+pub mod schema;
+
 use anyhow::Context;
 use anyhow::Result;
 use std::path::PathBuf;
@@ -62,6 +67,15 @@ pub async fn migrate_all() -> Result<()> {
     Ok(())
 }
 
+pub async fn migrate_common() -> Result<()> {
+    with_redis_lock(MIGRATE_LOCK_ID, async move { _migrate_common().await }).await?
+}
+
+pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
+    let c = c.clone();
+    with_redis_lock(MIGRATE_LOCK_ID, async move { _migrate_collection(c).await }).await?
+}
+
 async fn _migrate_common() -> Result<()> {
     let session = ScyllaDatabaseHandle::global_session().await?;
     info!("initiate common migration");
@@ -86,10 +100,6 @@ async fn _migrate_common() -> Result<()> {
     info!("execute common migration OK");
 
     Ok(())
-}
-
-pub async fn migrate_common() -> Result<()> {
-    with_redis_lock(MIGRATE_LOCK_ID, async move { _migrate_common().await }).await?
 }
 
 async fn _migrate_collection(c: CollectionId) -> Result<()> {
@@ -139,16 +149,9 @@ async fn _migrate_collection(c: CollectionId) -> Result<()> {
     check_db!(ScyllaDatabaseHandle);
     check_db!(S3DatabaseHandle);
 
-    Ok(())
-}
+    _migrate_nebula_collection(&c).await?;
 
-pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
-    let c = c.clone();
-    with_redis_lock(
-        MIGRATE_LOCK_ID,
-        async move { _migrate_collection(c).await },
-    )
-    .await?
+    Ok(())
 }
 
 async fn _drop_collection(c: CollectionId) -> Result<()> {

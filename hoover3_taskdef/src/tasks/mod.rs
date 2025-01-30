@@ -208,7 +208,8 @@ impl<T: Sized + TemporalioWorkflowDescriptor> ChildWorkflowFuture<T> {
             match self {
                 ChildWorkflowFuture::Running(started) => {
                     let child_result = started.result().await;
-                    let child_result_status = child_result.status
+                    let child_result_status = child_result
+                        .status
                         .as_ref()
                         .context("no child result status")?;
                     match child_result_status {
@@ -281,9 +282,7 @@ pub trait TemporalioWorkflowDescriptor:
                 )
                 .await;
             match _handle1 {
-                Ok(_resp) => {
-                    Ok(())
-                }
+                Ok(_resp) => Ok(()),
                 Err(e) => {
                     if e.code() == tonic::Code::AlreadyExists {
                         return Ok(());
@@ -377,11 +376,9 @@ pub trait TemporalioWorkflowDescriptor:
             });
             let start_result = child_wf.start(&wf_ctx).await;
             match &start_result.status {
-                ChildWorkflowStartStatus::Succeeded(_run_id) => {
-                    Ok(ChildWorkflowFuture::Running(
-                        start_result.into_started().unwrap(),
-                    ))
-                }
+                ChildWorkflowStartStatus::Succeeded(_run_id) => Ok(ChildWorkflowFuture::Running(
+                    start_result.into_started().unwrap(),
+                )),
                 ChildWorkflowStartStatus::Failed(s) => match s.cause() {
                     StartChildWorkflowExecutionFailedCause::WorkflowAlreadyExists => {
                         let arg: Self::Arg = arg.clone();
@@ -509,7 +506,9 @@ async fn query_workflow_execution_result(workflow_id: &str) -> anyhow::Result<Ve
     if let Some(history) = wf_result.history {
         for event in history.events.iter().rev() {
             if event.event_type() == WorkflowExecutionCompleted {
-                if let Some(WorkflowExecutionCompletedEventAttributes(attrib)) = event.attributes.as_ref() {
+                if let Some(WorkflowExecutionCompletedEventAttributes(attrib)) =
+                    event.attributes.as_ref()
+                {
                     if let Some(payloads) = &attrib.result {
                         if !payloads.payloads.is_empty() {
                             return Ok(payloads.payloads[0].data.clone());

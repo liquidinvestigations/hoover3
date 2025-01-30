@@ -12,11 +12,12 @@ use bb8_nebula::{
 use fbthrift_transport::AsyncTransportConfiguration;
 
 use bb8::{Pool, PooledConnection};
+use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
+use nebula_client::v3::graph::GraphQueryError;
 use nebula_client::v3::{graph::GraphQueryOutput, GraphQuery as _, GraphTransportResponseHandler};
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 use tokio::sync::{Mutex, OnceCell};
-
-use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
 use super::{CollectionId, DatabaseIdentifier, DatabaseSpaceManager};
 
@@ -29,6 +30,24 @@ type TManager = GraphConnectionManager<
 type TPool2 = Pool<TManager>;
 type TSession = PooledConnection<'static, TManager>;
 pub type NebulaDatabaseHandle = Mutex<TSession>;
+
+pub trait NebulaDatabaseHandleExt {
+    fn execute<T: DeserializeOwned>(
+        &self,
+        query: String,
+    ) -> impl futures::Future<Output = Result<GraphQueryOutput<T>, GraphQueryError>>;
+}
+
+impl NebulaDatabaseHandleExt for NebulaDatabaseHandle {
+    async fn execute<T: DeserializeOwned>(
+        &self,
+        query: String,
+    ) -> Result<GraphQueryOutput<T>, GraphQueryError> {
+        let query = query.as_bytes().to_vec();
+        let mut session = self.lock().await;
+        session.query_as::<T>(&query).await
+    }
+}
 
 impl DatabaseSpaceManager for NebulaDatabaseHandle {
     async fn global_session() -> anyhow::Result<Arc<Self>> {
@@ -172,8 +191,7 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
 
     let mut session = pool.get().await?;
 
-    let sql_use = format!("USE {space}")
-        .as_bytes().to_vec();
+    let sql_use = format!("USE {space}").as_bytes().to_vec();
     // use nebula_fbthrift_common_v3::types::ErrorCode;
     match session.query(&sql_use).await {
         Ok(_) => {}
@@ -191,7 +209,8 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
                     vid_type = FIXED_STRING(64)
                     );"
                     )
-                    .as_bytes().to_vec();
+                    .as_bytes()
+                    .to_vec();
                     session.query(&sql_create).await?;
                     for _ in 0..6 {
                         if session.query(&sql_use).await.is_ok() {

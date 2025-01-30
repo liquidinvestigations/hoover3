@@ -58,10 +58,7 @@ impl DataRowDisplay for CollectionUiRow {
     }
     fn set_editable_fields(&mut self, _h: HashMap<String, String>) {
         self.collection_title = _h.get("Collection Title").unwrap().to_string();
-        self.collection_description = _h
-            .get("Collection Description")
-            .unwrap()
-            .to_string();
+        self.collection_description = _h.get("Collection Description").unwrap().to_string();
     }
 }
 

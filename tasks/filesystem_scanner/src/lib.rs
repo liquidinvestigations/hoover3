@@ -6,8 +6,8 @@ use hoover3_database::models::collection::filesystem::FsDirectoryDbRow;
 use hoover3_database::models::collection::filesystem::FsFileDbRow;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
-    activity, anyhow, workflow,
-    TemporalioActivityDescriptor, WfContext, WfExitValue, WorkflowResult,
+    activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
+    WorkflowResult,
 };
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::filesystem::FsScanDatasourceResult;

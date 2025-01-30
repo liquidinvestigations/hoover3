@@ -7,10 +7,9 @@ fn main() {
     {
         dioxus::web::launch::launch_cfg(
             hoover3_client::app::App,
-            dioxus::web::Config::new().hydrate(true)
+            dioxus::web::Config::new().hydrate(true),
         );
     }
-
 
     #[cfg(feature = "server")]
     {
@@ -30,7 +29,8 @@ fn main() {
                     // Server side render the application, serve static assets, and register server functions
                     .serve_dioxus_application(
                         ServeConfig::new().unwrap(),
-                         hoover3_client::app::App);
+                        hoover3_client::app::App,
+                    );
 
                 // serve the app using the address passed by the CLI
                 let addr = dioxus::cli_config::fullstack_address_or_localhost();
