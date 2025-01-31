@@ -1,8 +1,9 @@
+use crate::impl_model_callbacks;
 use charybdis::macros::charybdis_model;
 use charybdis::types::{BigInt, Text, Timestamp};
 use hoover3_types::filesystem::FsMetadata;
 use hoover3_types::identifier::DatabaseIdentifier;
-
+use serde::Serialize;
 #[charybdis_model(
     table_name = filesystem_directory,
     partition_keys = [datasource_id, path],
@@ -11,7 +12,7 @@ use hoover3_types::identifier::DatabaseIdentifier;
     local_secondary_indexes = [],
     static_columns = []
 )]
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct FsDirectoryDbRow {
     pub datasource_id: Text,
     pub path: Text,
@@ -43,6 +44,7 @@ impl FsDirectoryDbRow {
     }
 }
 
+impl_model_callbacks!(FsDirectoryDbRow);
 #[charybdis_model(
     table_name = filesystem_file,
     partition_keys = [datasource_id, path],
@@ -51,7 +53,7 @@ impl FsDirectoryDbRow {
     local_secondary_indexes = [],
     static_columns = []
 )]
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct FsFileDbRow {
     pub datasource_id: Text,
     pub path: Text,
@@ -82,3 +84,4 @@ impl FsFileDbRow {
         }
     }
 }
+impl_model_callbacks!(FsFileDbRow);

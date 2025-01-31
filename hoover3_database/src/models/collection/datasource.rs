@@ -1,8 +1,12 @@
+use crate::impl_model_callbacks;
+use charybdis::callbacks::Callbacks;
 use charybdis::macros::charybdis_model;
+use charybdis::scylla::CachingSession;
 use charybdis::types::{Text, Timestamp};
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
+use serde::Serialize;
 
 #[charybdis_model(
     table_name = datasource,
@@ -12,7 +16,7 @@ use hoover3_types::identifier::DatabaseIdentifier;
     local_secondary_indexes = [],
     static_columns = []
 )]
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct DatasourceDbRow {
     pub datasource_id: Text,
     pub datasource_type: Text,
@@ -32,3 +36,5 @@ impl DatasourceDbRow {
         }
     }
 }
+
+impl_model_callbacks!(DatasourceDbRow);

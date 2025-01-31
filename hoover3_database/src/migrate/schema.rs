@@ -3,20 +3,21 @@ use crate::migrate::ScyllaDatabaseHandle;
 use anyhow::Result;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
+use std::collections::BTreeMap;
 use tracing::info;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DatabaseSchema {
-    pub tables: Vec<DatabaseTable>,
+    pub tables: BTreeMap<DatabaseIdentifier, DatabaseTable>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DatabaseTable {
     pub name: DatabaseIdentifier,
     pub columns: Vec<DatabaseColumn>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DatabaseColumn {
     pub name: DatabaseIdentifier,
     pub _type: String,
@@ -25,7 +26,9 @@ pub struct DatabaseColumn {
 
 pub async fn get_scylla_schema_primary(c: &CollectionId) -> Result<DatabaseSchema> {
     let session = ScyllaDatabaseHandle::global_session().await?;
-    let mut schema = DatabaseSchema { tables: vec![] };
+    let mut schema = DatabaseSchema {
+        tables: BTreeMap::new(),
+    };
     let ks_name = c.database_name()?.to_string();
 
     for row in session
@@ -41,12 +44,14 @@ pub async fn get_scylla_schema_primary(c: &CollectionId) -> Result<DatabaseSchem
     {
         let name = row?.0;
         if let Ok(name) = DatabaseIdentifier::new(&name) {
-            schema.tables.push(get_scylla_table_schema_primary(c, &name).await?);
+            schema.tables.insert(
+                name.clone(),
+                get_scylla_table_schema_primary(c, &name).await?,
+            );
         } else {
             info!("skipped scylla table {}", name);
         }
     }
-    schema.tables.sort_by_key(|t| t.name.clone());
 
     Ok(schema)
 }

@@ -150,6 +150,9 @@ async fn fs_do_scan_datasource(
     FsDirectoryDbRow::batch()
         .chunked_insert(&session, &dirs, 1024)
         .await?;
+    let db_extra = hoover3_database::models::collection::DatabaseExtraCallbacks::new(&arg.collection_id.clone()).await?;
+    db_extra.insert(&files).await?;
+    db_extra.insert(&dirs).await?;
 
     next_paths.sort();
     next_paths.dedup();

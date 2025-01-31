@@ -32,21 +32,23 @@ type TSession = PooledConnection<'static, TManager>;
 pub type NebulaDatabaseHandle = Mutex<TSession>;
 
 pub trait NebulaDatabaseHandleExt {
-    fn execute<T: DeserializeOwned>(
+    fn execute<T: DeserializeOwned + std::fmt::Debug>(
         &self,
         query: &str,
     ) -> impl futures::Future<Output = Result<Vec<T>, GraphQueryError>>;
 }
 
-
 impl NebulaDatabaseHandleExt for NebulaDatabaseHandle {
-    async fn execute<T: DeserializeOwned>(
+    async fn execute<T: DeserializeOwned + std::fmt::Debug>(
         &self,
         query: &str,
     ) -> Result<Vec<T>, GraphQueryError> {
+        // println!("NEBULA QUERY: {}", query);
         let query = query.as_bytes().to_vec();
         let mut session = self.lock().await;
-        Ok(session.query_as::<T>(&query).await?.data_set)
+        let result = session.query_as::<T>(&query).await;
+        // println!("NEBULA RESULT: {:?}", result);
+        Ok(result?.data_set)
     }
 }
 

@@ -3,7 +3,10 @@ use crate::db_management::redis::with_redis_cache;
 use crate::db_management::redis::with_redis_lock;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::ScyllaDatabaseHandle;
+use crate::models::collection::DatabaseExtraCallbacks;
+
 use crate::models::collection::datasource::DatasourceDbRow;
+use charybdis::operations::InsertWithCallbacks;
 
 use anyhow::Result;
 use charybdis::operations::{Find, Insert};
@@ -43,15 +46,17 @@ pub async fn create_datasource(
             return Ok(ds.to_ui_row(&c));
         }
         let now = chrono::offset::Utc::now();
-        let row = DatasourceDbRow {
+        let mut row = DatasourceDbRow {
             datasource_id: name.to_string(),
             datasource_type: settings.type_str(),
             datasource_settings: settings_serialized,
             time_created: now,
             time_modified: now,
         };
-
-        DatasourceDbRow::insert(&row).execute(&session).await?;
+        let cb_info = DatabaseExtraCallbacks::new(&c).await?;
+        DatasourceDbRow::insert_cb(&mut row, &cb_info)
+            .execute(&session)
+            .await?;
         Ok(row.to_ui_row(&c))
     })
     .await?
@@ -83,4 +88,55 @@ pub async fn get_datasource(
         &(c, name),
     )
     .await
+}
+
+#[tokio::test]
+async fn test_datasource_query() -> Result<()> {
+    // make sure we have common migrations on
+    crate::migrate::migrate_common().await?;
+
+    use crate::client_query::collections::create_new_collection;
+    use crate::client_query::collections::drop_collection;
+    use crate::client_query::collections::get_all_collections;
+    use std::path::PathBuf;
+
+    use crate::client_query::datasources::create_datasource;
+    use crate::client_query::datasources::drop_datasource;
+    use crate::client_query::datasources::get_all_datasources;
+
+    // check we can read collections at all
+    get_all_collections(()).await.unwrap();
+
+    // check we can create collections
+    let cid = CollectionId::new("test_datasource_query")?;
+    create_new_collection(cid.clone()).await?;
+
+    let name = DatabaseIdentifier::new("test_datasource_query")?;
+    let settings = DatasourceSettings::LocalDisk {
+        path: PathBuf::from("hoover-testdata/eml-1-promotional"),
+    };
+    create_datasource((cid.clone(), name.clone(), settings.clone())).await?;
+
+    let ds = get_datasource((cid.clone(), name.clone())).await?;
+    assert_eq!(ds.datasource_id.to_string(), name.to_string());
+
+    let list = get_all_datasources(cid.clone())
+        .await?
+        .into_iter()
+        .map(|x| x.datasource_id)
+        .collect::<Vec<_>>();
+    assert!(list.contains(&name));
+
+    drop_datasource((cid.clone(), name.clone())).await?;
+
+    let list = get_all_datasources(cid.clone())
+        .await?
+        .into_iter()
+        .map(|x| x.datasource_id)
+        .collect::<Vec<_>>();
+    assert!(!list.contains(&name));
+
+    drop_collection(cid.clone()).await?;
+
+    Ok(())
 }

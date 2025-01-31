@@ -49,7 +49,7 @@ where
 
     let mut retry_count = 0;
     let mut acq_retry_wait_secs = 0.016;
-    let max_acq_retry = 12; // 1 min
+    let max_acq_retry = 14; // 2 min
     let lock = loop {
         if let Ok(lock) = rl
             .lock(redis_lock_id.as_bytes(), Duration::from_secs_f64(lock_ttl))
@@ -61,7 +61,7 @@ where
         retry_count += 1;
         acq_retry_wait_secs *= 2.0;
         if retry_count >= max_acq_retry {
-            anyhow::bail!("could not acquire lock after 1min",);
+            anyhow::bail!("could not acquire lock after 2min",);
         }
     };
 

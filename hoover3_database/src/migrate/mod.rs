@@ -1,5 +1,5 @@
-mod nebula;
-pub use nebula::{_migrate_nebula_collection,nebula_get_tags_schema};
+pub mod nebula;
+pub use nebula::{_migrate_nebula_collection, nebula_get_tags_schema};
 
 pub mod schema;
 
@@ -12,7 +12,6 @@ use crate::db_management::CollectionId;
 use crate::{db_management::DatabaseSpaceManager, db_management::ScyllaDatabaseHandle};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
-const MIGRATE_LOCK_ID: &str = "migrate_lock";
 use super::db_management::redis::with_redis_lock;
 
 /// sometimes we run from workspace root. Sometimes we run from package root.
@@ -62,18 +61,34 @@ pub async fn migrate_all() -> Result<()> {
                 .with_context(move || format!("migrate {:?}", c))?;
         }
     }
+
     info!("collections ok");
 
     Ok(())
 }
 
 pub async fn migrate_common() -> Result<()> {
-    with_redis_lock(MIGRATE_LOCK_ID, async move { _migrate_common().await }).await?
+    with_redis_lock(
+        "migrate_lock_common",
+        async move { _migrate_common().await },
+    )
+    .await?
 }
 
 pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
     let c = c.clone();
-    with_redis_lock(MIGRATE_LOCK_ID, async move { _migrate_collection(c).await }).await?
+    with_redis_lock(&format!("migrate_lock_2_{}", c.to_string()), async move {
+        _migrate_collection(c).await
+    })
+    .await?
+}
+
+pub async fn drop_collection(c: &CollectionId) -> Result<()> {
+    let c = c.clone();
+    with_redis_lock(&format!("migrate_lock_2_{}", c.to_string()), async move {
+        _drop_collection(c).await
+    })
+    .await?
 }
 
 async fn _migrate_common() -> Result<()> {
@@ -211,11 +226,6 @@ async fn _drop_collection(c: CollectionId) -> Result<()> {
     Ok(())
 }
 
-pub async fn drop_collection(c: &CollectionId) -> Result<()> {
-    let c = c.clone();
-    with_redis_lock(MIGRATE_LOCK_ID, async move { _drop_collection(c).await }).await?
-}
-
 async fn scylla_migrate_collection(c: &CollectionId) -> Result<()> {
     info!("scylla_migrate_collection {}", c.to_string());
     let session = ScyllaDatabaseHandle::open_session(c.database_name()?).await?;
@@ -249,13 +259,10 @@ async fn test_create_drop_collection() {
     info!("test init");
     migrate_all().await.unwrap();
     let c = CollectionId::new("some_test_collection").unwrap();
-    _migrate_collection(c.clone()).await.unwrap();
-    _migrate_collection(c.clone()).await.unwrap();
+    migrate_collection(&c).await.unwrap();
+    migrate_collection(&c).await.unwrap();
     migrate_all().await.unwrap();
-    _migrate_collection(c.clone()).await.unwrap();
-    _drop_collection(c.clone()).await.unwrap();
-    _drop_collection(c.clone()).await.unwrap();
-    _migrate_collection(c.clone()).await.unwrap();
-    _drop_collection(c.clone()).await.unwrap();
-    _drop_collection(c.clone()).await.unwrap();
+    migrate_collection(&c).await.unwrap();
+    drop_collection(&c).await.unwrap();
+    drop_collection(&c).await.unwrap();
 }
