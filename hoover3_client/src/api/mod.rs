@@ -9,6 +9,7 @@ use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadata;
 use hoover3_types::identifier::*;
+use hoover3_types::tasks::*;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub struct ServerCallEvent {
@@ -182,4 +183,11 @@ server_wrapper!(
     start_scan,
     (CollectionId, DatabaseIdentifier),
     ()
+);
+
+server_wrapper!(
+    hoover3_filesystem_scanner,
+    get_scan_status,
+    (CollectionId, DatabaseIdentifier),
+    UiWorkflowStatus
 );

@@ -35,41 +35,47 @@ pub async fn get_all_datasources(c: CollectionId) -> Result<Vec<DatasourceUiRow>
 pub async fn create_datasource(
     (c, name, settings): (CollectionId, DatabaseIdentifier, DatasourceSettings),
 ) -> Result<DatasourceUiRow> {
-    info!("create_datasource collection={c:?} datasource={name:?} settings={settings:?}");
-    with_redis_lock("create_datasource", async move {
-        let session = ScyllaDatabaseHandle::collection_session(&c).await?;
-        let settings_serialized = serde_json::to_string(&settings)?;
-        if let Ok(ds) = DatasourceDbRow::find_by_datasource_id(name.to_string())
-            .execute(&session)
-            .await
-        {
-            return Ok(ds.to_ui_row(&c));
-        }
-        let now = chrono::offset::Utc::now();
-        let mut row = DatasourceDbRow {
-            datasource_id: name.to_string(),
-            datasource_type: settings.type_str(),
-            datasource_settings: settings_serialized,
-            time_created: now,
-            time_modified: now,
-        };
-        let cb_info = DatabaseExtraCallbacks::new(&c).await?;
-        DatasourceDbRow::insert_cb(&mut row, &cb_info)
-            .execute(&session)
-            .await?;
-        Ok(row.to_ui_row(&c))
+    tokio::spawn(async move {
+        info!("create_datasource collection={c:?} datasource={name:?} settings={settings:?}");
+        with_redis_lock("create_datasource", async move {
+            let session = ScyllaDatabaseHandle::collection_session(&c).await?;
+            let settings_serialized = serde_json::to_string(&settings)?;
+            if let Ok(ds) = DatasourceDbRow::find_by_datasource_id(name.to_string())
+                .execute(&session)
+                .await
+            {
+                return Ok(ds.to_ui_row(&c));
+            }
+            let now = chrono::offset::Utc::now();
+            let mut row = DatasourceDbRow {
+                datasource_id: name.to_string(),
+                datasource_type: settings.type_str(),
+                datasource_settings: settings_serialized,
+                time_created: now,
+                time_modified: now,
+            };
+            let cb_info = DatabaseExtraCallbacks::new(&c).await?;
+            DatasourceDbRow::insert_cb(&mut row, &cb_info)
+                .execute(&session)
+                .await?;
+            Ok(row.to_ui_row(&c))
+        })
+        .await?
     })
     .await?
 }
 
 pub async fn drop_datasource((c, name): (CollectionId, DatabaseIdentifier)) -> anyhow::Result<()> {
-    let session = ScyllaDatabaseHandle::collection_session(&c).await?;
-    DatasourceDbRow::delete_by_datasource_id(name.to_string())
-        .execute(&session)
-        .await?;
+    tokio::spawn(async move {
+        let session = ScyllaDatabaseHandle::collection_session(&c).await?;
+        DatasourceDbRow::delete_by_datasource_id(name.to_string())
+            .execute(&session)
+            .await?;
 
-    drop_redis_cache("get_datasource", &(c, name)).await?;
-    Ok(())
+        drop_redis_cache("get_datasource", &(c, name)).await?;
+        Ok(())
+    })
+    .await?
 }
 
 pub async fn get_datasource(

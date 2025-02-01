@@ -23,26 +23,29 @@ pub async fn get_single_collection(c: CollectionId) -> Result<CollectionUiRow> {
 /// databases, tables, search indexes and other setup that must happen.
 /// If a collection with said name exists, return that instead.
 pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
-    let session = ScyllaDatabaseHandle::global_session().await?;
+    tokio::spawn(async move {
+        let session = ScyllaDatabaseHandle::global_session().await?;
 
-    if let Ok(x) = CollectionDbRow::find_by_collection_id(c.to_string())
-        .execute(&session)
-        .await
-    {
-        return Ok(x.into());
-    }
-    let now = chrono::offset::Utc::now();
-    let new_row = CollectionDbRow {
-        collection_id: c.to_string(),
-        collection_title: c.to_string().replace("_", " "),
-        collection_description: "".to_string(),
-        time_created: now,
-        time_modified: now,
-    };
-    migrate_collection(&c).await?;
-    CollectionDbRow::insert(&new_row).execute(&session).await?;
-    drop_redis_cache("get_all_collections", &()).await?;
-    Ok(new_row.into())
+        if let Ok(x) = CollectionDbRow::find_by_collection_id(c.to_string())
+            .execute(&session)
+            .await
+        {
+            return Ok(x.into());
+        }
+        let now = chrono::offset::Utc::now();
+        let new_row = CollectionDbRow {
+            collection_id: c.to_string(),
+            collection_title: c.to_string().replace("_", " "),
+            collection_description: "".to_string(),
+            time_created: now,
+            time_modified: now,
+        };
+        migrate_collection(&c).await?;
+        CollectionDbRow::insert(&new_row).execute(&session).await?;
+        drop_redis_cache("get_all_collections", &()).await?;
+        Ok(new_row.into())
+    })
+    .await?
 }
 
 /// Client API method, returns list of all collections in system.
@@ -65,50 +68,56 @@ async fn _get_all_collections(_c: ()) -> Result<Vec<CollectionUiRow>> {
 
 /// Client API method used to update collection title and description.
 pub async fn update_collection(updated: CollectionUiRow) -> Result<CollectionUiRow> {
-    let session = ScyllaDatabaseHandle::global_session().await?;
-    info!("updating collection with user request {:?}", updated);
-    let old_row = CollectionDbRow::find_by_collection_id(updated.collection_id)
-        .execute(&session)
-        .await?;
+    tokio::spawn(async move {
+        let session = ScyllaDatabaseHandle::global_session().await?;
+        info!("updating collection with user request {:?}", updated);
+        let old_row = CollectionDbRow::find_by_collection_id(updated.collection_id)
+            .execute(&session)
+            .await?;
 
-    info!("updating collection found old {:?}", old_row);
-    let now = chrono::offset::Utc::now();
-    let new_row = CollectionDbRow {
-        collection_id: old_row.collection_id,
-        collection_title: updated.collection_title,
-        collection_description: updated.collection_description,
-        time_created: old_row.time_created,
-        time_modified: now,
-    };
+        info!("updating collection found old {:?}", old_row);
+        let now = chrono::offset::Utc::now();
+        let new_row = CollectionDbRow {
+            collection_id: old_row.collection_id,
+            collection_title: updated.collection_title,
+            collection_description: updated.collection_description,
+            time_created: old_row.time_created,
+            time_modified: now,
+        };
 
-    info!("updating collection inserting new row {:?}", new_row);
-    CollectionDbRow::insert(&new_row).execute(&session).await?;
-    drop_redis_cache("get_all_collections", &()).await?;
-    info!("updating collection {:?}: done", new_row.collection_id);
-    Ok(new_row.into())
+        info!("updating collection inserting new row {:?}", new_row);
+        CollectionDbRow::insert(&new_row).execute(&session).await?;
+        drop_redis_cache("get_all_collections", &()).await?;
+        info!("updating collection {:?}: done", new_row.collection_id);
+        Ok(new_row.into())
+    })
+    .await?
 }
 
 /// Client API method used to drop a collection, all databases and entries.
 pub async fn drop_collection(c: CollectionId) -> Result<()> {
-    use crate::client_query::collections::get_single_collection;
-    use crate::client_query::datasources::drop_datasource;
-    use crate::client_query::datasources::get_all_datasources;
+    tokio::spawn(async move {
+        use crate::client_query::collections::get_single_collection;
+        use crate::client_query::datasources::drop_datasource;
+        use crate::client_query::datasources::get_all_datasources;
 
-    if let Ok(_x) = get_single_collection(c.clone()).await {
-        for ds in get_all_datasources(c.clone()).await? {
-            drop_datasource((c.clone(), ds.datasource_id)).await?;
+        if let Ok(_x) = get_single_collection(c.clone()).await {
+            for ds in get_all_datasources(c.clone()).await? {
+                drop_datasource((c.clone(), ds.datasource_id)).await?;
+            }
         }
-    }
 
-    crate::migrate::drop_collection(&c).await?;
+        crate::migrate::drop_collection(&c).await?;
 
-    let session = ScyllaDatabaseHandle::global_session().await?;
-    CollectionDbRow::delete_by_collection_id(c.to_string())
-        .execute(&session)
-        .await?;
+        let session = ScyllaDatabaseHandle::global_session().await?;
+        CollectionDbRow::delete_by_collection_id(c.to_string())
+            .execute(&session)
+            .await?;
 
-    drop_redis_cache("get_all_collections", &()).await?;
-    Ok(())
+        drop_redis_cache("get_all_collections", &()).await?;
+        Ok(())
+    })
+    .await?
 }
 
 #[tokio::test]

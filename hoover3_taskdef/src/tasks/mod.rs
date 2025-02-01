@@ -1,3 +1,6 @@
+pub(crate) mod status_tree;
+use status_tree::temporalio_get_workflow_status_tree;
+
 use crate::client::get_client;
 pub use crate::client::TemporalioClient;
 pub use anyhow;
@@ -401,19 +404,15 @@ pub trait TemporalioWorkflowDescriptor:
             let workflow_id = Self::workflow_id(arg);
             let status = query_workflow_execution_status(&workflow_id).await?;
             let ui_status = UiWorkflowStatus {
-                workflow_id,
+                workflow_id: workflow_id.clone(),
                 task_name: Self::name().to_string(),
                 queue_name: Self::queue_name().to_string(),
-                task_status: match status {
-                    WorkflowExecutionStatus::Unspecified => UiWorkflowStatusCode::Unspecified,
-                    WorkflowExecutionStatus::Running => UiWorkflowStatusCode::Running,
-                    WorkflowExecutionStatus::Completed => UiWorkflowStatusCode::Completed,
-                    WorkflowExecutionStatus::Failed => UiWorkflowStatusCode::Failed,
-                    WorkflowExecutionStatus::Canceled => UiWorkflowStatusCode::Canceled,
-                    WorkflowExecutionStatus::Terminated => UiWorkflowStatusCode::Terminated,
-                    WorkflowExecutionStatus::ContinuedAsNew => UiWorkflowStatusCode::ContinuedAsNew,
-                    WorkflowExecutionStatus::TimedOut => UiWorkflowStatusCode::TimedOut,
-                },
+                task_status: convert_status(status),
+                status_tree: temporalio_get_workflow_status_tree(
+                    &workflow_id,
+                    convert_status(status),
+                )
+                .await?,
             };
             Ok(ui_status)
         }
@@ -633,5 +632,18 @@ pub mod test {
 
         sample_workflow2_workflow::client_start(&x).await?;
         Ok(())
+    }
+}
+
+fn convert_status(status: WorkflowExecutionStatus) -> UiWorkflowStatusCode {
+    match status {
+        WorkflowExecutionStatus::Unspecified => UiWorkflowStatusCode::Unspecified,
+        WorkflowExecutionStatus::Running => UiWorkflowStatusCode::Running,
+        WorkflowExecutionStatus::Completed => UiWorkflowStatusCode::Completed,
+        WorkflowExecutionStatus::Failed => UiWorkflowStatusCode::Failed,
+        WorkflowExecutionStatus::Canceled => UiWorkflowStatusCode::Canceled,
+        WorkflowExecutionStatus::Terminated => UiWorkflowStatusCode::Terminated,
+        WorkflowExecutionStatus::ContinuedAsNew => UiWorkflowStatusCode::ContinuedAsNew,
+        WorkflowExecutionStatus::TimedOut => UiWorkflowStatusCode::TimedOut,
     }
 }

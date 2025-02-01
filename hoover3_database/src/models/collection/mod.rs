@@ -2,6 +2,7 @@ pub mod _nebula_edges;
 pub mod blob;
 pub mod datasource;
 pub mod filesystem;
+pub mod tasks;
 
 use crate::db_management::meilisearch_wait_for_task;
 use crate::db_management::nebula_execute;

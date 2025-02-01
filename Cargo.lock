@@ -3359,6 +3359,7 @@ dependencies = [
  "buildid",
  "futures 0.3.31",
  "futures-util",
+ "hoover3_database",
  "hoover3_macro",
  "hoover3_types",
  "once_cell",

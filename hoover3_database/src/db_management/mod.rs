@@ -1,5 +1,6 @@
 pub use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
 pub(crate) mod redis;
+pub use redis::{with_redis_cache, with_redis_lock};
 
 mod clickhouse;
 pub use clickhouse::ClickhouseDatabaseHandle;

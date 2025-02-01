@@ -1,4 +1,5 @@
 use crate::api::get_datasource;
+use crate::api::get_scan_status;
 use crate::errors::AnyhowErrorDioxusExt;
 use dioxus::prelude::*;
 use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
@@ -8,9 +9,14 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
     let c_id = CollectionId::new(&collection_id).throw()?;
     let d_id = DatabaseIdentifier::new(&datasource_id).throw()?;
     let datasource = use_resource(move || {
-        let collection_id = c_id.clone();
-        let datasource_id = d_id.clone();
-        async move { get_datasource((collection_id, datasource_id)).await }
+        let c_id = c_id.clone();
+        let d_id = d_id.clone();
+        async move {
+            (
+                get_datasource((c_id.clone(), d_id.clone())).await,
+                get_scan_status((c_id.clone(), d_id.clone())).await,
+            )
+        }
     });
 
     let c_id = CollectionId::new(&collection_id).throw()?;

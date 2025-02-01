@@ -33,7 +33,6 @@ pub type NebulaDatabaseHandle = Mutex<TSession>;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 
-
 use tokio::time::Duration;
 const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(60);
 

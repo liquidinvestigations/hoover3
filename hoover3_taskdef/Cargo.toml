@@ -19,6 +19,7 @@ serde_json.workspace = true
 paste.workspace = true
 hoover3_types = {path = "../hoover3_types"}
 hoover3_macro = {path = "../hoover3_macro"}
+hoover3_database = {path = "../hoover3_database"}
 buildid = "1.0.3"
 # temporal
 temporal-client = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e" }
