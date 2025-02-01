@@ -179,7 +179,7 @@ where
 }
 
 
-pub fn row_pk_hash<T: BaseModel>(data: &T) -> String
+pub fn row_pk_hash<T>(data: &T) -> String
 where
     T: BaseModel,
     <T as BaseModel>::PrimaryKey: serde::Serialize,
@@ -204,7 +204,7 @@ impl DatabaseExtraCallbacks {
     }
 
 
-    pub async fn insert<T: BaseModel>(&self, data: &[T]) -> anyhow::Result<()>
+    pub async fn insert<T>(&self, data: &[T]) -> anyhow::Result<()>
     where
         T: BaseModel + serde::Serialize,
         <T as BaseModel>::PrimaryKey: serde::Serialize,
@@ -230,7 +230,7 @@ impl DatabaseExtraCallbacks {
         Ok(())
     }
 
-    pub async fn delete<T: BaseModel>(&self, data: &[T]) -> anyhow::Result<()>
+    pub async fn delete<T>(&self, data: &[T]) -> anyhow::Result<()>
     where
         T: BaseModel,
         <T as BaseModel>::PrimaryKey: serde::Serialize,

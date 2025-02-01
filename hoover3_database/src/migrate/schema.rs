@@ -104,7 +104,7 @@ async fn get_scylla_table_schema_primary(
             _ => panic!("invalid column kind: {}", b.1),
         };
 
-        ((_kind_pos_a, a.2)).cmp(&(_kind_pos_b, b.2))
+        (_kind_pos_a, a.2).cmp(&(_kind_pos_b, b.2))
     });
 
     for (column_name, column_kind, _column_position, column_type) in rows {

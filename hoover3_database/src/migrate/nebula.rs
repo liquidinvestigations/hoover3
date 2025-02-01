@@ -25,7 +25,7 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     let scylla_schema = get_scylla_schema_primary(c).await?;
     // if we already have all the tags, skip the create
     if let Ok(nebula_schema) = nebula_get_tags_schema(c).await {
-        if let Ok(_) = check_nebula_schema(c, &scylla_schema, &nebula_schema).await {
+        if check_nebula_schema(c, &scylla_schema, &nebula_schema).await.is_ok() {
             info!(
                 "nebula collection {} already has all the tags, skipping create",
                 c
