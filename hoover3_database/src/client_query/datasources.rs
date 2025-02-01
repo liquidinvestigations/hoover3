@@ -9,7 +9,7 @@ use crate::models::collection::datasource::DatasourceDbRow;
 use charybdis::operations::InsertWithCallbacks;
 
 use anyhow::Result;
-use charybdis::operations::{Find, Insert};
+use charybdis::operations::Find;
 use futures::pin_mut;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;

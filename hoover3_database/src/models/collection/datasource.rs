@@ -1,7 +1,5 @@
 use crate::impl_model_callbacks;
-use charybdis::callbacks::Callbacks;
 use charybdis::macros::charybdis_model;
-use charybdis::scylla::CachingSession;
 use charybdis::types::{Text, Timestamp};
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::CollectionId;

@@ -14,9 +14,12 @@ use tracing::info;
 pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     info!("migrating nebula collection {}...", c);
     let session = NebulaDatabaseHandle::collection_session(c).await?;
-    for edge_name in crate::models::collection::_nebula_edges::NEBULA_EDGES {
+    for edge_name in crate::models::collection::_nebula_edges::ALL_NEBULA_EDGES {
         session
-            .execute::<()>(&format!("CREATE EDGE IF NOT EXISTS `{}` ();", edge_name))
+            .execute::<()>(&format!(
+                "CREATE EDGE IF NOT EXISTS `{}` ();",
+                edge_name.name
+            ))
             .await?;
     }
     let scylla_schema = get_scylla_schema_primary(c).await?;

@@ -8,10 +8,10 @@ use crate::db_management::NebulaDatabaseHandle;
 use crate::db_management::NebulaDatabaseHandleExt;
 use crate::migrate::nebula_get_tags_schema;
 use crate::migrate::schema::DatabaseSchema;
+use crate::models::collection::_nebula_edges::GraphEdgeType;
 use charybdis::model::BaseModel;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
-
 pub struct DatabaseExtraCallbacks {
     pub nebula_handle: std::sync::Arc<NebulaDatabaseHandle>,
     pub nebula_schema: DatabaseSchema,
@@ -99,6 +99,100 @@ fn test_nebula_sql_insert_vertex() {
     );
 }
 
+fn nebula_sql_insert_edge(
+    edge: &GraphEdgeType,
+    data: Vec<(String, String)>,
+) -> anyhow::Result<String> {
+    let edge_name = edge.name;
+    let edge_rank: u32 = 0;
+    let query = data
+        .into_iter()
+        .map(|(from, to)| format!("\"{from}\"->\"{to}\"@{edge_rank}:()"))
+        .collect::<Vec<String>>()
+        .join(",\n");
+    Ok(format!(
+        "
+    INSERT EDGE `{edge_name}` () VALUES {query};
+    "
+    ))
+}
+
+#[tokio::test]
+async fn test_nebula_sql_insert_edge() {
+    let edge = GraphEdgeType { name: "test_edge" };
+    let data = vec![("1".to_string(), "2".to_string())];
+    let query = nebula_sql_insert_edge(&edge, data).unwrap();
+    assert_eq!(
+        query.trim(),
+        "INSERT EDGE `test_edge` () VALUES \"1\"->\"2\"@0:();"
+    );
+
+    let data = vec![
+        ("1".to_string(), "2".to_string()),
+        ("3".to_string(), "4".to_string()),
+    ];
+    let query = nebula_sql_insert_edge(&edge, data).unwrap();
+    assert_eq!(
+        query.trim(),
+        "INSERT EDGE `test_edge` () VALUES \"1\"->\"2\"@0:(), \"3\"->\"4\"@0:();"
+    );
+}
+
+pub struct InsertEdgeBatch<T1: BaseModel, T2: BaseModel> {
+    edge: GraphEdgeType,
+    data: Vec<(String, String)>,
+    _phantom: std::marker::PhantomData<(T1, T2)>,
+}
+
+impl<T1: BaseModel, T2: BaseModel> InsertEdgeBatch<T1, T2>
+where
+    T1: BaseModel,
+    T2: BaseModel,
+    <T1 as BaseModel>::PrimaryKey: serde::Serialize + 'static,
+    <T2 as BaseModel>::PrimaryKey: serde::Serialize + 'static,
+    <T1 as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
+    <T2 as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
+{
+    pub fn new(edge: &GraphEdgeType) -> Self {
+        Self {
+            edge: edge.clone(),
+            data: vec![],
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    pub fn push(&mut self, from: &T1, to: &T2)  {
+        self.data.push((
+            row_pk_hash::<T1>(&from),
+            row_pk_hash::<T2>(&to),
+        ));
+    }
+
+    pub async fn execute(self, db_extra: &DatabaseExtraCallbacks) -> anyhow::Result<()> {
+        if self.data.is_empty() {
+            return Ok(());
+        }
+        let query = nebula_sql_insert_edge(&self.edge, self.data)?;
+        db_extra.nebula_handle.execute::<()>(&query).await?;
+        Ok(())
+    }
+}
+
+
+pub fn row_pk_hash<T: BaseModel>(data: &T) -> String
+where
+    T: BaseModel,
+    <T as BaseModel>::PrimaryKey: serde::Serialize,
+    <T as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
+    <T as BaseModel>::PrimaryKey: 'static,
+{
+    use hoover3_types::stable_hash::stable_hash;
+    let data = data.primary_key_values();
+    let x = stable_hash(&data).expect("can compute stable hash");
+    let table_name = T::DB_MODEL_NAME;
+    format!("{table_name}_{x}")
+}
+
 impl DatabaseExtraCallbacks {
     pub async fn new(c: &CollectionId) -> anyhow::Result<Self> {
         let nebula_handle = NebulaDatabaseHandle::collection_session(c).await?;
@@ -109,18 +203,6 @@ impl DatabaseExtraCallbacks {
         })
     }
 
-    pub fn row_pk_hash<T: BaseModel>(&self, data: &T) -> anyhow::Result<String>
-    where
-        T: BaseModel,
-        <T as BaseModel>::PrimaryKey: serde::Serialize,
-        <T as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
-        <T as BaseModel>::PrimaryKey: 'static,
-    {
-        use hoover3_types::stable_hash::stable_hash;
-        let x = stable_hash(&data.primary_key_values())?;
-        let table_name = T::DB_MODEL_NAME;
-        Ok(format!("{table_name}_{x}"))
-    }
 
     pub async fn insert<T: BaseModel>(&self, data: &[T]) -> anyhow::Result<()>
     where
@@ -135,7 +217,7 @@ impl DatabaseExtraCallbacks {
         let table_id = DatabaseIdentifier::new(T::DB_MODEL_NAME)?;
         let mut v = vec![];
         for d in data.iter() {
-            let nebula_pk = self.row_pk_hash(d)?;
+            let nebula_pk = row_pk_hash::<T>(&d);
             let data_json = serde_json::to_value(d)?;
             v.push((nebula_pk, data_json));
         }
@@ -154,13 +236,14 @@ impl DatabaseExtraCallbacks {
         <T as BaseModel>::PrimaryKey: serde::Serialize,
         <T as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
         <T as BaseModel>::PrimaryKey: 'static,
-    {        if data.is_empty() {
-        return Ok(());
-    }
+    {
+        if data.is_empty() {
+            return Ok(());
+        }
         let pks = data
             .iter()
-            .map(|d| self.row_pk_hash(d))
-            .filter_map(|pk| pk.ok().map(|pk| format!("\"{pk}\"")))
+            .map(|d| row_pk_hash::<T>(&d))
+            .map(|pk| format!("\"{pk}\""))
             .collect::<Vec<String>>()
             .join(",");
         let query = format!(
@@ -174,6 +257,7 @@ impl DatabaseExtraCallbacks {
 
         Ok(())
     }
+
 }
 
 #[macro_export]

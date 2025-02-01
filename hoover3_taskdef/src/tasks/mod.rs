@@ -7,7 +7,8 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{info, warn};
-
+use hoover3_types::tasks::UiWorkflowStatus;
+use hoover3_types::tasks::UiWorkflowStatusCode;
 pub use crate::client::TemporalioClient;
 pub use prost_wkt_types::Duration as ProstDuration;
 pub use temporal_client::WorkflowClientTrait;
@@ -393,6 +394,40 @@ pub trait TemporalioWorkflowDescriptor:
         }
     }
 
+    fn client_get_status(arg: &Self::Arg) -> impl Future<Output = Result<UiWorkflowStatus, anyhow::Error>> {
+        async move {
+            let workflow_id = Self::workflow_id(arg);
+            let status = query_workflow_execution_status(&workflow_id).await?;
+            let ui_status = UiWorkflowStatus {
+                workflow_id,
+                task_name: Self::name().to_string(),
+                queue_name: Self::queue_name().to_string(),
+                task_status: match status {
+                    WorkflowExecutionStatus::Unspecified => UiWorkflowStatusCode::Unspecified,
+                    WorkflowExecutionStatus::Running => UiWorkflowStatusCode::Running,
+                    WorkflowExecutionStatus::Completed => UiWorkflowStatusCode::Completed,
+                    WorkflowExecutionStatus::Failed => UiWorkflowStatusCode::Failed,
+                    WorkflowExecutionStatus::Canceled => UiWorkflowStatusCode::Canceled,
+                    WorkflowExecutionStatus::Terminated => UiWorkflowStatusCode::Terminated,
+                    WorkflowExecutionStatus::ContinuedAsNew => UiWorkflowStatusCode::ContinuedAsNew,
+                    WorkflowExecutionStatus::TimedOut => UiWorkflowStatusCode::TimedOut,
+                },
+            };
+            Ok(ui_status)
+        }
+    }
+
+    fn client_get_result(
+        arg: &Self::Arg,
+    ) -> impl Future<Output = Result<Self::Ret, anyhow::Error>> {
+        async move {
+            let workflow_id = Self::workflow_id(arg);
+            let result = query_workflow_execution_result(&workflow_id).await?;
+            let result: Self::Ret = serde_json::from_slice(&result)?;
+            Ok(result)
+        }
+    }
+
     fn client_wait_for_completion(
         arg: &Self::Arg,
     ) -> impl Future<Output = Result<Self::Ret, anyhow::Error>> {
@@ -408,9 +443,7 @@ pub trait TemporalioWorkflowDescriptor:
             if status != WorkflowExecutionStatus::Completed {
                 anyhow::bail!("Workflow execution failed with status={:?}", status);
             }
-            let result = query_workflow_execution_result(&workflow_id).await?;
-            let result: Self::Ret = serde_json::from_slice(&result)?;
-            Ok(result)
+            Self::client_get_result(arg).await
         }
     }
 }

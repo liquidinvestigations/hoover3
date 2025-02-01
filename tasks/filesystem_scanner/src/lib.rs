@@ -5,6 +5,7 @@ use hoover3_database::db_management::ScyllaDatabaseHandle;
 use hoover3_database::models::collection::filesystem::FsDirectoryDbRow;
 use hoover3_database::models::collection::filesystem::FsFileDbRow;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
+use hoover3_types::tasks::UiWorkflowStatus;
 use hoover3_taskdef::{
     activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
     WorkflowResult,
@@ -15,7 +16,8 @@ use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-
+use hoover3_database::models::collection::_nebula_edges::FilesystemParentEdge;
+use hoover3_database::models::collection::InsertEdgeBatch;
 const FILESYSTEM_SCANNER_TASK_QUEUE: &str = "filesystem_scanner";
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -41,6 +43,28 @@ pub async fn start_scan(
     };
     fs_scan_datasource_workflow::client_start(&args).await?;
     Ok(())
+}
+
+pub async fn wait_for_scan_results(
+    (c_id, ds_id): (CollectionId, DatabaseIdentifier)
+) -> Result<FsScanDatasourceResult, anyhow::Error> {
+    let args = ScanDatasourceArgs {
+        collection_id: c_id.clone(),
+        datasource_id: ds_id.clone(),
+        path: None,
+    };
+    fs_scan_datasource_workflow::client_wait_for_completion(&args).await
+}
+
+pub async fn get_scan_status(
+    (c_id, ds_id): (CollectionId, DatabaseIdentifier)
+) -> Result<UiWorkflowStatus, anyhow::Error> {
+    let args = ScanDatasourceArgs {
+        collection_id: c_id.clone(),
+        datasource_id: ds_id.clone(),
+        path: None,
+    };
+    fs_scan_datasource_workflow::client_get_status(&args).await
 }
 
 #[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
@@ -129,30 +153,53 @@ async fn fs_do_scan_datasource(
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];
+    let mut edges_to_files = InsertEdgeBatch::new(&FilesystemParentEdge);
+    let mut edges_to_dirs = InsertEdgeBatch::new(&FilesystemParentEdge);
 
+    let parent_pk = arg.path.map(|p| FsDirectoryDbRow{
+        datasource_id: arg.datasource_id.to_string(),
+        path: p.to_str().unwrap().into(),
+        size_bytes: 0,
+        modified: None,
+        created: None,
+    });
     children.into_iter().for_each(|mut c| {
         c.path = c.path.strip_prefix(root_path).unwrap().to_path_buf();
         if c.is_file {
-            files.push(FsFileDbRow::from_meta(&arg.datasource_id, &c));
+            let new_file = FsFileDbRow::from_meta(&arg.datasource_id, &c);
+            if let Some(parent_pk) = &parent_pk {
+                edges_to_files.push(parent_pk, &new_file);
+            }
+            files.push(new_file);
             file_count += 1;
             file_size_bytes += c.size_bytes;
         } else if c.is_dir {
-            dirs.push(FsDirectoryDbRow::from_meta(&arg.datasource_id, &c));
+            let new_dir = FsDirectoryDbRow::from_meta(&arg.datasource_id, &c);
+            if let Some(parent_pk) = &parent_pk {
+                edges_to_dirs.push(parent_pk, &new_dir);
+            }
+            dirs.push(new_dir);
             dir_count += 1;
             next_paths.push(c.path.clone());
         }
     });
 
-    let session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
+    let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
     FsFileDbRow::batch()
-        .chunked_insert(&session, &files, 1024)
+        .chunked_insert(&scylla_session, &files, 1024)
         .await?;
     FsDirectoryDbRow::batch()
-        .chunked_insert(&session, &dirs, 1024)
+        .chunked_insert(&scylla_session, &dirs, 1024)
         .await?;
-    let db_extra = hoover3_database::models::collection::DatabaseExtraCallbacks::new(&arg.collection_id.clone()).await?;
+
+    let db_extra = hoover3_database::models::collection::DatabaseExtraCallbacks::new(
+        &arg.collection_id.clone(),
+    )
+    .await?;
     db_extra.insert(&files).await?;
     db_extra.insert(&dirs).await?;
+    edges_to_files.execute(&db_extra).await?;
+    edges_to_dirs.execute(&db_extra).await?;
 
     next_paths.sort();
     next_paths.dedup();
@@ -166,4 +213,27 @@ async fn fs_do_scan_datasource(
         },
         next_paths,
     ))
+}
+
+#[tokio::test]
+async fn test_fs_do_scan_datasource() -> anyhow::Result<()> {
+    use hoover3_types::tasks::UiWorkflowStatusCode;
+    let collection_id = CollectionId::new("test_fs_do_scan_datasource")?;
+    use hoover3_database::client_query;
+    client_query::collections::drop_collection(collection_id.clone()).await?;
+    client_query::collections::create_new_collection(collection_id.clone()).await?;
+    assert!(client_query::datasources::get_all_datasources(collection_id.clone()).await?.is_empty());
+    let datasource_id = DatabaseIdentifier::new("test_fs_do_scan_datasource_collection")?;
+    let settings = DatasourceSettings::LocalDisk { path: PathBuf::from("hoover-testdata/data/disk-files/long-filenames") };
+    client_query::datasources::create_datasource((collection_id.clone(), datasource_id.clone(), settings)).await?;
+    start_scan((collection_id.clone(), datasource_id.clone())).await?;
+    let status = wait_for_scan_results((collection_id.clone(), datasource_id.clone())).await?;
+    assert_eq!(status.file_count, 3);
+    assert_eq!(status.dir_count, 0);
+    assert_eq!(status.file_size_bytes, 308482);
+    assert_eq!(status.errors, 0);
+    let status = get_scan_status((collection_id.clone(), datasource_id.clone())).await?;
+    assert_eq!(status.task_status, UiWorkflowStatusCode::Completed);
+    client_query::collections::drop_collection(collection_id.clone()).await?;
+    Ok(())
 }
