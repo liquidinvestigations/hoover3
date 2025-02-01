@@ -26,12 +26,12 @@ pub fn nebula_sql_insert_vertex(
 
     let schema_table = schema
         .tables
-        .get(&table_id)
+        .get(table_id)
         .context("table not found in schema")?;
     let column_defs = schema_table
         .columns
         .iter()
-        .map(|c| format!("`{}`", c.name.to_string()))
+        .map(|c| format!("`{}`", c.name))
         .collect::<Vec<String>>()
         .join(", ");
 
@@ -163,8 +163,8 @@ where
 
     pub fn push(&mut self, from: &T1, to: &T2)  {
         self.data.push((
-            row_pk_hash::<T1>(&from),
-            row_pk_hash::<T2>(&to),
+            row_pk_hash::<T1>(from),
+            row_pk_hash::<T2>(to),
         ));
     }
 
@@ -217,7 +217,7 @@ impl DatabaseExtraCallbacks {
         let table_id = DatabaseIdentifier::new(T::DB_MODEL_NAME)?;
         let mut v = vec![];
         for d in data.iter() {
-            let nebula_pk = row_pk_hash::<T>(&d);
+            let nebula_pk = row_pk_hash::<T>(d);
             let data_json = serde_json::to_value(d)?;
             v.push((nebula_pk, data_json));
         }
@@ -242,7 +242,7 @@ impl DatabaseExtraCallbacks {
         }
         let pks = data
             .iter()
-            .map(|d| row_pk_hash::<T>(&d))
+            .map(|d| row_pk_hash::<T>(d))
             .map(|pk| format!("\"{pk}\""))
             .collect::<Vec<String>>()
             .join(",");

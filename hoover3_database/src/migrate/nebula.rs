@@ -92,10 +92,8 @@ async fn check_nebula_schema(
     let drop_q = "DELETE VERTEX \"test___dummy\" WITH EDGE;";
     let session = NebulaDatabaseHandle::collection_session(collection_id).await?;
     for _i in 0..60 {
-        if session.execute::<()>(&insert_q).await.is_ok() {
-            if session.execute::<()>(&drop_q).await.is_ok() {
-                return Ok(());
-            }
+        if session.execute::<()>(insert_q).await.is_ok() && session.execute::<()>(drop_q).await.is_ok() {
+            return Ok(());
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
     }
@@ -157,7 +155,7 @@ async fn nebula_describe_tag(
 fn nebula_create_tags_query(schema: &DatabaseSchema) -> Vec<String> {
     let mut query = vec![];
     for table in schema.tables.values() {
-        query.push(nebula_create_tag_query(&table));
+        query.push(nebula_create_tag_query(table));
     }
     query
 }
@@ -170,7 +168,7 @@ fn nebula_create_tag_query(table: &DatabaseTable) -> String {
             .columns
             .iter()
             .filter(|c| c.primary)
-            .map(|c| nebula_create_tag_column_query(&c))
+            .map(nebula_create_tag_column_query)
             .collect::<Vec<_>>()
             .join(",\n"),
     );

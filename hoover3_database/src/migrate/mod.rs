@@ -87,7 +87,7 @@ pub async fn migrate_common() -> Result<()> {
 
 pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
     let c = c.clone();
-    with_redis_lock(&format!("migrate_lock_2_{}", c.to_string()), async move {
+    with_redis_lock(&format!("migrate_lock_2_{}", c), async move {
         _migrate_collection(c).await
     })
     .await?
@@ -95,7 +95,7 @@ pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
 
 pub async fn drop_collection(c: &CollectionId) -> Result<()> {
     let c = c.clone();
-    with_redis_lock(&format!("migrate_lock_2_{}", c.to_string()), async move {
+    with_redis_lock(&format!("migrate_lock_2_{}", c), async move {
         _drop_collection(c).await
     })
     .await?
