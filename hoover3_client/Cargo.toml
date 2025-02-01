@@ -10,7 +10,7 @@ publish  = {workspace = true}
 
 [dependencies]
 hoover3_database = {path="../hoover3_database",optional=true}
-hoover3_taskdef = {path="../hoover3_taskdef",optional=true}
+# hoover3_taskdef = {path="../hoover3_taskdef",optional=true}
 hoover3_types  = {path="../hoover3_types"}
 hoover3_filesystem_scanner = {path="../tasks/filesystem_scanner",optional=true}
 
@@ -36,4 +36,11 @@ default = []
 web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 mobile = ["dioxus/mobile"]
-server = ["dioxus/server", "dep:tokio","dep:hoover3_database", "dep:axum", "dep:hoover3_taskdef", "dep:hoover3_filesystem_scanner"]
+server = [
+    "dioxus/server",
+    "dep:tokio",
+    "dep:hoover3_database",
+    "dep:axum",
+    # "dep:hoover3_taskdef",
+    "dep:hoover3_filesystem_scanner"
+    ]

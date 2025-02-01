@@ -6,6 +6,7 @@ pub use clickhouse::ClickhouseDatabaseHandle;
 
 mod meilisearch;
 pub use meilisearch::MeilisearchDatabaseHandle;
+pub use meilisearch::meilisearch_wait_for_task;
 
 mod nebula;
 pub use nebula::NebulaDatabaseHandle;
@@ -21,8 +22,9 @@ use std::sync::Arc;
 
 #[allow(async_fn_in_trait)]
 pub trait DatabaseSpaceManager {
+    type CollectionSessionType;
     async fn global_session() -> Result<Arc<Self>, anyhow::Error>;
-    async fn collection_session(c: &CollectionId) -> Result<Arc<Self>, anyhow::Error>;
+    async fn collection_session(c: &CollectionId) -> Result<Arc<Self::CollectionSessionType>, anyhow::Error>;
 
     async fn space_exists(&self, name: &DatabaseIdentifier) -> Result<bool, anyhow::Error>;
     async fn list_spaces(&self) -> Result<Vec<DatabaseIdentifier>, anyhow::Error>;

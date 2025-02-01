@@ -13,7 +13,6 @@ use fbthrift_transport::AsyncTransportConfiguration;
 
 use bb8::{Pool, PooledConnection};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
-use nebula_client::v3::graph::GraphQueryError;
 use nebula_client::v3::{graph::GraphQueryOutput, GraphQuery as _, GraphTransportResponseHandler};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
@@ -35,24 +34,29 @@ pub trait NebulaDatabaseHandleExt {
     fn execute<T: DeserializeOwned + std::fmt::Debug>(
         &self,
         query: &str,
-    ) -> impl futures::Future<Output = Result<Vec<T>, GraphQueryError>>;
+    ) -> impl futures::Future<Output = Result<Vec<T>,  anyhow::Error>>;
 }
+use tokio::time::Duration;
+const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(30);
 
 impl NebulaDatabaseHandleExt for NebulaDatabaseHandle {
     async fn execute<T: DeserializeOwned + std::fmt::Debug>(
         &self,
         query: &str,
-    ) -> Result<Vec<T>, GraphQueryError> {
+    ) -> Result<Vec<T>, anyhow::Error> {
         // println!("NEBULA QUERY: {}", query);
         let query = query.as_bytes().to_vec();
         let mut session = self.lock().await;
-        let result = session.query_as::<T>(&query).await;
+        let result = tokio::time::timeout(
+            NEBULA_QUERY_TIMEOUT, session.query_as::<T>(&query)
+        ).await?;
         // println!("NEBULA RESULT: {:?}", result);
         Ok(result?.data_set)
     }
 }
 
 impl DatabaseSpaceManager for NebulaDatabaseHandle {
+    type CollectionSessionType = Self;
     async fn global_session() -> anyhow::Result<Arc<Self>> {
         use anyhow::Context;
         Ok(Arc::new(Mutex::new(
@@ -116,7 +120,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
                 ",
                 name
             );
-            info!("nebula query: {}", query);
+            info!("nebula create space query: {}", query);
             let query = query.as_bytes().to_vec();
 
             let res = {

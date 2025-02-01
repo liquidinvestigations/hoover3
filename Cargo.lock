@@ -3276,7 +3276,6 @@ dependencies = [
  "dioxus-sdk",
  "hoover3_database",
  "hoover3_filesystem_scanner",
- "hoover3_taskdef",
  "hoover3_types",
  "paste",
  "serde",

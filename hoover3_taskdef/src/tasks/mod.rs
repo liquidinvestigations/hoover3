@@ -114,7 +114,7 @@ pub trait TemporalioActivityDescriptor:
                     maximum_attempts: 2,
                     ..Default::default()
                 }),
-                start_to_close_timeout: Some(Duration::from_secs(30)),
+                start_to_close_timeout: Some(Duration::from_secs(600)),
                 ..Default::default()
             };
 

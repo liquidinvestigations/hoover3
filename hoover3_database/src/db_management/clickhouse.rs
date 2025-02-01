@@ -11,6 +11,7 @@ fn clickhouse_url() -> String {
 }
 
 impl DatabaseSpaceManager for ClickhouseDatabaseHandle {
+    type CollectionSessionType = Self;
     async fn global_session() -> anyhow::Result<Arc<Self>> {
         static CLICKHOUSE_CLIENT: OnceCell<Arc<Client>> = OnceCell::const_new();
         Ok(CLICKHOUSE_CLIENT

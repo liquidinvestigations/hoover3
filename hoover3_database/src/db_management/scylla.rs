@@ -18,6 +18,7 @@ impl ScyllaDatabaseHandle {
 }
 
 impl DatabaseSpaceManager for ScyllaDatabaseHandle {
+    type CollectionSessionType = Self;
     async fn global_session() -> anyhow::Result<Arc<Self>> {
         static SCYLLA_CONNECTION_GLOBAL: OnceCell<Arc<ScyllaConnection>> = OnceCell::const_new();
         Ok(SCYLLA_CONNECTION_GLOBAL

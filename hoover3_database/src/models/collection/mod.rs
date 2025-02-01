@@ -4,6 +4,7 @@ pub mod datasource;
 pub mod filesystem;
 
 use crate::db_management::DatabaseSpaceManager;
+use crate::db_management::MeilisearchDatabaseHandle;
 use crate::db_management::NebulaDatabaseHandle;
 use crate::db_management::NebulaDatabaseHandleExt;
 use crate::migrate::nebula_get_tags_schema;
@@ -12,10 +13,7 @@ use crate::models::collection::_nebula_edges::GraphEdgeType;
 use charybdis::model::BaseModel;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
-pub struct DatabaseExtraCallbacks {
-    pub nebula_handle: std::sync::Arc<NebulaDatabaseHandle>,
-    pub nebula_schema: DatabaseSchema,
-}
+// use crate::db_management::meilisearch_wait_for_task;
 
 pub fn nebula_sql_insert_vertex(
     table_id: &DatabaseIdentifier,
@@ -196,16 +194,24 @@ where
     format!("{table_name}_{x}")
 }
 
+pub struct DatabaseExtraCallbacks {
+    pub nebula_handle: std::sync::Arc<NebulaDatabaseHandle>,
+    pub nebula_schema: DatabaseSchema,
+    pub search_index: std::sync::Arc<<meilisearch_sdk::client::Client as DatabaseSpaceManager>::CollectionSessionType>,
+}
+
+
 impl DatabaseExtraCallbacks {
     pub async fn new(c: &CollectionId) -> anyhow::Result<Self> {
         let nebula_handle = NebulaDatabaseHandle::collection_session(c).await?;
         let nebula_schema = nebula_get_tags_schema(c).await?;
+        let search_client = MeilisearchDatabaseHandle::collection_session(c).await?;
         Ok(Self {
             nebula_handle,
             nebula_schema,
+            search_index: search_client,
         })
     }
-
 
     pub async fn insert<T>(&self, data: &[T]) -> anyhow::Result<()>
     where
@@ -218,17 +224,27 @@ impl DatabaseExtraCallbacks {
             return Ok(());
         }
         let table_id = DatabaseIdentifier::new(T::DB_MODEL_NAME)?;
-        let mut v = vec![];
+        let mut nebula_data = vec![];
+        let mut search_data = vec![];
         for d in data.iter() {
-            let nebula_pk = row_pk_hash::<T>(d);
+            let row_pk = row_pk_hash::<T>(d);
             let data_json = serde_json::to_value(d)?;
-            v.push((nebula_pk, data_json));
+            nebula_data.push((row_pk.clone(), data_json.clone()));
+
+            let mut obj_map = serde_json::Map::new();
+            obj_map.insert("id".to_string(), serde_json::value::Value::String(row_pk));
+            obj_map.insert(table_id.to_string(), data_json);
+            search_data.push(serde_json::value::Value::Object(obj_map));
         }
+        use tokio::time::Duration;
 
-        let query = nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), v)?;
+        let _search_result = tokio::time::timeout(Duration::from_secs(30), self.search_index.add_documents(&search_data, Some("id"))).await??;
 
-        tracing::info!("nebula_sql_insert_vertex:\n {query}");
-        self.nebula_handle.execute::<()>(&query).await?;
+        let nebula_insert_query = nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), nebula_data)?;
+        self.nebula_handle.execute::<()>(&nebula_insert_query).await?;
+
+        // takes too much time
+        // meilisearch_wait_for_task(_search_result).await?;
 
         Ok(())
     }
@@ -246,17 +262,23 @@ impl DatabaseExtraCallbacks {
         let pks = data
             .iter()
             .map(|d| row_pk_hash::<T>(d))
+            .collect::<Vec<String>>();
+
+        let _search_result = self.search_index.delete_documents(&pks).await?;
+
+        let nebula_pks = pks.into_iter()
             .map(|pk| format!("\"{pk}\""))
             .collect::<Vec<String>>()
             .join(",");
-        let query = format!(
+        let nebula_delete_query = format!(
             "
-            DELETE VERTEX {pks} WITH EDGE;
+            DELETE VERTEX {nebula_pks} WITH EDGE;
             "
         );
-        tracing::info!("nebula_sql_delete_vertex:\n {query}");
+        self.nebula_handle.execute::<()>(&nebula_delete_query).await?;
 
-        self.nebula_handle.execute::<()>(&query).await?;
+        // takes too much time
+        // meilisearch_wait_for_task(_search_result).await?;
 
         Ok(())
     }

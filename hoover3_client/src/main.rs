@@ -22,7 +22,7 @@ fn main() {
                 hoover3_database::migrate::migrate_all().await.unwrap();
 
                 // start workers
-                hoover3_taskdef::spawn_worker_on_thread::<hoover3_filesystem_scanner::AllTasks>();
+                // hoover3_taskdef::spawn_worker_on_thread::<hoover3_filesystem_scanner::AllTasks>();
 
                 // build our application with some routes
                 let app = axum::routing::Router::new()

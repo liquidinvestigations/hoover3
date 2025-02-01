@@ -217,6 +217,7 @@ async fn fs_do_scan_datasource(
 
 #[tokio::test]
 async fn test_fs_do_scan_datasource() -> anyhow::Result<()> {
+    hoover3_database::migrate::migrate_common().await?;
     use hoover3_types::tasks::UiWorkflowStatusCode;
     let collection_id = CollectionId::new("test_fs_do_scan_datasource")?;
     use hoover3_database::client_query;
@@ -226,6 +227,9 @@ async fn test_fs_do_scan_datasource() -> anyhow::Result<()> {
     let datasource_id = DatabaseIdentifier::new("test_fs_do_scan_datasource_collection")?;
     let settings = DatasourceSettings::LocalDisk { path: PathBuf::from("hoover-testdata/data/disk-files/long-filenames") };
     client_query::datasources::create_datasource((collection_id.clone(), datasource_id.clone(), settings)).await?;
+
+    hoover3_taskdef::spawn_worker_on_thread::<AllTasks>();
+
     start_scan((collection_id.clone(), datasource_id.clone())).await?;
     let status = wait_for_scan_results((collection_id.clone(), datasource_id.clone())).await?;
     assert_eq!(status.file_count, 3);

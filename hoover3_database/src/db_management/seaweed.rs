@@ -25,6 +25,7 @@ impl S3Configs {
 pub type S3DatabaseHandle = S3Configs;
 
 impl DatabaseSpaceManager for S3DatabaseHandle {
+    type CollectionSessionType = Self;
     async fn global_session() -> anyhow::Result<Arc<Self>> {
         static S3_CONFIGS: OnceCell<Arc<S3Configs>> = OnceCell::const_new();
         Ok(S3_CONFIGS
