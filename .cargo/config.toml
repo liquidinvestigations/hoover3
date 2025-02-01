@@ -3,3 +3,9 @@
 
 [toolchain]
 channel = "stable"
+
+# [target.x86_64-unknown-linux-gnu]
+# rustflags = ["-Zlinker-features=-lld", "-Clink-args=-Wl,--build-id"]
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]

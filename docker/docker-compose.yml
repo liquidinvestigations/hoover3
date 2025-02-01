@@ -424,9 +424,9 @@ services:
       - MEILI_MASTER_KEY=1234
       - MEILI_NO_ANALYTICS=true
       - MEILI_ENV=development
-      - MEILI_LOG_LEVEL=info
+      - MEILI_LOG_LEVEL=warn
       - MEILI_DB_PATH=/data.ms
-      - MEILI_MAX_INDEXING_MEMORY=4Gb
+      - MEILI_MAX_INDEXING_MEMORY=5Gb
       - MEILI_MAX_INDEXING_THREADS=4
     ports:
       - 7700:7700

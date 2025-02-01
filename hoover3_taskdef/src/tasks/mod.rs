@@ -1,16 +1,15 @@
 use crate::client::get_client;
+pub use crate::client::TemporalioClient;
 pub use anyhow;
 pub use futures::Future;
+use hoover3_types::tasks::UiWorkflowStatus;
+use hoover3_types::tasks::UiWorkflowStatusCode;
+pub use prost_wkt_types::Duration as ProstDuration;
 pub use serde;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{info, warn};
-use hoover3_types::tasks::UiWorkflowStatus;
-use hoover3_types::tasks::UiWorkflowStatusCode;
-pub use crate::client::TemporalioClient;
-pub use prost_wkt_types::Duration as ProstDuration;
 pub use temporal_client::WorkflowClientTrait;
 pub use temporal_client::WorkflowOptions;
 pub use temporal_sdk::ActContext;
@@ -25,6 +24,7 @@ pub use temporal_sdk_core::{init_worker, CoreRuntime};
 pub use temporal_sdk_core_protos::coresdk::AsJsonPayloadExt;
 pub use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowExecutionStatus;
 pub use temporal_sdk_core_protos::temporal::api::workflowservice::v1::StartWorkflowExecutionResponse;
+use tracing::{info, warn};
 
 pub const TEMPORALIO_NAMESPACE: &str = "default";
 /// Global name for this Temporalio thing (activity, workflow)
@@ -394,7 +394,9 @@ pub trait TemporalioWorkflowDescriptor:
         }
     }
 
-    fn client_get_status(arg: &Self::Arg) -> impl Future<Output = Result<UiWorkflowStatus, anyhow::Error>> {
+    fn client_get_status(
+        arg: &Self::Arg,
+    ) -> impl Future<Output = Result<UiWorkflowStatus, anyhow::Error>> {
         async move {
             let workflow_id = Self::workflow_id(arg);
             let status = query_workflow_execution_status(&workflow_id).await?;
@@ -501,7 +503,13 @@ fn create_worker<T: TemporalioDescriptorRegister>(
     let worker_build_id = format!("{queue_name}__{}", build_id());
     info!("worker build_id: {:?}", worker_build_id);
 
+    const MAX_CONCURRENCY: usize = 8;
+
     let worker_config = WorkerConfigBuilder::default()
+        .max_outstanding_activities(MAX_CONCURRENCY)
+        .max_outstanding_workflow_tasks(MAX_CONCURRENCY)
+        .max_concurrent_at_polls(MAX_CONCURRENCY)
+        .max_outstanding_local_activities(MAX_CONCURRENCY)
         .namespace(TEMPORALIO_NAMESPACE)
         .task_queue(queue_name)
         .worker_build_id(worker_build_id)

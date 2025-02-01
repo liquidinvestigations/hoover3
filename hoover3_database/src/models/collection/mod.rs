@@ -3,17 +3,16 @@ pub mod blob;
 pub mod datasource;
 pub mod filesystem;
 
+use crate::db_management::meilisearch_wait_for_task;
+use crate::db_management::nebula_execute;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::MeilisearchDatabaseHandle;
-use crate::db_management::NebulaDatabaseHandle;
-use crate::db_management::NebulaDatabaseHandleExt;
 use crate::migrate::nebula_get_tags_schema;
 use crate::migrate::schema::DatabaseSchema;
 use crate::models::collection::_nebula_edges::GraphEdgeType;
 use charybdis::model::BaseModel;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
-// use crate::db_management::meilisearch_wait_for_task;
 
 pub fn nebula_sql_insert_vertex(
     table_id: &DatabaseIdentifier,
@@ -129,10 +128,11 @@ async fn test_nebula_sql_insert_edge() {
         ("1".to_string(), "2".to_string()),
         ("3".to_string(), "4".to_string()),
     ];
-    let query = nebula_sql_insert_edge(&edge, data).unwrap()
-    .split_whitespace()
-    .collect::<Vec<&str>>()
-    .join(" ");
+    let query = nebula_sql_insert_edge(&edge, data)
+        .unwrap()
+        .split_whitespace()
+        .collect::<Vec<&str>>()
+        .join(" ");
     assert_eq!(
         query.trim(),
         "INSERT EDGE `test_edge` () VALUES \"1\"->\"2\"@0:(), \"3\"->\"4\"@0:();"
@@ -162,11 +162,9 @@ where
         }
     }
 
-    pub fn push(&mut self, from: &T1, to: &T2)  {
-        self.data.push((
-            row_pk_hash::<T1>(from),
-            row_pk_hash::<T2>(to),
-        ));
+    pub fn push(&mut self, from: &T1, to: &T2) {
+        self.data
+            .push((row_pk_hash::<T1>(from), row_pk_hash::<T2>(to)));
     }
 
     pub async fn execute(self, db_extra: &DatabaseExtraCallbacks) -> anyhow::Result<()> {
@@ -174,11 +172,10 @@ where
             return Ok(());
         }
         let query = nebula_sql_insert_edge(&self.edge, self.data)?;
-        db_extra.nebula_handle.execute::<()>(&query).await?;
+        nebula_execute::<()>(&db_extra.collection_id, &query).await?;
         Ok(())
     }
 }
-
 
 pub fn row_pk_hash<T>(data: &T) -> String
 where
@@ -195,19 +192,19 @@ where
 }
 
 pub struct DatabaseExtraCallbacks {
-    pub nebula_handle: std::sync::Arc<NebulaDatabaseHandle>,
+    pub collection_id: CollectionId,
     pub nebula_schema: DatabaseSchema,
-    pub search_index: std::sync::Arc<<meilisearch_sdk::client::Client as DatabaseSpaceManager>::CollectionSessionType>,
+    pub search_index: std::sync::Arc<
+        <meilisearch_sdk::client::Client as DatabaseSpaceManager>::CollectionSessionType,
+    >,
 }
-
 
 impl DatabaseExtraCallbacks {
     pub async fn new(c: &CollectionId) -> anyhow::Result<Self> {
-        let nebula_handle = NebulaDatabaseHandle::collection_session(c).await?;
         let nebula_schema = nebula_get_tags_schema(c).await?;
         let search_client = MeilisearchDatabaseHandle::collection_session(c).await?;
         Ok(Self {
-            nebula_handle,
+            collection_id: c.clone(),
             nebula_schema,
             search_index: search_client,
         })
@@ -238,10 +235,15 @@ impl DatabaseExtraCallbacks {
         }
         use tokio::time::Duration;
 
-        let _search_result = tokio::time::timeout(Duration::from_secs(30), self.search_index.add_documents(&search_data, Some("id"))).await??;
+        let _search_result = tokio::time::timeout(
+            Duration::from_secs(30),
+            self.search_index.add_documents(&search_data, Some("id")),
+        )
+        .await??;
 
-        let nebula_insert_query = nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), nebula_data)?;
-        self.nebula_handle.execute::<()>(&nebula_insert_query).await?;
+        let nebula_insert_query =
+            nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), nebula_data)?;
+        nebula_execute::<()>(&self.collection_id, &nebula_insert_query).await?;
 
         // takes too much time
         // meilisearch_wait_for_task(_search_result).await?;
@@ -266,7 +268,8 @@ impl DatabaseExtraCallbacks {
 
         let _search_result = self.search_index.delete_documents(&pks).await?;
 
-        let nebula_pks = pks.into_iter()
+        let nebula_pks = pks
+            .into_iter()
             .map(|pk| format!("\"{pk}\""))
             .collect::<Vec<String>>()
             .join(",");
@@ -275,14 +278,13 @@ impl DatabaseExtraCallbacks {
             DELETE VERTEX {nebula_pks} WITH EDGE;
             "
         );
-        self.nebula_handle.execute::<()>(&nebula_delete_query).await?;
+        nebula_execute::<()>(&self.collection_id, &nebula_delete_query).await?;
 
         // takes too much time
-        // meilisearch_wait_for_task(_search_result).await?;
+        meilisearch_wait_for_task(_search_result).await?;
 
         Ok(())
     }
-
 }
 
 #[macro_export]

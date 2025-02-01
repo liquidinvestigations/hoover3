@@ -2,6 +2,8 @@
 
 ## installation
 
+- use linux
+- sudo apt-get install mold clang
 - install docker
 - run ./start_docker.sh
 - cargo install cargo-binstall

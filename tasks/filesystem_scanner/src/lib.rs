@@ -2,10 +2,11 @@ use hoover3_database::charybdis::batch::ModelBatch;
 use hoover3_database::client_query;
 use hoover3_database::db_management::DatabaseSpaceManager;
 use hoover3_database::db_management::ScyllaDatabaseHandle;
+use hoover3_database::models::collection::_nebula_edges::FilesystemParentEdge;
 use hoover3_database::models::collection::filesystem::FsDirectoryDbRow;
 use hoover3_database::models::collection::filesystem::FsFileDbRow;
+use hoover3_database::models::collection::InsertEdgeBatch;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
-use hoover3_types::tasks::UiWorkflowStatus;
 use hoover3_taskdef::{
     activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
     WorkflowResult,
@@ -14,10 +15,9 @@ use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
+use hoover3_types::tasks::UiWorkflowStatus;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use hoover3_database::models::collection::_nebula_edges::FilesystemParentEdge;
-use hoover3_database::models::collection::InsertEdgeBatch;
 const FILESYSTEM_SCANNER_TASK_QUEUE: &str = "filesystem_scanner";
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -46,7 +46,7 @@ pub async fn start_scan(
 }
 
 pub async fn wait_for_scan_results(
-    (c_id, ds_id): (CollectionId, DatabaseIdentifier)
+    (c_id, ds_id): (CollectionId, DatabaseIdentifier),
 ) -> Result<FsScanDatasourceResult, anyhow::Error> {
     let args = ScanDatasourceArgs {
         collection_id: c_id.clone(),
@@ -57,7 +57,7 @@ pub async fn wait_for_scan_results(
 }
 
 pub async fn get_scan_status(
-    (c_id, ds_id): (CollectionId, DatabaseIdentifier)
+    (c_id, ds_id): (CollectionId, DatabaseIdentifier),
 ) -> Result<UiWorkflowStatus, anyhow::Error> {
     let args = ScanDatasourceArgs {
         collection_id: c_id.clone(),
@@ -156,7 +156,7 @@ async fn fs_do_scan_datasource(
     let mut edges_to_files = InsertEdgeBatch::new(&FilesystemParentEdge);
     let mut edges_to_dirs = InsertEdgeBatch::new(&FilesystemParentEdge);
 
-    let parent_pk = arg.path.map(|p| FsDirectoryDbRow{
+    let parent_pk = arg.path.map(|p| FsDirectoryDbRow {
         datasource_id: arg.datasource_id.to_string(),
         path: p.to_str().unwrap().into(),
         size_bytes: 0,
@@ -223,10 +223,21 @@ async fn test_fs_do_scan_datasource() -> anyhow::Result<()> {
     use hoover3_database::client_query;
     client_query::collections::drop_collection(collection_id.clone()).await?;
     client_query::collections::create_new_collection(collection_id.clone()).await?;
-    assert!(client_query::datasources::get_all_datasources(collection_id.clone()).await?.is_empty());
+    assert!(
+        client_query::datasources::get_all_datasources(collection_id.clone())
+            .await?
+            .is_empty()
+    );
     let datasource_id = DatabaseIdentifier::new("test_fs_do_scan_datasource_collection")?;
-    let settings = DatasourceSettings::LocalDisk { path: PathBuf::from("hoover-testdata/data/disk-files/long-filenames") };
-    client_query::datasources::create_datasource((collection_id.clone(), datasource_id.clone(), settings)).await?;
+    let settings = DatasourceSettings::LocalDisk {
+        path: PathBuf::from("hoover-testdata/data/disk-files/long-filenames"),
+    };
+    client_query::datasources::create_datasource((
+        collection_id.clone(),
+        datasource_id.clone(),
+        settings,
+    ))
+    .await?;
 
     hoover3_taskdef::spawn_worker_on_thread::<AllTasks>();
 

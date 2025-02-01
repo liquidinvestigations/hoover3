@@ -1,31 +1,29 @@
-use crate::db_management::DatabaseSpaceManager;
-use crate::db_management::NebulaDatabaseHandle;
-use crate::db_management::NebulaDatabaseHandleExt;
+use crate::db_management::nebula_execute;
 use crate::migrate::schema::get_scylla_schema_primary;
 use crate::migrate::schema::{DatabaseColumn, DatabaseSchema, DatabaseTable};
-use serde::Deserialize;
-
 use anyhow::Result;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
+use serde::Deserialize;
 use std::collections::BTreeMap;
 use tracing::info;
 
 pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     info!("migrating nebula collection {}...", c);
-    let session = NebulaDatabaseHandle::collection_session(c).await?;
     for edge_name in crate::models::collection::_nebula_edges::ALL_NEBULA_EDGES {
-        session
-            .execute::<()>(&format!(
-                "CREATE EDGE IF NOT EXISTS `{}` ();",
-                edge_name.name
-            ))
-            .await?;
+        nebula_execute::<()>(
+            c,
+            &format!("CREATE EDGE IF NOT EXISTS `{}` ();", edge_name.name),
+        )
+        .await?;
     }
     let scylla_schema = get_scylla_schema_primary(c).await?;
     // if we already have all the tags, skip the create
     if let Ok(nebula_schema) = nebula_get_tags_schema(c).await {
-        if check_nebula_schema(c, &scylla_schema, &nebula_schema).await.is_ok() {
+        if check_nebula_schema(c, &scylla_schema, &nebula_schema)
+            .await
+            .is_ok()
+        {
             info!(
                 "nebula collection {} already has all the tags, skipping create",
                 c
@@ -37,7 +35,7 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     let qs = nebula_create_tags_query(&scylla_schema);
     for s in qs {
         info!("nebula create tags query: \n  {}", s);
-        session.execute::<()>(&s).await?;
+        nebula_execute::<()>(c, &s).await?;
     }
     let nebula_schema = nebula_get_tags_schema(c).await?;
     check_nebula_schema(c, &scylla_schema, &nebula_schema).await?;
@@ -90,9 +88,10 @@ async fn check_nebula_schema(
     let insert_q =
         "INSERT VERTEX `datasource` (`datasource_id`) VALUES \"test___dummy\":(\"test___dummy\");";
     let drop_q = "DELETE VERTEX \"test___dummy\" WITH EDGE;";
-    let session = NebulaDatabaseHandle::collection_session(collection_id).await?;
     for _i in 0..60 {
-        if session.execute::<()>(insert_q).await.is_ok() && session.execute::<()>(drop_q).await.is_ok() {
+        if nebula_execute::<()>(&collection_id, insert_q).await.is_ok()
+            && nebula_execute::<()>(&collection_id, drop_q).await.is_ok()
+        {
             return Ok(());
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
@@ -101,26 +100,22 @@ async fn check_nebula_schema(
 }
 
 pub async fn nebula_get_tags_schema(c: &CollectionId) -> Result<DatabaseSchema> {
-    let session = NebulaDatabaseHandle::collection_session(c).await?;
     let mut schema = DatabaseSchema {
         tables: BTreeMap::new(),
     };
-    for tag in session.execute::<String>("SHOW TAGS;").await? {
+    for tag in nebula_execute::<String>(c, "SHOW TAGS;").await? {
         schema.tables.insert(
             DatabaseIdentifier::new(&tag)?,
             DatabaseTable {
                 name: DatabaseIdentifier::new(&tag)?,
-                columns: nebula_describe_tag(session.clone(), &tag).await?,
+                columns: nebula_describe_tag(c, &tag).await?,
             },
         );
     }
     Ok(schema)
 }
 
-async fn nebula_describe_tag(
-    session: std::sync::Arc<NebulaDatabaseHandle>,
-    tag: &str,
-) -> Result<Vec<DatabaseColumn>> {
+async fn nebula_describe_tag(c: &CollectionId, tag: &str) -> Result<Vec<DatabaseColumn>> {
     let mut columns = vec![];
 
     #[derive(Deserialize, Debug)]
@@ -137,9 +132,8 @@ async fn nebula_describe_tag(
         pub _field_comment: String,
     }
 
-    for field in session
-        .execute::<DescribeTagResponse>(&format!("DESCRIBE TAG `{}`;", tag))
-        .await?
+    for field in
+        nebula_execute::<DescribeTagResponse>(c, &format!("DESCRIBE TAG `{}`;", tag)).await?
     {
         columns.push(DatabaseColumn {
             name: DatabaseIdentifier::new(&field._field_name)?,

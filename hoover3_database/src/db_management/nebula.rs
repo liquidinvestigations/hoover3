@@ -5,6 +5,7 @@ cargo run -p nebula-demo-tokio --bin nebula_demo_tokio_v3_bb8_graph_pool 127.0.0
 use std::{env, sync::Arc};
 use tracing::info;
 
+use anyhow::Context;
 use bb8_nebula::{
     graph::GraphClientConfiguration, impl_tokio::v3::graph::new_graph_connection_manager,
     GraphConnectionManager,
@@ -29,31 +30,55 @@ type TManager = GraphConnectionManager<
 type TPool2 = Pool<TManager>;
 type TSession = PooledConnection<'static, TManager>;
 pub type NebulaDatabaseHandle = Mutex<TSession>;
+use std::collections::HashMap;
+use tokio::sync::RwLock;
 
-pub trait NebulaDatabaseHandleExt {
-    fn execute<T: DeserializeOwned + std::fmt::Debug>(
-        &self,
-        query: &str,
-    ) -> impl futures::Future<Output = Result<Vec<T>,  anyhow::Error>>;
-}
+
 use tokio::time::Duration;
-const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(30);
+const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(60);
 
-impl NebulaDatabaseHandleExt for NebulaDatabaseHandle {
-    async fn execute<T: DeserializeOwned + std::fmt::Debug>(
-        &self,
-        query: &str,
-    ) -> Result<Vec<T>, anyhow::Error> {
-        // println!("NEBULA QUERY: {}", query);
-        let query = query.as_bytes().to_vec();
-        let mut session = self.lock().await;
-        let result = tokio::time::timeout(
-            NEBULA_QUERY_TIMEOUT, session.query_as::<T>(&query)
-        ).await?;
-        // println!("NEBULA RESULT: {:?}", result);
-        Ok(result?.data_set)
-    }
+async fn nebula_execute_once<T: DeserializeOwned + std::fmt::Debug>(
+    collection: &CollectionId,
+    query: &str,
+) -> Result<Vec<T>, anyhow::Error> {
+    let handle = tokio::time::timeout(
+        NEBULA_QUERY_TIMEOUT,
+        NebulaDatabaseHandle::collection_session(collection),
+    )
+    .await
+    .context("nebula get session timeout")??;
+    let query = query.as_bytes().to_vec();
+    let mut session = tokio::time::timeout(NEBULA_QUERY_TIMEOUT, handle.lock())
+        .await
+        .context("nebula session lock timeout")?;
+    let result = tokio::time::timeout(NEBULA_QUERY_TIMEOUT, session.query_as::<T>(&query))
+        .await
+        .context("nebula query execution timeout")?;
+    Ok(result?.data_set)
 }
+
+pub async fn nebula_execute<T: DeserializeOwned + std::fmt::Debug>(
+    collection: &CollectionId,
+    query: &str,
+) -> Result<Vec<T>, anyhow::Error> {
+    let retry_count = 3;
+    for i in 1..=retry_count {
+        let res = nebula_execute_once(collection, query).await;
+        if res.is_ok() {
+            return res;
+        }
+        if i == retry_count {
+            anyhow::bail!("nebula query failed after {retry_count} retries: {res:?}");
+        }
+        tokio::time::sleep(tokio::time::Duration::from_secs_f64(
+            NEBULA_SESSION_CACHE_DURATION_SECONDS,
+        ))
+        .await;
+    }
+    unreachable!();
+}
+
+const NEBULA_SESSION_CACHE_DURATION_SECONDS: f64 = 5.0;
 
 impl DatabaseSpaceManager for NebulaDatabaseHandle {
     type CollectionSessionType = Self;
@@ -66,10 +91,39 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
         )))
     }
     async fn collection_session(_c: &CollectionId) -> Result<Arc<Self>, anyhow::Error> {
+        let current_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64();
         // TODO - cache in memory hashmap and drop old collection sessions
-        Ok(Arc::new(Mutex::new(
-            _open_new_session(&_c.database_name()?.to_string()).await?,
-        )))
+
+        static HASH: OnceCell<RwLock<HashMap<CollectionId, (f64, Arc<NebulaDatabaseHandle>)>>> =
+            OnceCell::const_new();
+        let h = HASH
+            .get_or_init(|| async move { RwLock::new(HashMap::new()) })
+            .await;
+        // try to fetch from hashmap
+        {
+            let h = h.read().await;
+            if let Some(s) = h.get(_c) {
+                let created_at = s.0;
+                if current_timestamp - created_at < NEBULA_SESSION_CACHE_DURATION_SECONDS {
+                    return Ok(s.1.clone());
+                }
+            }
+        }
+        // if not found, open new session
+        let s = {
+            let mut h = h.write().await;
+            let s = {
+                Arc::new(Mutex::new(
+                    _open_new_session(&_c.database_name()?.to_string()).await?,
+                ))
+            };
+            h.insert(_c.clone(), (current_timestamp, s.clone()));
+            s
+        };
+        Ok(s)
     }
 
     async fn list_spaces(&self) -> anyhow::Result<Vec<DatabaseIdentifier>> {

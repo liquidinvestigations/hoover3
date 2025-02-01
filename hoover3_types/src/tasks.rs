@@ -1,4 +1,3 @@
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct UiWorkflowStatus {
     pub workflow_id: String,
