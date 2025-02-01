@@ -97,6 +97,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
             .as_secs_f64();
         // TODO - cache in memory hashmap and drop old collection sessions
 
+        #[allow(clippy::type_complexity)]
         static HASH: OnceCell<RwLock<HashMap<CollectionId, (f64, Arc<NebulaDatabaseHandle>)>>> =
             OnceCell::const_new();
         let h = HASH

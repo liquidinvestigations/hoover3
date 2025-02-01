@@ -89,8 +89,8 @@ async fn check_nebula_schema(
         "INSERT VERTEX `datasource` (`datasource_id`) VALUES \"test___dummy\":(\"test___dummy\");";
     let drop_q = "DELETE VERTEX \"test___dummy\" WITH EDGE;";
     for _i in 0..60 {
-        if nebula_execute::<()>(&collection_id, insert_q).await.is_ok()
-            && nebula_execute::<()>(&collection_id, drop_q).await.is_ok()
+        if nebula_execute::<()>(collection_id, insert_q).await.is_ok()
+            && nebula_execute::<()>(collection_id, drop_q).await.is_ok()
         {
             return Ok(());
         }
