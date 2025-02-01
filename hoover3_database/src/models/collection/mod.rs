@@ -131,7 +131,10 @@ async fn test_nebula_sql_insert_edge() {
         ("1".to_string(), "2".to_string()),
         ("3".to_string(), "4".to_string()),
     ];
-    let query = nebula_sql_insert_edge(&edge, data).unwrap();
+    let query = nebula_sql_insert_edge(&edge, data).unwrap()
+    .split_whitespace()
+    .collect::<Vec<&str>>()
+    .join(" ");
     assert_eq!(
         query.trim(),
         "INSERT EDGE `test_edge` () VALUES \"1\"->\"2\"@0:(), \"3\"->\"4\"@0:();"
