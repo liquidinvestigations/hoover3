@@ -7,7 +7,6 @@ pub struct UiWorkflowStatus {
     pub task_name: String,
     pub queue_name: String,
     pub task_status: UiWorkflowStatusCode,
-    pub status_tree: TemporalioWorkflowStatusTree,
 }
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum UiWorkflowStatusCode {
@@ -41,7 +40,7 @@ impl Display for UiWorkflowStatusCode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:?}",
+            "{}",
             match self {
                 UiWorkflowStatusCode::Unspecified => "Unspecified",
                 UiWorkflowStatusCode::Running => "Running",
@@ -59,6 +58,7 @@ impl Display for UiWorkflowStatusCode {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TemporalioWorkflowStatusTree {
     pub root_workflow_id: String,
+    pub root_status: UiWorkflowStatusCode,
     pub nodes: BTreeMap<String, UiWorkflowStatusCode>,
     pub parent: BTreeMap<String, String>,
     pub children: BTreeMap<String, Vec<String>>,

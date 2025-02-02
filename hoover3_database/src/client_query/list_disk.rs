@@ -1,6 +1,6 @@
 use crate::migrate::get_package_dir;
 use anyhow::{Context, Result};
-use hoover3_types::filesystem::FsMetadata;
+use hoover3_types::filesystem::FsMetadataBasic;
 use std::path::PathBuf;
 use tokio::fs;
 use tracing::info;
@@ -12,7 +12,7 @@ async fn data_root_path() -> Result<PathBuf> {
         .join("data"))
 }
 
-pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadata> {
+pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadataBasic> {
     let path = data_root_path().await?.join(relative_path).canonicalize()?;
     let relative_path = path
         .strip_prefix(data_root_path().await?)
@@ -27,7 +27,7 @@ pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadata> {
         .context("non-utf8 filename")?
         .to_string();
 
-    Ok(FsMetadata {
+    Ok(FsMetadataBasic {
         is_dir: metadata.is_dir(),
         is_file: metadata.is_file(),
         size_bytes: metadata.len(),
@@ -37,7 +37,7 @@ pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadata> {
     })
 }
 
-pub async fn list_directory(relative_path: PathBuf) -> Result<Vec<FsMetadata>> {
+pub async fn list_directory(relative_path: PathBuf) -> Result<Vec<FsMetadataBasic>> {
     let path = data_root_path().await?.join(relative_path);
     info!("list_directory: {:?}", path);
     let mut entries = Vec::new();

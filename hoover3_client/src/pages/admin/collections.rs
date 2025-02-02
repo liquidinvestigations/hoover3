@@ -27,6 +27,7 @@ impl DataRowDisplay for CollectionUiRow {
         match header_name {
             "Collection Name" => rsx! {
                 Link {
+                    style: "font-size:200%;",
                     to: Route::CollectionAdminDetailsPage {
                         collection_id : self.collection_id.clone()
                     },
@@ -86,16 +87,18 @@ pub fn CollectionsAdminListPage() -> Element {
             })))
         }
 
-
         CollectionsCreateWidget {
             cb: Callback::new(move |c: CollectionId| {
                 spawn(async move {
                     let c_ = c.clone();
-                    let _ = create_new_collection(c_).await;
+                    if let Ok(_) = create_new_collection(c_).await {
                     // c_list.restart();
-                    navigator().push(
-                        Route::CollectionAdminDetailsPage {
-                            collection_id: c.to_string().clone() });
+                        navigator().push(
+                            Route::CollectionAdminDetailsPage {
+                                collection_id: c.to_string().clone()
+                            }
+                        );
+                    }
                 });
             }),
         }
@@ -217,6 +220,7 @@ impl DataRowDisplay for DatasourceUiRow {
     fn render_cell(&self, header_name: &str) -> Element {
         match header_name {
             "Name" => rsx! { Link {
+                style: "font-size:200%;",
                 to: Route::DatasourceAdminDetailsPage {
                     collection_id: self.collection_id.to_string(),
                     datasource_id: self.datasource_id.to_string()

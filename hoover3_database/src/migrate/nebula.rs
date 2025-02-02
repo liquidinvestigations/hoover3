@@ -1,5 +1,5 @@
 use crate::db_management::nebula_execute;
-use crate::migrate::schema::get_scylla_schema_primary;
+use crate::migrate::schema::get_scylla_schema;
 use crate::migrate::schema::{DatabaseColumn, DatabaseSchema, DatabaseTable};
 use anyhow::Result;
 use hoover3_types::identifier::CollectionId;
@@ -17,7 +17,7 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
         )
         .await?;
     }
-    let scylla_schema = get_scylla_schema_primary(c).await?;
+    let scylla_schema = get_scylla_schema(c).await?;
     // if we already have all the tags, skip the create
     if let Ok(nebula_schema) = nebula_get_tags_schema(c).await {
         if check_nebula_schema(c, &scylla_schema, &nebula_schema)
@@ -56,6 +56,7 @@ async fn check_nebula_schema(
         .values()
         .zip(nebula_schema.tables.values())
     {
+        let scylla_columns = scylla_table.columns.iter().filter(|c| c.primary).collect::<Vec<_>>();
         if scylla_table.name != nebula_table.name {
             anyhow::bail!(
                 "scylla table {} and nebula table {} have different names",
@@ -63,15 +64,16 @@ async fn check_nebula_schema(
                 nebula_table.name
             );
         }
-        if scylla_table.columns.len() != nebula_table.columns.len() {
+        if scylla_columns.len() != nebula_table.columns.len() {
             anyhow::bail!(
                 "scylla table {} and nebula table {} have different number of columns",
                 scylla_table.name,
                 nebula_table.name
             );
         }
-        for (scylla_column, nebula_column) in
-            scylla_table.columns.iter().zip(nebula_table.columns.iter())
+        for (scylla_column, nebula_column) in scylla_columns
+            .iter()
+            .zip(nebula_table.columns.iter())
         {
             if scylla_column.name != nebula_column.name {
                 anyhow::bail!(

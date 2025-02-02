@@ -24,7 +24,7 @@ pub struct DatabaseColumn {
     pub primary: bool,
 }
 
-pub async fn get_scylla_schema_primary(c: &CollectionId) -> Result<DatabaseSchema> {
+pub async fn get_scylla_schema(c: &CollectionId) -> Result<DatabaseSchema> {
     let session = ScyllaDatabaseHandle::global_session().await?;
     let mut schema = DatabaseSchema {
         tables: BTreeMap::new(),
@@ -46,7 +46,7 @@ pub async fn get_scylla_schema_primary(c: &CollectionId) -> Result<DatabaseSchem
         if let Ok(name) = DatabaseIdentifier::new(&name) {
             schema.tables.insert(
                 name.clone(),
-                get_scylla_table_schema_primary(c, &name).await?,
+                get_scylla_table_schema(c, &name).await?,
             );
         } else {
             info!("skipped scylla table {}", name);
@@ -56,7 +56,7 @@ pub async fn get_scylla_schema_primary(c: &CollectionId) -> Result<DatabaseSchem
     Ok(schema)
 }
 
-async fn get_scylla_table_schema_primary(
+async fn get_scylla_table_schema(
     c: &CollectionId,
     table_name: &DatabaseIdentifier,
 ) -> Result<DatabaseTable> {
@@ -110,13 +110,11 @@ async fn get_scylla_table_schema_primary(
     for (column_name, column_kind, _column_position, column_type) in rows {
         if let Ok(column_name) = DatabaseIdentifier::new(&column_name) {
             let primary = matches!(column_kind.as_str(), "partition_key" | "clustering");
-            if primary {
-                table.columns.push(DatabaseColumn {
-                    name: column_name,
-                    _type: column_type,
-                    primary,
-                });
-            }
+            table.columns.push(DatabaseColumn {
+                name: column_name,
+                _type: column_type,
+                primary,
+            });
         } else {
             info!("skipped scylla column {}", column_name);
         }

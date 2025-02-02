@@ -7,7 +7,7 @@ use crate::routes::UrlParam;
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
 use hoover3_types::datasource::DatasourceSettings;
-use hoover3_types::{filesystem::FsMetadata, identifier::DatabaseIdentifier};
+use hoover3_types::{filesystem::FsMetadataBasic, identifier::DatabaseIdentifier};
 use std::path::PathBuf;
 fn display_path(path: &PathBuf) -> String {
     let p = format!("{:?}", path);
@@ -17,7 +17,7 @@ fn display_path(path: &PathBuf) -> String {
     p
 }
 
-fn display_file_name(path: &FsMetadata) -> String {
+fn display_file_name(path: &FsMetadataBasic) -> String {
     let icon = if path.is_dir { "📁" } else { "📄" };
 
     let p = format!("{:?}", path.path.file_name().unwrap_or_default());
@@ -33,7 +33,7 @@ fn format_time(time: Option<DateTime<Utc>>) -> String {
         .unwrap_or_else(|| "-".to_string())
 }
 
-impl DataRowDisplay for FsMetadata {
+impl DataRowDisplay for FsMetadataBasic {
     fn get_headers() -> Vec<&'static str> {
         vec!["Name", "Size", "Modified", "Created"]
     }
@@ -159,7 +159,7 @@ fn _NewDatasourceFormPage(
 fn DatasourcePathPicker(
     collection_id: ReadOnlySignal<String>,
     path: ReadOnlySignal<PathBuf>,
-    child_list: ReadOnlySignal<Vec<FsMetadata>>,
+    child_list: ReadOnlySignal<Vec<FsMetadataBasic>>,
 ) -> Element {
     let parent_path = use_memo(move || {
         let parent = path
@@ -195,7 +195,7 @@ fn DatasourcePathPicker(
                     }
                 })),
                 data: child_list,
-                extra: Some(("Select", Callback::new(move |child: FsMetadata| rsx! {
+                extra: Some(("Select", Callback::new(move |child: FsMetadataBasic| rsx! {
                     if child.is_dir {
                         button {
                             style:"min-width: 7rem;",

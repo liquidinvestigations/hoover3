@@ -10,8 +10,9 @@ publish  = {workspace = true}
 
 [dependencies]
 hoover3_database = {path="../hoover3_database",optional=true}
-# hoover3_taskdef = {path="../hoover3_taskdef",optional=true}
+hoover3_taskdef = {path="../hoover3_taskdef",optional=true}
 hoover3_types  = {path="../hoover3_types"}
+hoover3_tracing = {path="../hoover3_tracing"}
 hoover3_filesystem_scanner = {path="../tasks/filesystem_scanner",optional=true}
 
 axum = {workspace = true, optional=true}
@@ -30,6 +31,12 @@ serde_json.workspace = true
 chrono.workspace = true
 base64.workspace = true
 ciborium = "0.2.2"
+futures-util.workspace = true
+log.workspace = true
+async-std.workspace = true
+tracing-log.workspace = true
+tracing-web = "0.1.3"
+tracing.workspace = true
 
 [features]
 default = []
@@ -41,6 +48,6 @@ server = [
     "dep:tokio",
     "dep:hoover3_database",
     "dep:axum",
-    # "dep:hoover3_taskdef",
+    "dep:hoover3_taskdef",
     "dep:hoover3_filesystem_scanner"
     ]

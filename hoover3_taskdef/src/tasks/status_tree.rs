@@ -9,24 +9,27 @@ use temporal_sdk_core_protos::temporal::api::workflowservice::v1::CountWorkflowE
 use temporal_sdk_core_protos::temporal::api::workflowservice::v1::ListWorkflowExecutionsRequest;
 use temporal_sdk_core_protos::temporal::api::workflowservice::v1::ListWorkflowExecutionsResponse;
 
+use super::convert_status;
+use super::query_workflow_execution_status;
 const TREE_NODE_LIMIT: usize = 24;
 
-pub(crate) async fn temporalio_get_workflow_status_tree(
-    workflow_id: &str,
-    workflow_status: UiWorkflowStatusCode,
+pub async fn get_workflow_status_tree(
+    workflow_id: String,
 ) -> anyhow::Result<TemporalioWorkflowStatusTree> {
     hoover3_database::db_management::with_redis_cache(
         "temporalio_get_workflow_status_tree",
-        10,
+        5,
         _temporalio_get_workflow_status_tree,
-        &(workflow_id.to_string(), workflow_status.clone()),
+        &(workflow_id.to_string()),
     )
     .await
 }
 
 async fn _temporalio_get_workflow_status_tree(
-    (workflow_id, root_status): (String, UiWorkflowStatusCode),
+    workflow_id: String,
 ) -> anyhow::Result<TemporalioWorkflowStatusTree> {
+    let root_status = convert_status(query_workflow_execution_status(&workflow_id).await?);
+
     let client = crate::get_client().await?;
     let mut client = (*client).clone();
 
@@ -41,6 +44,7 @@ async fn _temporalio_get_workflow_status_tree(
         children: BTreeMap::new(),
         counts: BTreeMap::new(),
         total_counts: BTreeMap::new(),
+        root_status: root_status.clone(),
     };
     tree.nodes.insert(workflow_id.clone(), root_status.clone());
     let count0 = BTreeMap::from([(root_status, 1)]);

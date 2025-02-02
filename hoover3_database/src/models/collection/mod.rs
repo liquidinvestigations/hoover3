@@ -232,6 +232,7 @@ impl DatabaseExtraCallbacks {
             let mut obj_map = serde_json::Map::new();
             obj_map.insert("id".to_string(), serde_json::value::Value::String(row_pk));
             obj_map.insert(table_id.to_string(), data_json);
+            obj_map.insert("table".to_string(), serde_json::json!(table_id.to_string()));
             search_data.push(serde_json::value::Value::Object(obj_map));
         }
         use tokio::time::Duration;

@@ -11,5 +11,6 @@ futures.workspace = true
 hoover3_database = {path="../../hoover3_database"}
 hoover3_taskdef = {path="../../hoover3_taskdef"}
 hoover3_types = {path="../../hoover3_types"}
+hoover3_tracing = {path="../../hoover3_tracing"}
 serde.workspace = true
 tokio.workspace = true

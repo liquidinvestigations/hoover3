@@ -1,6 +1,6 @@
 use anyhow::Result;
 use hoover3_database::db_management::DatabaseSpaceManager;
-use hoover3_database::tracing::init_tracing;
+use hoover3_tracing::init_tracing;
 use rustyline::completion::{Completer, Pair};
 use rustyline::error::ReadlineError;
 use rustyline::{CompletionType, Config, Context, Editor};

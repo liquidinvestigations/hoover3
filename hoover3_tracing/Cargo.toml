@@ -1,0 +1,17 @@
+[package]
+name = "hoover3_tracing"
+repository.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+console_error_panic_hook = "0.1.7"
+dioxus-logger.workspace = true
+log.workspace = true
+tracing.workspace = true
+tracing-log.workspace = true
+tracing-subscriber.workspace = true
+tracing-wasm = "0.2.1"
+# tracing-web = "0.1.3"

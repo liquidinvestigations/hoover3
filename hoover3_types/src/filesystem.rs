@@ -2,8 +2,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+use crate::identifier::DatabaseIdentifier;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct FsMetadata {
+pub struct FsMetadataBasic {
     pub is_dir: bool,
     pub is_file: bool,
     pub size_bytes: u64,
@@ -11,6 +13,27 @@ pub struct FsMetadata {
     pub created: Option<DateTime<Utc>>,
     // #[serde(with = "serialize_path")]
     pub path: PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FsDirectoryUiRow {
+    pub datasource_id: DatabaseIdentifier,
+    pub path: PathBuf,
+    pub size_bytes: u64,
+    pub modified: Option<DateTime<Utc>>,
+    pub created: Option<DateTime<Utc>>,
+
+    pub scan_children: FsScanDatasourceResult,
+    pub scan_total: FsScanDatasourceResult,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct FsFileUiRow {
+    pub datasource_id: DatabaseIdentifier,
+    pub path: PathBuf,
+    pub size_bytes: u64,
+    pub modified: Option<DateTime<Utc>>,
+    pub created: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq)]

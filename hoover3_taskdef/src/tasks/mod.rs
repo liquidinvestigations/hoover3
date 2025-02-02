@@ -1,5 +1,4 @@
-pub(crate) mod status_tree;
-use status_tree::temporalio_get_workflow_status_tree;
+pub mod status_tree;
 
 use crate::client::get_client;
 pub use crate::client::TemporalioClient;
@@ -408,11 +407,6 @@ pub trait TemporalioWorkflowDescriptor:
                 task_name: Self::name().to_string(),
                 queue_name: Self::queue_name().to_string(),
                 task_status: convert_status(status),
-                status_tree: temporalio_get_workflow_status_tree(
-                    &workflow_id,
-                    convert_status(status),
-                )
-                .await?,
             };
             Ok(ui_status)
         }

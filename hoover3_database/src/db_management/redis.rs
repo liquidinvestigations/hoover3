@@ -45,7 +45,7 @@ where
     let finalize_retry_count = 5 * (2 * 60 * 24); // 5 days
 
     let rl = redis_lockmanager().await;
-    info!("lockmanager init OK for {redis_lock_id}");
+    // info!("lockmanager init OK for {redis_lock_id}");
 
     let mut retry_count = 0;
     let mut acq_retry_wait_secs = 0.016;
@@ -65,7 +65,7 @@ where
         }
     };
 
-    info!("Lock {redis_lock_id} acquired!");
+    // info!("Lock {redis_lock_id} acquired!");
 
     retry_count = 0;
     let mut f = tokio::spawn(func);
@@ -75,7 +75,7 @@ where
         use futures_util::future::Either;
         f = match futures::future::select(f, wait).await {
             Either::Left((result, _wait)) => {
-                info!("locked {redis_lock_id} computation finalized;");
+                // info!("locked {redis_lock_id} computation finalized;");
                 break result;
             }
             Either::Right((_value, _orig)) => {
@@ -109,7 +109,7 @@ where
     };
 
     rl.unlock(&lock).await;
-    info!("Lock {redis_lock_id} released!");
+    // info!("Lock {redis_lock_id} released!");
     Ok(v?)
 }
 
@@ -184,7 +184,7 @@ where
         .await
     {
         if let Ok(_cache_hit) = bincode::deserialize::<F::Output>(&_cache_hit) {
-            info!("CACHE HIT 1: {redis_cache_id}!");
+            // info!("CACHE HIT 1: {redis_cache_id}!");
             return Ok(_cache_hit);
         }
     }
@@ -201,11 +201,11 @@ where
             .await
         {
             if let Ok(_cache_hit) = bincode::deserialize::<F::Output>(&_cache_hit) {
-                info!("CACHE HIT 2: {redis_cache_id}!");
+                // info!("CACHE HIT 2: {redis_cache_id}!");
                 return Ok(_cache_hit);
             }
         }
-        info!("CACHE MISS: {redis_cache_id}!");
+        // info!("CACHE MISS: {redis_cache_id}!");
         // We're sure there is not cached value. We can compute it now.
         let f = tokio::spawn(func(key.clone()));
         let rv = f.await?;
@@ -219,7 +219,7 @@ where
             return Ok(rv);
         }
 
-        info!("CACHE SET: {redis_cache_id}!");
+        // info!("CACHE SET: {redis_cache_id}!");
         redis::cmd("SET")
             .arg(redis_cache_id)
             .arg(bytes_to_cache)

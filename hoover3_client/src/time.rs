@@ -4,3 +4,7 @@ pub fn current_time() -> f64 {
         .unwrap()
         .as_secs_f64()
 }
+
+pub async fn sleep(duration: std::time::Duration) {
+    async_std::task::sleep(duration).await;
+}

@@ -31,6 +31,7 @@ pub type AllTasks = (
     fs_scan_datasource_workflow,
     fs_do_scan_datasource_activity,
     fs_scan_datasource_group_workflow,
+    fs_save_dir_scan_total_result_activity,
 );
 
 pub async fn start_scan(
@@ -75,7 +76,7 @@ async fn fs_scan_datasource(
     let (mut scan_result, next_paths) =
         fs_do_scan_datasource_activity::run(&wf_ctx, args.clone()).await?;
 
-    let args = next_paths
+    let next_args = next_paths
         .into_iter()
         .map(|p| ScanDatasourceArgs {
             collection_id: args.collection_id.clone(),
@@ -84,16 +85,16 @@ async fn fs_scan_datasource(
         })
         .collect::<Vec<_>>();
 
-    let results = if args.len() < 10 {
-        fs_scan_datasource_workflow::run_parallel(&wf_ctx, args)
+    let results = if next_args.len() < 10 {
+        fs_scan_datasource_workflow::run_parallel(&wf_ctx, next_args)
             .await?
             .into_iter()
             .map(|r| r.1)
             .collect::<Vec<_>>()
     } else {
         // to avoid large workflow history, break this into smaller chunks
-        let chunk_size = ((1.0 + args.len() as f64).sqrt()).ceil() as usize;
-        let groups = args
+        let chunk_size = ((1.0 + next_args.len() as f64).sqrt()).ceil() as usize;
+        let groups = next_args
             .chunks(chunk_size)
             .map(|c| c.to_vec())
             .collect::<Vec<_>>();
@@ -111,8 +112,47 @@ async fn fs_scan_datasource(
             scan_result.errors += 1;
         }
     }
+
+    fs_save_dir_scan_total_result_activity::run(&wf_ctx, (vec![args.clone()], scan_result)).await?;
     Ok(WfExitValue::Normal(scan_result))
 }
+
+
+#[activity(FILESYSTEM_SCANNER_TASK_QUEUE)]
+async fn fs_save_dir_scan_total_result(
+    (args, scan_result): (Vec<ScanDatasourceArgs>, FsScanDatasourceResult),
+) -> anyhow::Result<()> {
+    if args.is_empty() {
+        return Ok(());
+    }
+    let collection_id = args[0].collection_id.clone();
+    let scylla_session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
+    let mut dirs = vec![];
+    for arg in args {
+        use hoover3_database::charybdis::operations::Find;
+        if let Some(path) = arg.path {
+            let mut dir = FsDirectoryDbRow::find_by_primary_key_value((arg.datasource_id.to_string(), path.to_str().unwrap().into())).execute(&scylla_session).await?;
+            dir.scan_total.file_count = scan_result.file_count as i32;
+            dir.scan_total.dir_count = scan_result.dir_count as i32;
+            dir.scan_total.file_size_bytes = scan_result.file_size_bytes as i64;
+            dir.scan_total.errors = scan_result.errors as i32;
+            dirs.push(dir);
+        }
+    }
+    if dirs.is_empty() {
+        return Ok(());
+    }
+    FsDirectoryDbRow::batch()
+        .chunked_insert(&scylla_session, &dirs, 1024)
+        .await?;
+    let db_extra = hoover3_database::models::collection::DatabaseExtraCallbacks::new(
+        &collection_id,
+    )
+    .await?;
+    db_extra.insert(&dirs).await?;
+    Ok(())
+}
+
 
 #[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_scan_datasource_group(
@@ -156,17 +196,23 @@ async fn fs_do_scan_datasource(
     let mut edges_to_files = InsertEdgeBatch::new(&FilesystemParentEdge);
     let mut edges_to_dirs = InsertEdgeBatch::new(&FilesystemParentEdge);
 
-    let parent_pk = arg.path.map(|p| FsDirectoryDbRow {
-        datasource_id: arg.datasource_id.to_string(),
-        path: p.to_str().unwrap().into(),
-        size_bytes: 0,
-        modified: None,
-        created: None,
-    });
+    let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
+    let mut parent_pk = if arg.path.is_some() {
+        let p = arg.path.unwrap();
+        use hoover3_database::charybdis::operations::Find;
+        Some(FsDirectoryDbRow::find_by_primary_key_value((arg.datasource_id.to_string(), p.to_str().unwrap().into())).execute(&scylla_session).await?)
+    }else {
+        None
+    };
+    // let parent_pk = arg.path.map(|p| FsDirectoryDbRow {
+    //     datasource_id: arg.datasource_id.to_string(),
+    //     path: p.to_str().unwrap().into(),
+    //     ..Default::default()
+    // });
     children.into_iter().for_each(|mut c| {
         c.path = c.path.strip_prefix(root_path).unwrap().to_path_buf();
         if c.is_file {
-            let new_file = FsFileDbRow::from_meta(&arg.datasource_id, &c);
+            let new_file = FsFileDbRow::from_basic_meta(&arg.datasource_id, &c);
             if let Some(parent_pk) = &parent_pk {
                 edges_to_files.push(parent_pk, &new_file);
             }
@@ -174,7 +220,7 @@ async fn fs_do_scan_datasource(
             file_count += 1;
             file_size_bytes += c.size_bytes;
         } else if c.is_dir {
-            let new_dir = FsDirectoryDbRow::from_meta(&arg.datasource_id, &c);
+            let new_dir = FsDirectoryDbRow::from_basic_meta(&arg.datasource_id, &c);
             if let Some(parent_pk) = &parent_pk {
                 edges_to_dirs.push(parent_pk, &new_dir);
             }
@@ -184,7 +230,6 @@ async fn fs_do_scan_datasource(
         }
     });
 
-    let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
     FsFileDbRow::batch()
         .chunked_insert(&scylla_session, &files, 1024)
         .await?;
@@ -203,6 +248,14 @@ async fn fs_do_scan_datasource(
 
     next_paths.sort();
     next_paths.dedup();
+    if let Some(parent_pk) = &mut parent_pk {
+        parent_pk.scan_children.file_count = file_count as i32;
+        parent_pk.scan_children.dir_count = dir_count as i32;
+        parent_pk.scan_children.file_size_bytes = file_size_bytes as i64;
+        parent_pk.scan_children.errors = 0 as i32;
+        use hoover3_database::charybdis::operations::UpdateWithCallbacks;
+        FsDirectoryDbRow::update_cb(parent_pk, &db_extra).execute(&scylla_session).await?;
+    }
 
     Ok((
         FsScanDatasourceResult {

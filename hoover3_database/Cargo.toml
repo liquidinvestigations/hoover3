@@ -9,10 +9,7 @@ publish  = {workspace = true}
 
 [dependencies]
 hoover3_types  = {path="../hoover3_types"}
-
-### CLI
-rustyline = "9"
-rustyline-derive = "0.6.0"
+hoover3_tracing = {path="../hoover3_tracing"}
 
 ########## COMMON ############
 ##############################
@@ -26,6 +23,15 @@ tracing.workspace=true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 bincode.workspace = true
+tracing-subscriber.workspace = true
+log.workspace = true
+tracing-log.workspace = true
+
+
+### CLI
+rustyline = "9"
+rustyline-derive = "0.6.0"
+
 
 
 ########## PYTHON ############
@@ -71,4 +77,3 @@ rust-s3 = "0.35.1"
 ##############################
 redis = {version="0.27.5", features = ["aio", "tokio-comp"] }
 rslock = { version = "0.6.0", features = ["tokio-comp"], default-features = false }
-tracing-subscriber = "0.3.19"

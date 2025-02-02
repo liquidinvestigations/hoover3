@@ -1,6 +1,6 @@
 use anyhow::Result;
 use hoover3_database::db_management::CollectionId;
-use hoover3_database::tracing::init_tracing;
+use hoover3_tracing::init_tracing;
 #[tokio::main]
 async fn main() -> Result<()> {
     init_tracing();

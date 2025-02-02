@@ -1,7 +1,5 @@
-use dioxus_logger::tracing::{info, Level};
 fn main() {
-    dioxus_logger::init(Level::INFO).expect("failed to init logger");
-    info!("dioxus main()...");
+    hoover3_tracing::init_tracing();
 
     #[cfg(feature = "web")]
     {

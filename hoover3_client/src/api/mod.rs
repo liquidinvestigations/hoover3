@@ -7,7 +7,8 @@ use hoover3_types::collection::*;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::docker_health::*;
-use hoover3_types::filesystem::FsMetadata;
+use hoover3_types::filesystem::FsMetadataBasic;
+use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::identifier::*;
 use hoover3_types::tasks::*;
 
@@ -23,21 +24,6 @@ pub struct ServerCallEvent {
 }
 
 fn _before_call(function: &str, argument_val: &str, ts: f64) {
-    dioxus_logger::tracing::info!("before_call: {function} {argument_val}");
-
-    // {
-    //     let f2 = function.to_string();
-    //     let a2 = argument_val.to_string();
-    //     use_drop(move || {
-    //         warn!("dropped!");
-    //     _after_call(
-    //         &f2,
-    //         &a2,
-    //           &"dropped!".to_string(),
-    //            false, current_time(),
-    //             current_time()-ts
-    //         );
-    // });}
     nav_push_server_call_event(ServerCallEvent {
         ts,
         function: function.to_string(),
@@ -76,6 +62,13 @@ fn truncate(s: &str, max_chars: usize) -> &str {
     }
 }
 
+pub fn flatten_result<T, E>(x: Result<Result<T, E>, E>) -> Result<T, E> {
+    match x {
+        Ok(r) => r,
+        Err(e) => Err(e),
+    }
+}
+
 macro_rules! server_wrapper {
     ($ns:path,$id:ident,$arg:ty,$ret:ty) => {
         ::paste::paste! {
@@ -83,12 +76,10 @@ macro_rules! server_wrapper {
             pub async fn [<__ $id __>](c: $arg)
             -> Result<$ret, ServerFnError>
             {
-                let rv = $ns::$id(c)
+                let rv = $ns::$id(c.clone())
                 .await
                 .map_err(|e| ServerFnError::new(
                     format!("{}: {e}", stringify!($id))));
-
-                // ::dioxus_logger::tracing::trace!("server fn {} returned : {:#?}", stringify!($id),  rv);
                 rv
             }
 
@@ -96,16 +87,34 @@ macro_rules! server_wrapper {
             pub async fn $id(c: $arg)
             -> Result<$ret, ServerFnError>
             {
-                let arg_str = format!("{c:?}");
-                let arg_str = truncate(&arg_str, 1024);
-                let t0 = current_time();
-                _before_call(stringify!($id), arg_str, t0);
-                let rv = [<__ $id __>](c).await;
-                let t1 = current_time();
-                let ret_str = format!("{rv:#?}");
-                let ret_str = truncate(&ret_str, 1024);
-                _after_call(stringify!($id), arg_str, ret_str, rv.is_ok(), t1, t1-t0);
-                rv
+                let retry = 3;
+                for i in 1..=retry {
+                    let rv = {
+                        let arg_str = format!("{c:?}");
+                        let arg_str = truncate(&arg_str, 1024);
+                        let t0 = current_time();
+                        _before_call(stringify!($id), arg_str, t0);
+                        let rv = async_std::future::timeout(
+                            std::time::Duration::from_secs(30),
+                            [<__ $id __>](c.clone())).await.map_err(|e| ServerFnError::new(
+                                format!("{}: timeout: {e}", stringify!($id))));
+                        let rv = flatten_result(rv);
+                        let t1 = current_time();
+                        let ret_str = format!("{rv:#?}");
+                        let ret_str = truncate(&ret_str, 1024);
+                        _after_call(stringify!($id), arg_str, ret_str, rv.is_ok(), t1, t1-t0);
+                        rv
+                    };
+
+                    if rv.is_ok() {
+                        return rv;
+                    }
+                    if i == retry {
+                        return rv;
+                    }
+                    $crate::time::sleep(std::time::Duration::from_secs(1+i)).await;
+                }
+                unreachable!()
             }
         }
     };
@@ -161,7 +170,7 @@ server_wrapper!(
     hoover3_database::client_query::list_disk,
     list_directory,
     PathBuf,
-    Vec<FsMetadata>
+    Vec<FsMetadataBasic>
 );
 
 server_wrapper!(
@@ -190,4 +199,18 @@ server_wrapper!(
     get_scan_status,
     (CollectionId, DatabaseIdentifier),
     UiWorkflowStatus
+);
+
+server_wrapper!(
+    hoover3_taskdef::tasks::status_tree,
+    get_workflow_status_tree,
+    String,
+    TemporalioWorkflowStatusTree
+);
+
+server_wrapper!(
+    hoover3_filesystem_scanner,
+    wait_for_scan_results,
+    (CollectionId, DatabaseIdentifier),
+    FsScanDatasourceResult
 );
