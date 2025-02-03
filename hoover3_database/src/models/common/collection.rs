@@ -22,14 +22,16 @@ pub struct CollectionDbRow {
 }
 
 use hoover3_types::collection::CollectionUiRow;
-impl From<CollectionDbRow> for CollectionUiRow {
-    fn from(value: CollectionDbRow) -> Self {
-        Self {
-            collection_id: value.collection_id,
-            collection_title: value.collection_title,
-            collection_description: value.collection_description,
-            time_created: value.time_created,
-            time_modified: value.time_modified,
-        }
+use hoover3_types::identifier::CollectionId;
+impl CollectionDbRow {
+
+    pub fn to_ui(&self) -> anyhow::Result<CollectionUiRow> {
+        Ok(CollectionUiRow {
+            collection_id: CollectionId::new(&self.collection_id)?,
+            collection_title: self.collection_title.clone(),
+            collection_description: self.collection_description.clone(),
+            time_created: self.time_created,
+            time_modified: self.time_modified,
+        })
     }
 }

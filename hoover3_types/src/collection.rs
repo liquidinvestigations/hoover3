@@ -1,8 +1,10 @@
+use crate::identifier::CollectionId;
+
 #[derive(
-    Default, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
 )]
 pub struct CollectionUiRow {
-    pub collection_id: String,
+    pub collection_id: CollectionId,
     pub collection_title: String,
     pub collection_description: String,
     pub time_created: chrono::DateTime<chrono::Utc>,

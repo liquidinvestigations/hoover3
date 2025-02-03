@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 use hoover3_types::collection::*;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
+use hoover3_types::db_schema::CollectionSchema;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadataBasic;
 use hoover3_types::filesystem::FsScanDatasourceResult;
@@ -213,4 +214,11 @@ server_wrapper!(
     wait_for_scan_results,
     (CollectionId, DatabaseIdentifier),
     FsScanDatasourceResult
+);
+
+server_wrapper!(
+    hoover3_database::migrate,
+    get_collection_schema,
+    CollectionId,
+    CollectionSchema
 );

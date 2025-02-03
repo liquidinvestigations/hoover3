@@ -8,22 +8,24 @@ use crate::db_management::meilisearch_wait_for_task;
 use crate::db_management::nebula_execute;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::MeilisearchDatabaseHandle;
-use crate::migrate::nebula_get_tags_schema;
-use crate::migrate::schema::DatabaseSchema;
-use crate::models::collection::_nebula_edges::GraphEdgeType;
+use crate::migrate::nebula_get_schema;
+use _nebula_edges::GraphEdgeIdentifier;
+use hoover3_types::db_schema::DatabaseColumnType;
+use hoover3_types::db_schema::GraphEdgeType;
 use charybdis::model::BaseModel;
+use hoover3_types::db_schema::NebulaDatabaseSchema;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 
 pub fn nebula_sql_insert_vertex(
     table_id: &DatabaseIdentifier,
-    schema: DatabaseSchema,
+    schema: NebulaDatabaseSchema,
     data: Vec<(String, serde_json::Value)>,
 ) -> anyhow::Result<String> {
     use anyhow::Context;
 
     let schema_table = schema
-        .tables
+        .tags
         .get(table_id)
         .context("table not found in schema")?;
     let column_defs = schema_table
@@ -58,25 +60,26 @@ pub fn nebula_sql_insert_vertex(
 
 #[test]
 fn test_nebula_sql_insert_vertex() {
-    use crate::migrate::schema::{DatabaseColumn, DatabaseTable};
+    use hoover3_types::db_schema::{DatabaseColumn, DatabaseTable};
 
-    let mut schema = DatabaseSchema {
-        tables: std::collections::BTreeMap::new(),
+    let mut schema = NebulaDatabaseSchema {
+        tags: std::collections::BTreeMap::new(),
+        edges: vec![],
     };
-    let table_id = DatabaseIdentifier::new("test").unwrap();
-    schema.tables.insert(
+    let table_id = DatabaseIdentifier::new("test_nebula_sql_insert_vertex").unwrap();
+    schema.tags.insert(
         table_id.clone(),
         DatabaseTable {
             name: table_id.clone(),
             columns: vec![
                 DatabaseColumn {
                     name: DatabaseIdentifier::new("name").unwrap(),
-                    _type: "string".to_string(),
+                    _type: DatabaseColumnType::String,
                     primary: true,
                 },
                 DatabaseColumn {
                     name: DatabaseIdentifier::new("age").unwrap(),
-                    _type: "int64".to_string(),
+                    _type: DatabaseColumnType::Int64,
                     primary: true,
                 },
             ],
@@ -93,7 +96,7 @@ fn test_nebula_sql_insert_vertex() {
         .join(" ");
     assert_eq!(
         query.trim(),
-        "INSERT VERTEX `test` (`name`, `age`) VALUES \"1\":(\"John\", 30);"
+        "INSERT VERTEX `test_nebula_sql_insert_vertex` (`name`, `age`) VALUES \"1\":(\"John\", 30);"
     );
 }
 
@@ -101,7 +104,7 @@ fn nebula_sql_insert_edge(
     edge: &GraphEdgeType,
     data: Vec<(String, String)>,
 ) -> anyhow::Result<String> {
-    let edge_name = edge.name;
+    let edge_name = &edge.name;
     let edge_rank: u32 = 0;
     let query = data
         .into_iter()
@@ -117,7 +120,7 @@ fn nebula_sql_insert_edge(
 
 #[tokio::test]
 async fn test_nebula_sql_insert_edge() {
-    let edge = GraphEdgeType { name: "test_edge" };
+    let edge = GraphEdgeType { name: DatabaseIdentifier::new("test_edge").unwrap() };
     let data = vec![("1".to_string(), "2".to_string())];
     let query = nebula_sql_insert_edge(&edge, data).unwrap();
     assert_eq!(
@@ -155,9 +158,9 @@ where
     <T1 as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
     <T2 as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
 {
-    pub fn new(edge: &GraphEdgeType) -> Self {
+    pub fn new(edge: impl GraphEdgeIdentifier) -> Self {
         Self {
-            edge: edge.clone(),
+            edge: edge.to_owned(),
             data: vec![],
             _phantom: std::marker::PhantomData,
         }
@@ -194,7 +197,7 @@ where
 
 pub struct DatabaseExtraCallbacks {
     pub collection_id: CollectionId,
-    pub nebula_schema: DatabaseSchema,
+    pub nebula_schema: NebulaDatabaseSchema,
     pub search_index: std::sync::Arc<
         <meilisearch_sdk::client::Client as DatabaseSpaceManager>::CollectionSessionType,
     >,
@@ -202,7 +205,7 @@ pub struct DatabaseExtraCallbacks {
 
 impl DatabaseExtraCallbacks {
     pub async fn new(c: &CollectionId) -> anyhow::Result<Self> {
-        let nebula_schema = nebula_get_tags_schema(c).await?;
+        let nebula_schema = nebula_get_schema(c).await?;
         let search_client = MeilisearchDatabaseHandle::collection_session(c).await?;
         Ok(Self {
             collection_id: c.clone(),

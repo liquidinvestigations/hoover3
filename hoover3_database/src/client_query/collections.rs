@@ -16,7 +16,7 @@ pub async fn get_single_collection(c: CollectionId) -> Result<CollectionUiRow> {
     Ok(CollectionDbRow::find_by_collection_id(c.to_string())
         .execute(&session)
         .await?
-        .into())
+        .to_ui()?)
 }
 
 /// Client API method to create a new collection, including all the
@@ -30,7 +30,7 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
             .execute(&session)
             .await
         {
-            return Ok(x.into());
+            return Ok(x.to_ui()?);
         }
         let now = chrono::offset::Utc::now();
         let new_row = CollectionDbRow {
@@ -43,7 +43,7 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
         migrate_collection(&c).await?;
         CollectionDbRow::insert(&new_row).execute(&session).await?;
         drop_redis_cache("get_all_collections", &()).await?;
-        Ok(new_row.into())
+        Ok(new_row.to_ui()?)
     })
     .await?
 }
@@ -61,7 +61,7 @@ async fn _get_all_collections(_c: ()) -> Result<Vec<CollectionUiRow>> {
         CollectionDbRow::find_all().execute(&session).await?;
     use futures::StreamExt;
     while let Some(Ok(c)) = collections_stream.next().await {
-        v.push(c.into());
+        v.push(c.to_ui()?);
     }
     Ok(v)
 }
@@ -71,7 +71,7 @@ pub async fn update_collection(updated: CollectionUiRow) -> Result<CollectionUiR
     tokio::spawn(async move {
         let session = ScyllaDatabaseHandle::global_session().await?;
         info!("updating collection with user request {:?}", updated);
-        let old_row = CollectionDbRow::find_by_collection_id(updated.collection_id)
+        let old_row = CollectionDbRow::find_by_collection_id(updated.collection_id.to_string())
             .execute(&session)
             .await?;
 
@@ -89,7 +89,7 @@ pub async fn update_collection(updated: CollectionUiRow) -> Result<CollectionUiR
         CollectionDbRow::insert(&new_row).execute(&session).await?;
         drop_redis_cache("get_all_collections", &()).await?;
         info!("updating collection {:?}: done", new_row.collection_id);
-        Ok(new_row.into())
+        Ok(new_row.to_ui()?)
     })
     .await?
 }
@@ -131,7 +131,7 @@ async fn test_collection_query() -> Result<()> {
     // check we can create collections
     let cid = CollectionId::new("test_collection_query")?;
     let mut z = create_new_collection(cid.clone()).await?;
-    assert_eq!(z.collection_id, cid.to_string());
+    assert_eq!(z.collection_id, cid);
 
     // check create x2 is ok
     let z1 = create_new_collection(cid.clone()).await?;

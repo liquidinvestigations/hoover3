@@ -1,4 +1,6 @@
 mod url_param;
+use hoover3_types::identifier::CollectionId;
+use hoover3_types::identifier::DatabaseIdentifier;
 pub use url_param::UrlParam;
 
 use std::collections::HashMap;
@@ -20,6 +22,12 @@ use crate::pages::DockerHealthPage;
 use crate::pages::HomePage;
 use crate::pages::NewDatasourceFormPage;
 use crate::pages::ServerCallLogPage;
+use crate::pages::DatabaseExplorerRootPage;
+use crate::pages::DatabaseExplorerCollectionPage;
+use crate::pages::DatabaseExplorerCollectionPageSqlTable;
+use crate::pages::DatabaseExplorerCollectionPageGraphNodes;
+use crate::pages::DatabaseExplorerCollectionPageGraphEdges;
+use crate::pages::DatabaseExplorerCollectionPageSearchIndex;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -39,6 +47,24 @@ pub enum Route {
 
         #[route("/server-call-logs")]
         ServerCallLogPage {},
+
+        #[route("/database-explorer")]
+        DatabaseExplorerRootPage {},
+
+        #[route("/database-explorer/:collection_id")]
+        DatabaseExplorerCollectionPage {collection_id: CollectionId},
+
+        #[route("/database-explorer/:collection_id/sql-table/:table_name")]
+        DatabaseExplorerCollectionPageSqlTable {collection_id: CollectionId, table_name: DatabaseIdentifier},
+
+        #[route("/database-explorer/:collection_id/graph-nodes/:tag_name")]
+        DatabaseExplorerCollectionPageGraphNodes {collection_id: CollectionId, tag_name: DatabaseIdentifier},
+
+        #[route("/database-explorer/:collection_id/graph-edges/:edge_name")]
+        DatabaseExplorerCollectionPageGraphEdges {collection_id: CollectionId, edge_name: DatabaseIdentifier},
+
+        #[route("/database-explorer/:collection_id/search-index/:field_name")]
+        DatabaseExplorerCollectionPageSearchIndex {collection_id: CollectionId, field_name: String},
     #[end_nest]
 
     #[nest("/admin")]
@@ -46,13 +72,13 @@ pub enum Route {
         CollectionsAdminListPage {},
 
         #[route("/collection/:collection_id")]
-        CollectionAdminDetailsPage{collection_id: String},
+        CollectionAdminDetailsPage{collection_id: CollectionId},
 
         #[route("/collection/:collection_id/new_datasource/#:current_path")]
-        NewDatasourceFormPage {collection_id: String, current_path: UrlParam<PathBuf>},
+        NewDatasourceFormPage {collection_id: CollectionId, current_path: UrlParam<PathBuf>},
 
         #[route("/collection/:collection_id/datasource/:datasource_id")]
-        DatasourceAdminDetailsPage {collection_id: String, datasource_id: String},
+        DatasourceAdminDetailsPage {collection_id: CollectionId, datasource_id: DatabaseIdentifier},
     #[end_nest]
 
     #[route("/dashboards/iframe/:id")]
@@ -85,6 +111,7 @@ fn Navbar(display_loading_icon: ReadOnlySignal<bool>) -> Element {
                     NavbarDropdown {
                         title: "Tools",
                         links: vec![
+                            ("DatabaseExplorer".to_string(), Route::DatabaseExplorerRootPage {}.to_string()),
                             ("ServerCallLogPage".to_string(), Route::ServerCallLogPage {}.to_string()),
                             ("DioxusTranslate".to_string(), Route::DioxusTranslatePage {}.to_string()),
                             ("DockerHealth".to_string(), Route::DockerHealthPage {}.to_string()),

@@ -1,4 +1,3 @@
-use crate::api::get_datasource;
 use crate::api::get_scan_status;
 use crate::api::get_workflow_status_tree;
 use crate::components::InfoCard;
@@ -9,11 +8,10 @@ use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
 use hoover3_types::tasks::UiWorkflowStatus;
 use hoover3_types::tasks::UiWorkflowStatusCode;
 use std::collections::BTreeMap;
-use std::future::Future;
 #[component]
-pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) -> Element {
-    let c = CollectionId::new(&collection_id).throw()?;
-    let d = DatabaseIdentifier::new(&datasource_id).throw()?;
+pub fn DatasourceAdminDetailsPage(collection_id: CollectionId, datasource_id: DatabaseIdentifier) -> Element {
+    let c = collection_id.clone();
+    let d = datasource_id.clone();
     let mut scan_status_res = use_resource(move || {
         let c = c.clone();
         let d = d.clone();
@@ -28,8 +26,8 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
         }
     });
     // let scan_status: ReadOnlySignal<Option<Result<UiWorkflowStatus, ServerFnError>>> = ReadOnlySignal::new(scan_status);
-    let c = CollectionId::new(&collection_id).throw()?;
-    let d = DatabaseIdentifier::new(&datasource_id).throw()?;
+    let c = collection_id.clone();
+    let d = datasource_id.clone();
 
     let mut scan_result_res = use_resource(move || {
         let c = c.clone();
@@ -43,8 +41,8 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
         }
     });
 
-    let c = CollectionId::new(&collection_id).throw()?;
-    let d = DatabaseIdentifier::new(&datasource_id).throw()?;
+    let c = collection_id.clone();
+    let d = datasource_id.clone();
     spawn(async move {
         loop {
             crate::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -69,7 +67,7 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
             h4 {
                 "Collection {collection_id}"
             }
-            DataousrceInfoCard {c: c.clone(), ds: d.clone()}
+            DatasourceInfoCard {c: c.clone(), ds: d.clone()}
             WorkflowStatusDisplay {
                 title: "Scan".to_string(),
                 scan_status,
@@ -86,7 +84,7 @@ pub fn DatasourceAdminDetailsPage(collection_id: String, datasource_id: String) 
 }
 
 #[component]
-fn DataousrceInfoCard(c: CollectionId, ds: DatabaseIdentifier) -> Element {
+fn DatasourceInfoCard(c: CollectionId, ds: DatabaseIdentifier) -> Element {
     let c_title = format!("Datasource `{}`", c);
     let c2 = c.clone();
     let info_res = use_resource(move || crate::api::get_datasource((c2.clone(), ds.clone())));

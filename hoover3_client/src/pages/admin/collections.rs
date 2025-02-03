@@ -95,7 +95,7 @@ pub fn CollectionsAdminListPage() -> Element {
                     // c_list.restart();
                         navigator().push(
                             Route::CollectionAdminDetailsPage {
-                                collection_id: c.to_string().clone()
+                                collection_id: c.clone()
                             }
                         );
                     }
@@ -116,7 +116,7 @@ fn ButtonGroup(c: String, do_refresh: Callback) -> Element {
                 onclick: move |_| {
                     navigator().push(
                         Route::CollectionAdminDetailsPage {
-                            collection_id: c2.to_string()
+                            collection_id: c2.clone()
                         }
                     );
                 },
@@ -170,11 +170,10 @@ fn CollectionsCreateWidget(cb: Callback<CollectionId>) -> Element {
 }
 
 #[component]
-pub fn CollectionAdminDetailsPage(collection_id: String) -> Element {
-    let c = CollectionId::new(&collection_id).throw()?;
+pub fn CollectionAdminDetailsPage(collection_id: CollectionId) -> Element {
     rsx! {
-        CollectionInfoCard {c: c.clone()}
-        CollectionDatasourceListCard { c:  c.clone() }
+        CollectionInfoCard {c: collection_id.clone()}
+        CollectionDatasourceListCard { c:  collection_id.clone() }
     }
 }
 
@@ -222,8 +221,8 @@ impl DataRowDisplay for DatasourceUiRow {
             "Name" => rsx! { Link {
                 style: "font-size:200%;",
                 to: Route::DatasourceAdminDetailsPage {
-                    collection_id: self.collection_id.to_string(),
-                    datasource_id: self.datasource_id.to_string()
+                    collection_id: self.collection_id.clone(),
+                    datasource_id: self.datasource_id.clone()
                 },
                 "{self.datasource_id.to_string()}"
             }},
@@ -259,7 +258,7 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
                 button {
                     onclick: move |_| {
                         let _ = navigator().push(Route::NewDatasourceFormPage {
-                            collection_id: c3.to_string().clone(),
+                            collection_id: c3.clone(),
                             current_path: UrlParam::new(std::path::PathBuf::from("."))
                         });
                     },
@@ -272,8 +271,8 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
                     onclick: move |_| {
                         let c4 = c4.clone();
                         let _ = navigator().push(Route::DatasourceAdminDetailsPage {
-                            collection_id: c4.to_string().clone(),
-                            datasource_id: row.datasource_id.to_string()
+                            collection_id: c4.clone(),
+                            datasource_id: row.datasource_id.clone()
                         });
                     },
                     "View"

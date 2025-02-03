@@ -1,7 +1,9 @@
-use crate::db_management::nebula_execute;
-use crate::migrate::schema::get_scylla_schema;
-use crate::migrate::schema::{DatabaseColumn, DatabaseSchema, DatabaseTable};
+use crate::db_management::redis::drop_redis_cache;
+use crate::db_management::{nebula_execute, with_redis_cache};
+use crate::migrate::schema_scylla::{_get_scylla_schema, get_scylla_schema};
+use crate::models::collection::_nebula_edges::get_all_nebula_edge_types;
 use anyhow::Result;
+use hoover3_types::db_schema::{DatabaseColumn, DatabaseColumnType, DatabaseTable, GraphEdgeType, NebulaDatabaseSchema, ScyllaDatabaseSchema};
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use serde::Deserialize;
@@ -10,16 +12,17 @@ use tracing::info;
 
 pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     info!("migrating nebula collection {}...", c);
-    for edge_name in crate::models::collection::_nebula_edges::ALL_NEBULA_EDGES {
+
+    for edge_name in crate::models::collection::_nebula_edges::get_all_nebula_edge_types() {
         nebula_execute::<()>(
             c,
             &format!("CREATE EDGE IF NOT EXISTS `{}` ();", edge_name.name),
         )
         .await?;
     }
-    let scylla_schema = get_scylla_schema(c).await?;
+    let scylla_schema = _get_scylla_schema(c.clone()).await?;
     // if we already have all the tags, skip the create
-    if let Ok(nebula_schema) = nebula_get_tags_schema(c).await {
+    if let Ok(nebula_schema) = _nebula_get_schema(c.clone()).await {
         if check_nebula_schema(c, &scylla_schema, &nebula_schema)
             .await
             .is_ok()
@@ -34,10 +37,10 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
 
     let qs = nebula_create_tags_query(&scylla_schema);
     for s in qs {
-        info!("nebula create tags query: \n  {}", s);
+        println!("nebula create tags query: \n  {}", s);
         nebula_execute::<()>(c, &s).await?;
     }
-    let nebula_schema = nebula_get_tags_schema(c).await?;
+    let nebula_schema = _nebula_get_schema(c.clone()).await?;
     check_nebula_schema(c, &scylla_schema, &nebula_schema).await?;
     info!("migrating nebula collection {} OK.", c);
     Ok(())
@@ -45,16 +48,16 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
 
 async fn check_nebula_schema(
     collection_id: &CollectionId,
-    scylla_schema: &DatabaseSchema,
-    nebula_schema: &DatabaseSchema,
+    scylla_schema: &ScyllaDatabaseSchema,
+    nebula_schema: &NebulaDatabaseSchema,
 ) -> Result<()> {
-    if scylla_schema.tables.len() != nebula_schema.tables.len() {
-        anyhow::bail!("scylla schema and nebula schema have different number of tables");
+    if scylla_schema.tables.len() != nebula_schema.tags.len() {
+        anyhow::bail!("scylla schema {:#?} and nebula schema {:#?} have different number of tables", scylla_schema, nebula_schema);
     }
     for (scylla_table, nebula_table) in scylla_schema
         .tables
         .values()
-        .zip(nebula_schema.tables.values())
+        .zip(nebula_schema.tags.values())
     {
         let scylla_columns = scylla_table.columns.iter().filter(|c| c.primary).collect::<Vec<_>>();
         if scylla_table.name != nebula_table.name {
@@ -101,16 +104,25 @@ async fn check_nebula_schema(
     anyhow::bail!("timed out on vertex insert test");
 }
 
-pub async fn nebula_get_tags_schema(c: &CollectionId) -> Result<DatabaseSchema> {
-    let mut schema = DatabaseSchema {
-        tables: BTreeMap::new(),
+pub async fn nebula_get_schema(c: &CollectionId) -> Result<NebulaDatabaseSchema> {
+    let c = c.clone();
+    with_redis_cache("nebula_get_schema", 60, move|c| _nebula_get_schema(c), &c).await
+}
+
+async fn _nebula_get_schema(c: CollectionId) -> Result<NebulaDatabaseSchema> {
+    tracing::info!("nebula_get_schema {}", c.to_string());
+    let mut schema = NebulaDatabaseSchema {
+        tags: BTreeMap::new(),
+        edges: nebula_execute::<String>(&c, "SHOW EDGES;").await?.into_iter()
+            .filter_map(|s| DatabaseIdentifier::new(&s).ok())
+            .map(|v| GraphEdgeType { name: v }).collect(),
     };
-    for tag in nebula_execute::<String>(c, "SHOW TAGS;").await? {
-        schema.tables.insert(
+    for tag in nebula_execute::<String>(&c, "SHOW TAGS;").await? {
+        schema.tags.insert(
             DatabaseIdentifier::new(&tag)?,
             DatabaseTable {
                 name: DatabaseIdentifier::new(&tag)?,
-                columns: nebula_describe_tag(c, &tag).await?,
+                columns: nebula_describe_tag(&c, &tag).await?,
             },
         );
     }
@@ -139,7 +151,7 @@ async fn nebula_describe_tag(c: &CollectionId, tag: &str) -> Result<Vec<Database
     {
         columns.push(DatabaseColumn {
             name: DatabaseIdentifier::new(&field._field_name)?,
-            _type: field._field_type,
+            _type: DatabaseColumnType::from_nebula_type(&field._field_type)?,
             primary: true,
         });
     }
@@ -148,7 +160,7 @@ async fn nebula_describe_tag(c: &CollectionId, tag: &str) -> Result<Vec<Database
     Ok(columns)
 }
 
-fn nebula_create_tags_query(schema: &DatabaseSchema) -> Vec<String> {
+fn nebula_create_tags_query(schema: &ScyllaDatabaseSchema) -> Vec<String> {
     let mut query = vec![];
     for table in schema.tables.values() {
         query.push(nebula_create_tag_query(table));
@@ -173,16 +185,6 @@ fn nebula_create_tag_query(table: &DatabaseTable) -> String {
 }
 
 fn nebula_create_tag_column_query(column: &DatabaseColumn) -> String {
-    let nebula_type = match column._type.as_str() {
-        "boolean" => "bool",
-        "int" => "INT32",
-        "bigint" => "INT64",
-        "smallint" => "INT16",
-        "tinyint" => "INT8",
-        "float" => "FLOAT",
-        "double" => "DOUBLE",
-        "text" | "varchar" => "STRING",
-        _ => panic!("invalid scylla column type: {}", column._type),
-    };
+    let nebula_type = column._type.to_nebula_type().unwrap();
     format!("  `{}` {} NOT NULL", column.name, nebula_type)
 }

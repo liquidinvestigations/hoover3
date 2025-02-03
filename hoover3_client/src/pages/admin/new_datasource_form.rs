@@ -7,6 +7,7 @@ use crate::routes::UrlParam;
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
 use hoover3_types::datasource::DatasourceSettings;
+use hoover3_types::identifier::CollectionId;
 use hoover3_types::{filesystem::FsMetadataBasic, identifier::DatabaseIdentifier};
 use std::path::PathBuf;
 fn display_path(path: &PathBuf) -> String {
@@ -51,7 +52,7 @@ impl DataRowDisplay for FsMetadataBasic {
 
 #[component]
 pub fn NewDatasourceFormPage(
-    collection_id: ReadOnlySignal<String>,
+    collection_id: ReadOnlySignal<CollectionId>,
     current_path: ReadOnlySignal<UrlParam<PathBuf>>,
 ) -> Element {
     let (path, path_loaded) = UrlParam::convert_signals(current_path);
@@ -65,13 +66,10 @@ pub fn NewDatasourceFormPage(
 
 #[component]
 fn _NewDatasourceFormPage(
-    collection_id: ReadOnlySignal<String>,
+    collection_id: ReadOnlySignal<CollectionId>,
     path: ReadOnlySignal<PathBuf>,
 ) -> Element {
-    use crate::errors::AnyhowErrorDioxusExt;
-    use hoover3_types::identifier::CollectionId;
 
-    let _collection = CollectionId::new(collection_id.read().as_str()).throw()?;
     let mut name = use_signal(String::new);
     let mut children = use_signal(Vec::new);
 
@@ -123,15 +121,14 @@ fn _NewDatasourceFormPage(
                             let name = name.peek().clone();
                             let path = path.peek().clone();
                             let settings = DatasourceSettings::LocalDisk { path };
-                            let collection_id = _collection.clone();
-                            let collection_id_str = collection_id.to_string();
+                            let collection_id2 = collection_id.read().clone();
                             spawn(async move {
                                 if let Ok(d) = DatabaseIdentifier::new(&name) {
-                                    if let Ok(r) = create_datasource((collection_id.clone(), d.clone(), settings.clone())).await {
-                                        if crate::api::start_scan((collection_id.clone(), d.clone())).await.is_ok() {
+                                    if let Ok(r) = create_datasource((collection_id2.clone(), d.clone(), settings.clone())).await {
+                                        if crate::api::start_scan((collection_id2.clone(), d.clone())).await.is_ok() {
                                             navigator().push(Route::DatasourceAdminDetailsPage {
-                                                collection_id: collection_id_str.clone(),
-                                                datasource_id: r.datasource_id.to_string()
+                                                collection_id: collection_id2.clone(),
+                                                datasource_id: r.datasource_id.clone()
                                             });
                                         }
                                     }
@@ -157,7 +154,7 @@ fn _NewDatasourceFormPage(
 
 #[component]
 fn DatasourcePathPicker(
-    collection_id: ReadOnlySignal<String>,
+    collection_id: ReadOnlySignal<CollectionId>,
     path: ReadOnlySignal<PathBuf>,
     child_list: ReadOnlySignal<Vec<FsMetadataBasic>>,
 ) -> Element {

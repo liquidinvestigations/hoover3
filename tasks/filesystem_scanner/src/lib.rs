@@ -193,8 +193,8 @@ async fn fs_do_scan_datasource(
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];
-    let mut edges_to_files = InsertEdgeBatch::new(&FilesystemParentEdge);
-    let mut edges_to_dirs = InsertEdgeBatch::new(&FilesystemParentEdge);
+    let mut edges_to_files = InsertEdgeBatch::new(FilesystemParentEdge);
+    let mut edges_to_dirs = InsertEdgeBatch::new(FilesystemParentEdge);
 
     let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
     let mut parent_pk = if arg.path.is_some() {

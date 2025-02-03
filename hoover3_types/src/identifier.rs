@@ -39,6 +39,14 @@ impl CollectionId {
     }
 }
 
+impl FromStr for CollectionId {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        CollectionId::new(s)
+    }
+}
+
 impl std::fmt::Display for CollectionId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -50,7 +58,7 @@ impl std::fmt::Display for CollectionId {
 )]
 pub struct DatabaseIdentifier(String);
 
-use std::sync::OnceLock;
+use std::{str::FromStr, sync::OnceLock};
 static REGEX: OnceLock<RegexList> = OnceLock::new();
 
 struct RegexList {
@@ -101,7 +109,13 @@ impl std::fmt::Display for DatabaseIdentifier {
         write!(f, "{}", &self.0)
     }
 }
+impl FromStr for DatabaseIdentifier {
+    type Err = anyhow::Error;
 
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        DatabaseIdentifier::new(s)
+    }
+}
 #[test]
 fn test_db_identifier_regex() {
     assert!(DatabaseIdentifier::new("system").is_err());

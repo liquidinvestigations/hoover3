@@ -1,32 +1,26 @@
+use crate::db_management::with_redis_cache;
 use crate::db_management::DatabaseSpaceManager;
 use crate::migrate::ScyllaDatabaseHandle;
 use anyhow::Result;
+use hoover3_types::db_schema::DatabaseColumn;
+use hoover3_types::db_schema::DatabaseColumnType;
+use hoover3_types::db_schema::ScyllaDatabaseSchema;
+use hoover3_types::db_schema::DatabaseTable;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use std::collections::BTreeMap;
 use tracing::info;
 
-#[derive(Debug, Clone)]
-pub struct DatabaseSchema {
-    pub tables: BTreeMap<DatabaseIdentifier, DatabaseTable>,
+pub async fn get_scylla_schema(c: &CollectionId) -> Result<ScyllaDatabaseSchema> {
+    let c = c.clone();
+    let c2 = c.clone();
+    with_redis_cache( "get_scylla_schema", 60, move|c| _get_scylla_schema(c.clone()), &c2).await
 }
 
-#[derive(Debug, Clone)]
-pub struct DatabaseTable {
-    pub name: DatabaseIdentifier,
-    pub columns: Vec<DatabaseColumn>,
-}
-
-#[derive(Debug, Clone)]
-pub struct DatabaseColumn {
-    pub name: DatabaseIdentifier,
-    pub _type: String,
-    pub primary: bool,
-}
-
-pub async fn get_scylla_schema(c: &CollectionId) -> Result<DatabaseSchema> {
+pub(super) async fn _get_scylla_schema(c: CollectionId) -> Result<ScyllaDatabaseSchema> {
+    tracing::info!("get_scylla_schema {}", c.to_string());
     let session = ScyllaDatabaseHandle::global_session().await?;
-    let mut schema = DatabaseSchema {
+    let mut schema = ScyllaDatabaseSchema {
         tables: BTreeMap::new(),
     };
     let ks_name = c.database_name()?.to_string();
@@ -46,7 +40,7 @@ pub async fn get_scylla_schema(c: &CollectionId) -> Result<DatabaseSchema> {
         if let Ok(name) = DatabaseIdentifier::new(&name) {
             schema.tables.insert(
                 name.clone(),
-                get_scylla_table_schema(c, &name).await?,
+                get_scylla_table_schema(&c, &name).await?,
             );
         } else {
             info!("skipped scylla table {}", name);
@@ -112,7 +106,7 @@ async fn get_scylla_table_schema(
             let primary = matches!(column_kind.as_str(), "partition_key" | "clustering");
             table.columns.push(DatabaseColumn {
                 name: column_name,
-                _type: column_type,
+                _type: DatabaseColumnType::from_scylla_type(&column_type).unwrap(),
                 primary,
             });
         } else {

@@ -83,7 +83,7 @@ pub async fn get_datasource(
 ) -> Result<DatasourceUiRow> {
     with_redis_cache(
         "get_datasource",
-        3600,
+        60,
         move |(c, name)| async move {
             let session = ScyllaDatabaseHandle::collection_session(&c).await?;
             let row = DatasourceDbRow::find_by_datasource_id(name.to_string())

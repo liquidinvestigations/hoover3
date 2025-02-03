@@ -1,13 +1,17 @@
-pub mod nebula;
-pub use nebula::{_migrate_nebula_collection, nebula_get_tags_schema};
+pub mod schema_nebula;
+use hoover3_types::db_schema::CollectionSchema;
+use schema_meilisearch::get_meilisearch_schema;
+pub use schema_nebula::{_migrate_nebula_collection, nebula_get_schema};
 
-pub mod schema;
-
+pub mod schema_scylla;
+pub mod schema_meilisearch;
 use anyhow::Context;
 use anyhow::Result;
+use schema_scylla::get_scylla_schema;
 use std::path::PathBuf;
 use tracing::info;
 
+use crate::db_management::redis::drop_redis_cache;
 use crate::db_management::CollectionId;
 use crate::{db_management::DatabaseSpaceManager, db_management::ScyllaDatabaseHandle};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
@@ -174,6 +178,11 @@ async fn _migrate_collection(c: CollectionId) -> Result<()> {
     check_db!(ScyllaDatabaseHandle);
     check_db!(S3DatabaseHandle);
 
+
+    drop_redis_cache("nebula_get_schema",&c).await?;
+    drop_redis_cache("get_scylla_schema",&c).await?;
+    drop_redis_cache("meilisearch_get_schema",&c).await?;
+
     _migrate_nebula_collection(&c).await?;
 
     Ok(())
@@ -275,4 +284,15 @@ async fn test_create_drop_collection() {
     migrate_collection(&c).await.unwrap();
     drop_collection(&c).await.unwrap();
     drop_collection(&c).await.unwrap();
+}
+
+
+pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchema> {
+    tracing::info!("get_collection_schema {}", c.to_string());
+    Ok(CollectionSchema {
+        collection_id: c.clone(),
+        scylla: get_scylla_schema(&c).await?,
+        nebula: nebula_get_schema(&c).await?,
+        meilisearch: get_meilisearch_schema(&c).await?,
+    })
 }

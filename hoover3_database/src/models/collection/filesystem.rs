@@ -15,6 +15,7 @@ pub struct FsDirectoryScanResultDb {
     pub errors: Int,
 }
 
+
 impl From<FsScanDatasourceResult> for FsDirectoryScanResultDb {
     fn from(value: FsScanDatasourceResult) -> Self {
         Self {
