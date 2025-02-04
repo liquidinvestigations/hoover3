@@ -2,7 +2,6 @@ use crate::api::get_scan_status;
 use crate::api::get_workflow_status_tree;
 use crate::components::make_page_title;
 use crate::components::InfoCard;
-use crate::errors::AnyhowErrorDioxusExt;
 use dioxus::prelude::*;
 use dioxus_logger::tracing;
 use hoover3_types::datasource::DatasourceUiRow;
@@ -43,7 +42,7 @@ pub fn DatasourceAdminDetailsPage(
     let mut scan_result = use_signal(|| None);
     use_effect(move || {
         if let Some(Ok(result)) = scan_result_res.read().as_ref() {
-            scan_result.set(Some(result.clone()));
+            scan_result.set(Some(*result));
         }
     });
 
@@ -125,8 +124,7 @@ pub fn WorkflowStatusDisplay(
         scan_status
             .read()
             .as_ref()
-            .map(|s| s.as_ref().ok().map(|s| s.workflow_id.clone()))
-            .flatten()
+            .and_then(|s| s.as_ref().ok().map(|s| s.workflow_id.clone()))
     });
     let workflow_id_str = use_memo(move || {
         workflow_id
@@ -139,8 +137,7 @@ pub fn WorkflowStatusDisplay(
         scan_status
             .read()
             .as_ref()
-            .map(|s| s.as_ref().ok().map(|s| s.task_status.clone()))
-            .flatten()
+            .and_then(|s| s.as_ref().ok().map(|s| s.task_status.clone()))
             .unwrap_or(UiWorkflowStatusCode::Unspecified)
     });
     let mut status_tree_res = use_resource(move || {
@@ -213,7 +210,7 @@ fn WorkflowDisplayProgressBar(
                 .filter(|(k, _)| *k == &UiWorkflowStatusCode::Running)
                 .map(|(_, v)| *v)
                 .sum::<i64>(),
-            total_count.read().clone(),
+            *total_count.read(),
         )
     });
     let completed_percent = use_memo(move || {
@@ -224,7 +221,7 @@ fn WorkflowDisplayProgressBar(
                 .filter(|(k, _)| *k == &UiWorkflowStatusCode::Completed)
                 .map(|(_, v)| *v)
                 .sum::<i64>(),
-            total_count.read().clone(),
+            *total_count.read(),
         )
     });
     let error_percent = use_memo(move || {
@@ -237,7 +234,7 @@ fn WorkflowDisplayProgressBar(
                 })
                 .map(|(_, v)| *v)
                 .sum::<i64>(),
-            total_count.read().clone(),
+            *total_count.read(),
         )
     });
 

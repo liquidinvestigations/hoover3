@@ -2,21 +2,15 @@ use std::time::Duration;
 
 use crate::{
     api::{
-        db_explorer_run_scylla_query, get_all_collections, get_collection_schema, scylla_row_count,
+        db_explorer_run_scylla_query, get_collection_schema,
     },
     components::{make_page_title, DynamicTable},
-    errors::AnyhowErrorDioxusExt,
     routes::{Route, UrlParam},
 };
 use dioxus::prelude::*;
-use dioxus_logger::tracing;
 use dioxus_sdk::utils::timing::use_debounce;
 use futures_util::StreamExt;
-use hoover3_types::{
-    db_schema::{MeilisearchDatabaseSchema, NebulaDatabaseSchema, ScyllaDatabaseSchema},
-    identifier::{CollectionId, DatabaseIdentifier},
-};
-use tracing::info;
+use hoover3_types::identifier::CollectionId;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize, Default)]
 pub struct ScyllaQueryToolState {
@@ -140,8 +134,7 @@ fn ScyllaQueryJumpLinks(collection_id: ReadOnlySignal<CollectionId>) -> Element 
         schema_res
             .read()
             .as_ref()
-            .map(|s| s.as_ref().ok().clone())
-            .flatten()
+            .and_then(|s| s.as_ref().ok())
             .cloned()
     });
     let tables = use_memo(move || {

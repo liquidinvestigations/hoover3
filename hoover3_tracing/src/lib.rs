@@ -1,6 +1,5 @@
 use dioxus_logger::tracing;
 use tracing::Level;
-use tracing_subscriber::FmtSubscriber;
 
 pub fn init_tracing() {
     init_logging();

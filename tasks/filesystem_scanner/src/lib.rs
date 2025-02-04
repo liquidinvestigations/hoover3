@@ -260,7 +260,7 @@ async fn fs_do_scan_datasource(
         parent_pk.scan_children.file_count = file_count as i32;
         parent_pk.scan_children.dir_count = dir_count as i32;
         parent_pk.scan_children.file_size_bytes = file_size_bytes as i64;
-        parent_pk.scan_children.errors = 0 as i32;
+        parent_pk.scan_children.errors = 0_i32;
         use hoover3_database::charybdis::operations::UpdateWithCallbacks;
         FsDirectoryDbRow::update_cb(parent_pk, &db_extra)
             .execute(&scylla_session)

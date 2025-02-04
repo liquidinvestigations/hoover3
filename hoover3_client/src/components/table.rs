@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, convert::identity};
+use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 use hoover3_types::db_schema::{DynamicQueryResponse, DynamicQueryResult};
@@ -141,7 +141,7 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
         .cloned()
         .collect::<Vec<_>>();
     let have_editable =
-        headers.iter().map(|e| T::can_edit(e)).any(identity) && props.edited_cb.is_some();
+        headers.iter().any(|e| T::can_edit(e)) && props.edited_cb.is_some();
     let mut new_value = use_signal(BTreeMap::new);
     use_effect(move || {
         new_value.set(

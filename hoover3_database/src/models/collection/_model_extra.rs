@@ -201,11 +201,11 @@ where
     let table_name = T::DB_MODEL_NAME;
     let row_pk = row_pk_hash::<T>(row);
     let data_json = serde_json::to_value(row)?;
-    Ok(flatten_index_data(serde_json::json!({
+    flatten_index_data(serde_json::json!({
         "id": row_pk,
         "table": table_name,
         table_name: data_json,
-    }))?)
+    }))
 }
 
 fn flatten_index_data(data: serde_json::Value) -> anyhow::Result<serde_json::Value> {

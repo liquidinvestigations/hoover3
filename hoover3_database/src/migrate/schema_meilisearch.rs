@@ -7,7 +7,7 @@ pub async fn get_meilisearch_schema(c: &CollectionId) -> anyhow::Result<Meilisea
     with_redis_cache(
         "meilisearch_get_schema",
         60,
-        move |c| _get_meilisearch_schema(c),
+        _get_meilisearch_schema,
         &c,
     )
     .await

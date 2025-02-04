@@ -114,7 +114,7 @@ async fn check_nebula_schema(
 
 pub async fn nebula_get_schema(c: &CollectionId) -> Result<NebulaDatabaseSchema> {
     let c = c.clone();
-    with_redis_cache("nebula_get_schema", 60, move |c| _nebula_get_schema(c), &c).await
+    with_redis_cache("nebula_get_schema", 60, _nebula_get_schema, &c).await
 }
 
 async fn _nebula_get_schema(c: CollectionId) -> Result<NebulaDatabaseSchema> {

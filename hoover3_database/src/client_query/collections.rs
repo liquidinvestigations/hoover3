@@ -13,10 +13,10 @@ use tracing::info;
 /// Client API method, returns details for a single collection in the system.
 pub async fn get_single_collection(c: CollectionId) -> Result<CollectionUiRow> {
     let session = ScyllaDatabaseHandle::global_session().await?;
-    Ok(CollectionDbRow::find_by_collection_id(c.to_string())
+    CollectionDbRow::find_by_collection_id(c.to_string())
         .execute(&session)
         .await?
-        .to_ui()?)
+        .to_ui()
 }
 
 /// Client API method to create a new collection, including all the
@@ -30,7 +30,7 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
             .execute(&session)
             .await
         {
-            return Ok(x.to_ui()?);
+            return x.to_ui();
         }
         let now = chrono::offset::Utc::now();
         let new_row = CollectionDbRow {
@@ -43,7 +43,7 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
         migrate_collection(&c).await?;
         CollectionDbRow::insert(&new_row).execute(&session).await?;
         drop_redis_cache("get_all_collections", &()).await?;
-        Ok(new_row.to_ui()?)
+        new_row.to_ui()
     })
     .await?
 }
@@ -89,7 +89,7 @@ pub async fn update_collection(updated: CollectionUiRow) -> Result<CollectionUiR
         CollectionDbRow::insert(&new_row).execute(&session).await?;
         drop_redis_cache("get_all_collections", &()).await?;
         info!("updating collection {:?}: done", new_row.collection_id);
-        Ok(new_row.to_ui()?)
+        new_row.to_ui()
     })
     .await?
 }

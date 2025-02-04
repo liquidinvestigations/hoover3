@@ -90,7 +90,7 @@ fn print_scylladb_result(
             }
         }
         Err(IntoRowsResultError::ResultNotRows(_)) => {
-            return Ok(DynamicQueryResult::from_single_string("OK".to_string())?)
+            return DynamicQueryResult::from_single_string("OK".to_string())
         }
         Err(e) => return Err(e.into()),
     }
@@ -119,7 +119,7 @@ fn convert_scylla_column_type(c: &ColumnType) -> DatabaseColumnType {
             field_types,
         } => DatabaseColumnType::Object(
             field_types
-                .into_iter()
+                .iter()
                 .map(|(name, typ)| (name.to_string(), Box::new(convert_scylla_column_type(typ))))
                 .collect(),
         ),
@@ -151,7 +151,7 @@ fn convert_scylla_column_value(r: Option<CqlValue>) -> Option<DatabaseValue> {
                 .map(|v| convert_scylla_column_value(Some(v)))
                 .collect::<Vec<Option<DatabaseValue>>>()
                 .into_iter()
-                .filter_map(|v| v)
+                .flatten()
                 .collect(),
         )),
         Some(CqlValue::UserDefinedType {
