@@ -65,7 +65,8 @@ impl DataRowDisplay for CollectionUiRow {
 
 #[component]
 pub fn CollectionsAdminListPage() -> Element {
-    let mut c_list = use_resource(move || async move { get_all_collections(()).await });
+    let mut c_list = use_resource(
+        move || async move { get_all_collections(()).await });
     let collections = use_memo(move || {
         if let Some(Ok(v)) = c_list.read().as_ref() {
             v.clone()
@@ -91,13 +92,15 @@ pub fn CollectionsAdminListPage() -> Element {
             cb: Callback::new(move |c: CollectionId| {
                 spawn(async move {
                     let c_ = c.clone();
-                    if let Ok(_) = create_new_collection(c_).await {
-                    // c_list.restart();
+                    if create_new_collection(c_).await.is_ok() {
                         navigator().push(
                             Route::CollectionAdminDetailsPage {
                                 collection_id: c.clone()
                             }
                         );
+                    } else {
+                        dioxus_logger::tracing::error!(
+                            "failed to create collection {:#?}", c.clone());
                     }
                 });
             }),

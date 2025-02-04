@@ -144,7 +144,9 @@ fn ScyllaQueryJumpLinks(collection_id: ReadOnlySignal<CollectionId>) -> Element 
             .map(|s| s.scylla.tables.keys().cloned().collect::<Vec<_>>())
             .unwrap_or(vec![])
     });
-    let queries: Vec<(&str, Box<dyn Fn(String) -> String>)> = vec![
+
+    type QueryFn = Box<dyn Fn(String) -> String>;
+    let queries: Vec<(&str, QueryFn)> = vec![
         (
             "SELECT *",
             Box::new(move |x| format!("SELECT * FROM {};", x)),
@@ -169,7 +171,6 @@ fn ScyllaQueryJumpLinks(collection_id: ReadOnlySignal<CollectionId>) -> Element 
                                         collection_id: collection_id.read().clone(),
                                         query_state: UrlParam::new(ScyllaQueryToolState {
                                             query: query_str(table.to_string()),
-                                            ..Default::default()
                                         })
                                     },
                                     "{query}"
