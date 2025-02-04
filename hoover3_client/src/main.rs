@@ -1,4 +1,7 @@
-fn main() {
+//! The Hoover3 client - the website frontend entrypoint.
+
+/// Main dioxus Entrypoint. Sets up launch configurations for Dioxus, as well as server backend main function.
+pub fn main() {
     hoover3_tracing::init_tracing();
 
     #[cfg(feature = "web")]

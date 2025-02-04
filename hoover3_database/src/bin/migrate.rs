@@ -1,3 +1,5 @@
+//! The database migration entrypoint.
+
 use anyhow::Result;
 use hoover3_tracing::init_tracing;
 

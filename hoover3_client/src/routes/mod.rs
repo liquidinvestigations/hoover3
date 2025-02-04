@@ -1,5 +1,4 @@
 mod url_param;
-use hoover3_types::db_schema::DatabaseType;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 pub use url_param::UrlParam;

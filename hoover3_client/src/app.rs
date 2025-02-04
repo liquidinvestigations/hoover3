@@ -1,3 +1,5 @@
+//! The Hoover3 client App component - the whole website as a single component.
+
 use crate::routes::Route;
 use dioxus::prelude::*;
 use dioxus_logger::tracing;
@@ -6,6 +8,7 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 // const PICO_CSS: Asset = asset!("/assets/libs/pico.min.css");
 // const MAIN_CSS: Asset = asset!("/assets/main.css");
 
+/// The main app component that loads extra CSS and the router.
 #[component]
 pub fn App() -> Element {
     tracing::info!("dioxus App()...");

@@ -1,3 +1,5 @@
+//! The Hoover3 client library - the website frontend components and pages.
+
 pub(crate) mod api;
 pub mod app;
 pub(crate) mod components;
