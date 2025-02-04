@@ -1,15 +1,21 @@
 use crate::api::get_scan_status;
 use crate::api::get_workflow_status_tree;
+use crate::components::make_page_title;
 use crate::components::InfoCard;
 use crate::errors::AnyhowErrorDioxusExt;
 use dioxus::prelude::*;
+use dioxus_logger::tracing;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
 use hoover3_types::tasks::UiWorkflowStatus;
 use hoover3_types::tasks::UiWorkflowStatusCode;
 use std::collections::BTreeMap;
+
 #[component]
-pub fn DatasourceAdminDetailsPage(collection_id: CollectionId, datasource_id: DatabaseIdentifier) -> Element {
+pub fn DatasourceAdminDetailsPage(
+    collection_id: CollectionId,
+    datasource_id: DatabaseIdentifier,
+) -> Element {
     let c = collection_id.clone();
     let d = datasource_id.clone();
     let mut scan_status_res = use_resource(move || {
@@ -85,8 +91,8 @@ pub fn DatasourceAdminDetailsPage(collection_id: CollectionId, datasource_id: Da
 
 #[component]
 fn DatasourceInfoCard(c: CollectionId, ds: DatabaseIdentifier) -> Element {
-    let c_title = format!("Datasource `{}`", c);
     let c2 = c.clone();
+    let ds2 = ds.clone();
     let info_res = use_resource(move || crate::api::get_datasource((c2.clone(), ds.clone())));
     let mut info = use_signal(|| None);
 
@@ -104,7 +110,7 @@ fn DatasourceInfoCard(c: CollectionId, ds: DatabaseIdentifier) -> Element {
     rsx! {
         InfoCard<DatasourceUiRow> {
             data: info,
-            title: c_title,
+            title: make_page_title(1, "Datasource", &ds2.to_string()),
         }
     }
 }
@@ -160,7 +166,7 @@ pub fn WorkflowStatusDisplay(
                 }
             }
         }
-        tracing::info!("done refreshing scan tree");
+        dioxus_logger::tracing::info!("done refreshing scan tree");
     });
 
     let tree_counts = use_memo(move || {
@@ -182,7 +188,6 @@ pub fn WorkflowStatusDisplay(
             WorkflowDisplayProgressBar {counts: tree_counts}
             {children}
         }
-
     }
 }
 

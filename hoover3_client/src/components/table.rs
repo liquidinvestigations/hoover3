@@ -1,6 +1,7 @@
-use std::{collections::HashMap, convert::identity};
+use std::{collections::BTreeMap, convert::identity};
 
 use dioxus::prelude::*;
+use hoover3_types::db_schema::{DynamicQueryResponse, DynamicQueryResult};
 
 pub trait DataRowDisplay: serde::Serialize + for<'a> serde::Deserialize<'a> {
     fn get_headers() -> Vec<&'static str> {
@@ -19,10 +20,10 @@ pub trait DataRowDisplay: serde::Serialize + for<'a> serde::Deserialize<'a> {
     fn can_edit(_header_name: &str) -> bool {
         false
     }
-    fn get_editable_fields(&self) -> HashMap<String, String> {
-        HashMap::new()
+    fn get_editable_fields(&self) -> BTreeMap<String, String> {
+        BTreeMap::new()
     }
-    fn set_editable_fields(&mut self, _h: HashMap<String, String>) {}
+    fn set_editable_fields(&mut self, _h: BTreeMap<String, String>) {}
 }
 
 #[derive(PartialEq, Props, Clone)]
@@ -114,7 +115,7 @@ pub fn HtmlTable<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispl
                     }
                 } else {
                     p {
-                        i { "No data for filter `{search_query}`" }
+                        i { "No data for filter '{search_query}'" }
                     }
                 }
             }
@@ -124,7 +125,7 @@ pub fn HtmlTable<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispl
 
 #[derive(PartialEq, Props, Clone)]
 pub struct InfoCardProps_<T: 'static + Clone + PartialEq + DataRowDisplay> {
-    title: ReadOnlySignal<String>,
+    title: ReadOnlySignal<Element>,
     data: ReadOnlySignal<Option<T>>,
     edited_cb: Option<Callback<T>>,
 }
@@ -141,7 +142,7 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
         .collect::<Vec<_>>();
     let have_editable =
         headers.iter().map(|e| T::can_edit(e)).any(identity) && props.edited_cb.is_some();
-    let mut new_value = use_signal(HashMap::new);
+    let mut new_value = use_signal(BTreeMap::new);
     use_effect(move || {
         new_value.set(
             props
@@ -160,7 +161,7 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
             div {
                 class: "grid",
                 h1 {
-                    "{props.title}"
+                    {props.title}
                 }
                 if have_editable {
                     button {
@@ -208,6 +209,66 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
                 }
             }
 
+        }
+    }
+}
+
+#[component]
+pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
+    let time_ms = use_memo(move || (data.read().elapsed_seconds * 10000.0).round() / 10.0);
+
+    let result_rows = data
+        .read()
+        .result
+        .as_ref()
+        .ok()
+        .map(|r| r.rows.len())
+        .unwrap_or(0);
+    rsx! {
+        small {
+            style:"display:block;width:max-content;margin:auto; border: 1px solid gray; padding: 5px;",
+            "Query returned {result_rows} rows after {time_ms}ms"
+        }
+        if let Some(result) = data.read().result.as_ref().ok() {
+            DynamicTableInner{data: result.clone()}
+        } else {
+            pre {
+                "Error: \n\n{data.read().result.as_ref():#?}"
+            }
+        }
+
+    }
+}
+
+#[component]
+pub fn DynamicTableInner(data: ReadOnlySignal<DynamicQueryResult>) -> Element {
+    rsx! {
+        table { class: "striped",
+            thead {
+                for k in data.read().columns.iter() {
+                    th { key: "{k.0.clone()},{k.1}", {k.0.clone()} br{} pre{"{k.1}"} }
+                }
+            }
+            tbody {
+                for row in data.read().rows.iter() {
+                    tr {
+                        for col in row.iter() {
+                            td {
+                                {
+                                    if let Some(col) = col {
+                                        let col = format!("{}", col);
+                                        if col.contains("\n") {
+                                            rsx!{pre{"{col}"}}
+                                        } else {
+                                            rsx!{"{col}"}
+                                        }
+                                    } else {rsx!()}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

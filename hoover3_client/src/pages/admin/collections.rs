@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
@@ -6,7 +6,7 @@ use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::{collection::CollectionUiRow, identifier::CollectionId};
 
 use crate::api::*;
-use crate::components::{DataRowDisplay, HtmlTable, InfoCard};
+use crate::components::{make_page_title, DataRowDisplay, HtmlTable, InfoCard, PageTitle};
 use crate::errors::AnyhowErrorDioxusExt;
 use crate::routes::Route;
 use crate::routes::UrlParam;
@@ -45,8 +45,8 @@ impl DataRowDisplay for CollectionUiRow {
     fn can_edit(_header_name: &str) -> bool {
         matches!(_header_name, "Collection Title" | "Collection Description")
     }
-    fn get_editable_fields(&self) -> std::collections::HashMap<String, String> {
-        let mut h = HashMap::new();
+    fn get_editable_fields(&self) -> std::collections::BTreeMap<String, String> {
+        let mut h = BTreeMap::new();
         h.insert(
             "Collection Title".to_string(),
             self.collection_title.clone(),
@@ -57,7 +57,7 @@ impl DataRowDisplay for CollectionUiRow {
         );
         h
     }
-    fn set_editable_fields(&mut self, _h: HashMap<String, String>) {
+    fn set_editable_fields(&mut self, _h: BTreeMap<String, String>) {
         self.collection_title = _h.get("Collection Title").unwrap().to_string();
         self.collection_description = _h.get("Collection Description").unwrap().to_string();
     }
@@ -179,7 +179,6 @@ pub fn CollectionAdminDetailsPage(collection_id: CollectionId) -> Element {
 
 #[component]
 fn CollectionInfoCard(c: CollectionId) -> Element {
-    let c_title = format!("Collection `{}`", c);
     let c2 = c.clone();
     let mut info_res = use_resource(move || crate::api::get_single_collection(c2.clone()));
     let mut info = use_signal(|| None);
@@ -198,7 +197,7 @@ fn CollectionInfoCard(c: CollectionId) -> Element {
     rsx! {
         InfoCard<CollectionUiRow> {
             data: info,
-            title: c_title,
+            title: make_page_title(1, "Collection", &c.to_string()),
             edited_cb: Some(Callback::new(move |i:CollectionUiRow| {
                 spawn(async move {
                     info!("sending modify request for {:#?}", i);

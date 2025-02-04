@@ -69,7 +69,6 @@ fn _NewDatasourceFormPage(
     collection_id: ReadOnlySignal<CollectionId>,
     path: ReadOnlySignal<PathBuf>,
 ) -> Element {
-
     let mut name = use_signal(String::new);
     let mut children = use_signal(Vec::new);
 

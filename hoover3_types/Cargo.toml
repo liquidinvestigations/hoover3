@@ -5,6 +5,7 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 serde = {workspace=true, features = ["serde_derive"]}
@@ -13,3 +14,4 @@ anyhow.workspace = true
 stable-hash = "0.4.3"
 chrono.workspace = true
 bincode.workspace = true
+serde_json.workspace = true

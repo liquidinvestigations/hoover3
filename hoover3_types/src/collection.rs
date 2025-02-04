@@ -1,8 +1,6 @@
 use crate::identifier::CollectionId;
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
-)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct CollectionUiRow {
     pub collection_id: CollectionId,
     pub collection_title: String,

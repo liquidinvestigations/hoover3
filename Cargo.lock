@@ -2070,7 +2070,9 @@ dependencies = [
  "dioxus",
  "dioxus-signals",
  "directories",
+ "futures 0.3.31",
  "futures-util",
+ "gloo-timers",
  "js-sys",
  "once_cell",
  "postcard",
@@ -3376,15 +3378,11 @@ dependencies = [
  "hoover3_taskdef",
  "hoover3_tracing",
  "hoover3_types",
- "log",
  "paste",
  "serde",
  "serde-aux",
  "serde_json",
  "tokio",
- "tracing",
- "tracing-log",
- "tracing-web",
  "web-time",
 ]
 
@@ -3418,6 +3416,7 @@ dependencies = [
  "rustyline",
  "rustyline-derive",
  "scylla",
+ "scylla-cql",
  "serde",
  "serde_json",
  "tokio",
@@ -3506,6 +3505,7 @@ dependencies = [
  "chrono",
  "regex",
  "serde",
+ "serde_json",
  "stable-hash",
 ]
 
@@ -6562,6 +6562,7 @@ dependencies = [
  "num-bigint 0.4.6",
  "scylla-macros",
  "secrecy",
+ "serde",
  "snap",
  "stable_deref_trait",
  "thiserror 2.0.11",
@@ -8015,19 +8016,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "tracing-web"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9e6a141feebd51f8d91ebfd785af50fca223c570b86852166caa3b141defe7c"
-dependencies = [
- "js-sys",
- "tracing-core",
- "tracing-subscriber",
- "wasm-bindgen",
- "web-sys",
 ]
 
 [[package]]

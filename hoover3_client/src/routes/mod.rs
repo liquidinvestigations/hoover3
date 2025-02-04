@@ -3,7 +3,7 @@ use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 pub use url_param::UrlParam;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::path::PathBuf;
@@ -16,18 +16,20 @@ use crate::pages::CollectionAdminDetailsPage;
 use crate::pages::CollectionsAdminListPage;
 use crate::pages::DashboardIframePage;
 use crate::pages::DashboardNavbarDropdown;
+use crate::pages::DatabaseExplorerCollectionPage;
+use crate::pages::DatabaseExplorerCollectionPageGraphEdges;
+use crate::pages::DatabaseExplorerCollectionPageGraphNodes;
+use crate::pages::DatabaseExplorerCollectionPageSearchIndex;
+use crate::pages::DatabaseExplorerCollectionPageSqlTable;
+use crate::pages::DatabaseExplorerRootPage;
+use crate::pages::DatabaseExplorerSqlQueryToolPage;
 use crate::pages::DatasourceAdminDetailsPage;
 use crate::pages::DioxusTranslatePage;
 use crate::pages::DockerHealthPage;
 use crate::pages::HomePage;
 use crate::pages::NewDatasourceFormPage;
+use crate::pages::ScyllaQueryToolState;
 use crate::pages::ServerCallLogPage;
-use crate::pages::DatabaseExplorerRootPage;
-use crate::pages::DatabaseExplorerCollectionPage;
-use crate::pages::DatabaseExplorerCollectionPageSqlTable;
-use crate::pages::DatabaseExplorerCollectionPageGraphNodes;
-use crate::pages::DatabaseExplorerCollectionPageGraphEdges;
-use crate::pages::DatabaseExplorerCollectionPageSearchIndex;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
@@ -65,6 +67,9 @@ pub enum Route {
 
         #[route("/database-explorer/:collection_id/search-index/:field_name")]
         DatabaseExplorerCollectionPageSearchIndex {collection_id: CollectionId, field_name: String},
+
+        #[route("/database-explorer/:collection_id/sql-query-tool/#:query_state")]
+        DatabaseExplorerSqlQueryToolPage {collection_id: CollectionId, query_state: UrlParam<ScyllaQueryToolState>},
     #[end_nest]
 
     #[nest("/admin")]
@@ -163,7 +168,7 @@ pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
 #[derive(Clone, Debug)]
 struct ServerCallHistory {
     cb: Callback<ServerCallEvent>,
-    hist: ReadOnlySignal<HashMap<String, VecDeque<ServerCallEvent>>>,
+    hist: ReadOnlySignal<BTreeMap<String, VecDeque<ServerCallEvent>>>,
 }
 
 pub fn nav_push_server_call_event(event: ServerCallEvent) {
@@ -171,7 +176,7 @@ pub fn nav_push_server_call_event(event: ServerCallEvent) {
     cb.call(event);
 }
 
-pub fn read_server_call_history() -> ReadOnlySignal<HashMap<String, VecDeque<ServerCallEvent>>> {
+pub fn read_server_call_history() -> ReadOnlySignal<BTreeMap<String, VecDeque<ServerCallEvent>>> {
     let ServerCallHistory { hist, .. } = use_context();
     hist
 }
@@ -187,17 +192,17 @@ fn NavbarLayout() -> Element {
     });
     use_effect(move || {
         let c = currently_loading.read();
-        info!("currently_loading: {:#?}", c);
+        info!("currently_loading: {:?}", c);
     });
 
     let mut hist = dioxus_sdk::storage::use_synced_storage::<
         dioxus_sdk::storage::LocalStorage,
-        HashMap<String, VecDeque<ServerCallEvent>>,
-    >("HashMap_ServerCallEvent".to_string(), || {
-        HashMap::<String, VecDeque<ServerCallEvent>>::new()
+        BTreeMap<String, VecDeque<ServerCallEvent>>,
+    >("BTreeMap_ServerCallEvent".to_string(), || {
+        BTreeMap::<String, VecDeque<ServerCallEvent>>::new()
     });
 
-    // let mut hist = use_signal(|| HashMap::<String, VecDeque<ServerCallEvent>>::new());
+    // let mut hist = use_signal(|| BTreeMap::<String, VecDeque<ServerCallEvent>>::new());
     use_context_provider(|| ServerCallHistory {
         cb: Callback::new(move |event: ServerCallEvent| {
             if event.is_finished {

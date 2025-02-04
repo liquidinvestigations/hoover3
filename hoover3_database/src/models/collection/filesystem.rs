@@ -1,10 +1,10 @@
 use crate::impl_model_callbacks;
 use charybdis::macros::charybdis_model;
-use charybdis::types::{BigInt, Text, Timestamp, Int};
+use charybdis::macros::charybdis_udt_model;
+use charybdis::types::{BigInt, Int, Text, Timestamp};
+use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::filesystem::{FsDirectoryUiRow, FsFileUiRow, FsMetadataBasic};
 use hoover3_types::identifier::DatabaseIdentifier;
-use hoover3_types::filesystem::FsScanDatasourceResult;
-use charybdis::macros::charybdis_udt_model;
 
 #[charybdis_udt_model(type_name = FsDirectoryScanResultDb)]
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Default)]
@@ -14,7 +14,6 @@ pub struct FsDirectoryScanResultDb {
     pub file_size_bytes: BigInt,
     pub errors: Int,
 }
-
 
 impl From<FsScanDatasourceResult> for FsDirectoryScanResultDb {
     fn from(value: FsScanDatasourceResult) -> Self {

@@ -117,7 +117,6 @@ async fn fs_scan_datasource(
     Ok(WfExitValue::Normal(scan_result))
 }
 
-
 #[activity(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_save_dir_scan_total_result(
     (args, scan_result): (Vec<ScanDatasourceArgs>, FsScanDatasourceResult),
@@ -131,7 +130,12 @@ async fn fs_save_dir_scan_total_result(
     for arg in args {
         use hoover3_database::charybdis::operations::Find;
         if let Some(path) = arg.path {
-            let mut dir = FsDirectoryDbRow::find_by_primary_key_value((arg.datasource_id.to_string(), path.to_str().unwrap().into())).execute(&scylla_session).await?;
+            let mut dir = FsDirectoryDbRow::find_by_primary_key_value((
+                arg.datasource_id.to_string(),
+                path.to_str().unwrap().into(),
+            ))
+            .execute(&scylla_session)
+            .await?;
             dir.scan_total.file_count = scan_result.file_count as i32;
             dir.scan_total.dir_count = scan_result.dir_count as i32;
             dir.scan_total.file_size_bytes = scan_result.file_size_bytes as i64;
@@ -145,14 +149,11 @@ async fn fs_save_dir_scan_total_result(
     FsDirectoryDbRow::batch()
         .chunked_insert(&scylla_session, &dirs, 1024)
         .await?;
-    let db_extra = hoover3_database::models::collection::DatabaseExtraCallbacks::new(
-        &collection_id,
-    )
-    .await?;
+    let db_extra =
+        hoover3_database::models::collection::DatabaseExtraCallbacks::new(&collection_id).await?;
     db_extra.insert(&dirs).await?;
     Ok(())
 }
-
 
 #[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_scan_datasource_group(
@@ -200,8 +201,15 @@ async fn fs_do_scan_datasource(
     let mut parent_pk = if arg.path.is_some() {
         let p = arg.path.unwrap();
         use hoover3_database::charybdis::operations::Find;
-        Some(FsDirectoryDbRow::find_by_primary_key_value((arg.datasource_id.to_string(), p.to_str().unwrap().into())).execute(&scylla_session).await?)
-    }else {
+        Some(
+            FsDirectoryDbRow::find_by_primary_key_value((
+                arg.datasource_id.to_string(),
+                p.to_str().unwrap().into(),
+            ))
+            .execute(&scylla_session)
+            .await?,
+        )
+    } else {
         None
     };
     // let parent_pk = arg.path.map(|p| FsDirectoryDbRow {
@@ -254,7 +262,9 @@ async fn fs_do_scan_datasource(
         parent_pk.scan_children.file_size_bytes = file_size_bytes as i64;
         parent_pk.scan_children.errors = 0 as i32;
         use hoover3_database::charybdis::operations::UpdateWithCallbacks;
-        FsDirectoryDbRow::update_cb(parent_pk, &db_extra).execute(&scylla_session).await?;
+        FsDirectoryDbRow::update_cb(parent_pk, &db_extra)
+            .execute(&scylla_session)
+            .await?;
     }
 
     Ok((

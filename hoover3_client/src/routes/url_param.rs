@@ -48,6 +48,12 @@ impl<T: Default + Clone> UrlParam<T> {
     }
 }
 
+impl<T: Default + Clone> From<T> for UrlParam<T> {
+    fn from(value: T) -> Self {
+        UrlParam::new(value)
+    }
+}
+
 // Display the state in a way that can be parsed by FromStr
 impl<T> Display for UrlParam<T>
 where

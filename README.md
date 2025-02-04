@@ -3,6 +3,7 @@
 ## installation
 
 - use linux
+- put `fs.aio-max-nr = 1048576` in `/etc/sysctl.conf` and run `sysctl -p`
 - install rustup and rust stable (1.81)
 - sudo apt-get install mold clang
 - install docker
@@ -24,7 +25,7 @@
 ### basic features
 - [ ] admin view of all tables
     - [ ] sort/filter by any column (meilisearch/clickhouse)
-    - [ ] 
+    - [ ]
 - [ ]
 
 

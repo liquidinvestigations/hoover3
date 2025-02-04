@@ -7,6 +7,7 @@ use hoover3_types::collection::*;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::db_schema::CollectionSchema;
+use hoover3_types::db_schema::DynamicQueryResponse;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadataBasic;
 use hoover3_types::filesystem::FsScanDatasourceResult;
@@ -88,7 +89,7 @@ macro_rules! server_wrapper {
             pub async fn $id(c: $arg)
             -> Result<$ret, ServerFnError>
             {
-                let retry = 3;
+                let retry = 2;
                 for i in 1..=retry {
                     let rv = {
                         let arg_str = format!("{c:?}");
@@ -113,7 +114,9 @@ macro_rules! server_wrapper {
                     if i == retry {
                         return rv;
                     }
-                    $crate::time::sleep(std::time::Duration::from_secs(1+i)).await;
+                    $crate::time::sleep(
+                        std::time::Duration::from_secs_f32(
+                            0.1+i as f32*0.1)).await;
                 }
                 unreachable!()
             }
@@ -221,4 +224,18 @@ server_wrapper!(
     get_collection_schema,
     CollectionId,
     CollectionSchema
+);
+
+server_wrapper!(
+    hoover3_database::client_query::database_explorer,
+    scylla_row_count,
+    (CollectionId, DatabaseIdentifier),
+    i64
+);
+
+server_wrapper!(
+    hoover3_database::client_query::database_explorer,
+    db_explorer_run_scylla_query,
+    (CollectionId, String),
+    DynamicQueryResponse
 );

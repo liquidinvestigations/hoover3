@@ -5,6 +5,7 @@ version.workspace = true
 authors.workspace = true
 edition.workspace = true
 publish.workspace = true
+rust-version.workspace = true
 
 [dependencies]
 proc-macro-crate = "3.2.0"

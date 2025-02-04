@@ -73,11 +73,11 @@ input {
 }
 
 td {
-    max-width: 25rem;
-    max-height: 10rem;
+    max-width: 35rem;
+    max-height: 15rem;
     overflow: scroll;
 }
 
 td > pre {
-    max-height:10rem;
+    max-height:15rem;
 }

@@ -24,7 +24,6 @@ pub struct CollectionDbRow {
 use hoover3_types::collection::CollectionUiRow;
 use hoover3_types::identifier::CollectionId;
 impl CollectionDbRow {
-
     pub fn to_ui(&self) -> anyhow::Result<CollectionUiRow> {
         Ok(CollectionUiRow {
             collection_id: CollectionId::new(&self.collection_id)?,

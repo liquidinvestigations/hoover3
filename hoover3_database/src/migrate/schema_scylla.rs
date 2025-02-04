@@ -4,8 +4,8 @@ use crate::migrate::ScyllaDatabaseHandle;
 use anyhow::Result;
 use hoover3_types::db_schema::DatabaseColumn;
 use hoover3_types::db_schema::DatabaseColumnType;
-use hoover3_types::db_schema::ScyllaDatabaseSchema;
 use hoover3_types::db_schema::DatabaseTable;
+use hoover3_types::db_schema::ScyllaDatabaseSchema;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use std::collections::BTreeMap;
@@ -14,7 +14,13 @@ use tracing::info;
 pub async fn get_scylla_schema(c: &CollectionId) -> Result<ScyllaDatabaseSchema> {
     let c = c.clone();
     let c2 = c.clone();
-    with_redis_cache( "get_scylla_schema", 60, move|c| _get_scylla_schema(c.clone()), &c2).await
+    with_redis_cache(
+        "get_scylla_schema",
+        60,
+        move |c| _get_scylla_schema(c.clone()),
+        &c2,
+    )
+    .await
 }
 
 pub(super) async fn _get_scylla_schema(c: CollectionId) -> Result<ScyllaDatabaseSchema> {
@@ -38,10 +44,9 @@ pub(super) async fn _get_scylla_schema(c: CollectionId) -> Result<ScyllaDatabase
     {
         let name = row?.0;
         if let Ok(name) = DatabaseIdentifier::new(&name) {
-            schema.tables.insert(
-                name.clone(),
-                get_scylla_table_schema(&c, &name).await?,
-            );
+            schema
+                .tables
+                .insert(name.clone(), get_scylla_table_schema(&c, &name).await?);
         } else {
             info!("skipped scylla table {}", name);
         }
