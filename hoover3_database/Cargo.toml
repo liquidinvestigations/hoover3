@@ -5,7 +5,10 @@ version = {workspace = true}
 authors = {workspace = true}
 edition = {workspace = true}
 publish  = {workspace = true}
+rust-version.workspace = true
 
+[lints]
+workspace = true
 
 [dependencies]
 hoover3_types  = {path="../hoover3_types"}

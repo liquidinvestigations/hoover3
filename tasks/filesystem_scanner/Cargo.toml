@@ -7,6 +7,9 @@ edition.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 
+[lints]
+workspace = true
+
 [dependencies]
 futures.workspace = true
 hoover3_database = {path="../../hoover3_database"}

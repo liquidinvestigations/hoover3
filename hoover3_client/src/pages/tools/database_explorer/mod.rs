@@ -3,7 +3,9 @@ pub use sql_query_tool::*;
 
 use dioxus::prelude::*;
 use hoover3_types::{
-    db_schema::{MeilisearchDatabaseSchema, NebulaDatabaseSchema, ScyllaDatabaseSchema},
+    db_schema::{
+        DatabaseType, MeilisearchDatabaseSchema, NebulaDatabaseSchema, ScyllaDatabaseSchema,
+    },
     identifier::{CollectionId, DatabaseIdentifier},
 };
 
@@ -11,8 +13,108 @@ use crate::{
     api::{get_all_collections, get_collection_schema, scylla_row_count},
     components::make_page_title,
     errors::AnyhowErrorDioxusExt,
-    routes::Route,
+    routes::{Route, UrlParam},
 };
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize, Default)]
+pub enum DatabaseExplorerRoute {
+    #[default]
+    RootPage,
+    CollectionPage {
+        collection_id: CollectionId,
+    },
+    SqlTablePage {
+        collection_id: CollectionId,
+        table_name: DatabaseIdentifier,
+    },
+    GraphNodesPage {
+        collection_id: CollectionId,
+        tag_name: DatabaseIdentifier,
+    },
+    GraphEdgesPage {
+        collection_id: CollectionId,
+        edge_name: DatabaseIdentifier,
+    },
+    SearchIndexPage {
+        collection_id: CollectionId,
+        field_name: String,
+    },
+    QueryToolPage {
+        collection_id: CollectionId,
+        db_type: DatabaseType,
+        query_state: ScyllaQueryToolState,
+    },
+}
+
+#[component]
+pub fn DatabaseExplorerPage(
+    explorer_route: ReadOnlySignal<UrlParam<DatabaseExplorerRoute>>,
+) -> Element {
+    let (state, loaded) = UrlParam::convert_signals(explorer_route);
+
+    rsx! {
+        if *loaded.read() {
+            _DatabaseExplorerPage{
+                explorer_route: state.read().clone()
+            }
+        }
+    }
+}
+#[component]
+fn _DatabaseExplorerPage(explorer_route: ReadOnlySignal<DatabaseExplorerRoute>) -> Element {
+    match explorer_route.read().clone() {
+        DatabaseExplorerRoute::RootPage => rsx! {DatabaseExplorerRootPage{}},
+        DatabaseExplorerRoute::CollectionPage { collection_id } => {
+            rsx! {DatabaseExplorerCollectionPage{collection_id}}
+        }
+        DatabaseExplorerRoute::SqlTablePage {
+            collection_id,
+            table_name,
+        } => rsx! {DatabaseExplorerCollectionPageSqlTable{collection_id, table_name}},
+        DatabaseExplorerRoute::GraphNodesPage {
+            collection_id,
+            tag_name,
+        } => rsx! {DatabaseExplorerCollectionPageGraphNodes{collection_id, tag_name}},
+        DatabaseExplorerRoute::GraphEdgesPage {
+            collection_id,
+            edge_name,
+        } => rsx! {DatabaseExplorerCollectionPageGraphEdges{collection_id, edge_name}},
+        DatabaseExplorerRoute::SearchIndexPage {
+            collection_id,
+            field_name,
+        } => rsx! {DatabaseExplorerCollectionPageSearchIndex{collection_id, field_name}},
+        DatabaseExplorerRoute::QueryToolPage {
+            collection_id,
+            db_type,
+            query_state,
+        } => rsx! {DatabaseExplorerQueryToolPage{collection_id, db_type, query_state}},
+    }
+}
+
+#[component]
+fn DatabaseExplorerRootPage() -> Element {
+    let collections_res = use_resource(move || async move { get_all_collections(()).await });
+    rsx! {
+        h1 { "Database Explorer" }
+        CardGridDisplay {
+            if let Some(Ok(collections)) = collections_res.read().as_ref() {
+                for collection in collections {
+                    LinkCard {
+                        subtitle: "collection".to_string(),
+                        title: collection.collection_id.to_string(),
+                        link: Route::DatabaseExplorerPage{
+                            explorer_route: DatabaseExplorerRoute::CollectionPage {
+                            collection_id: collection.collection_id.clone()
+                        }.into()},
+                        CollectionStatsInfoCard{
+                            collection_id: collection.collection_id.clone()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 #[component]
 fn LinkCard(subtitle: String, title: String, link: Route, children: Element) -> Element {
@@ -39,30 +141,6 @@ fn CardGridDisplay(children: Element) -> Element {
                 min-height: 200px;
             ",
             {children}
-        }
-    }
-}
-
-#[component]
-pub fn DatabaseExplorerRootPage() -> Element {
-    let collections_res = use_resource(move || async move { get_all_collections(()).await });
-    rsx! {
-        h1 { "Database Explorer" }
-        CardGridDisplay {
-            if let Some(Ok(collections)) = collections_res.read().as_ref() {
-                for collection in collections {
-                    LinkCard {
-                        subtitle: "collection".to_string(),
-                        title: collection.collection_id.to_string(),
-                        link: Route::DatabaseExplorerCollectionPage {
-                            collection_id: collection.collection_id.clone()
-                        },
-                        CollectionStatsInfoCard{
-                            collection_id: collection.collection_id.clone()
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -120,7 +198,7 @@ fn CollectionStatsInfoCard(collection_id: CollectionId) -> Element {
 }
 
 #[component]
-pub fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
+fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
     let c = CollectionId::new(&collection_id).throw()?;
     let collection_id = use_signal(move || c);
     let schema_res = use_resource(move || {
@@ -142,7 +220,9 @@ pub fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
     rsx! {
         h1 {
             Link {
-                to: Route::DatabaseExplorerRootPage{},
+                to: Route::DatabaseExplorerPage{
+                    explorer_route: DatabaseExplorerRoute::RootPage.into()
+                },
                 "Database Explorer"
             }
             " > "
@@ -152,29 +232,38 @@ pub fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
             LinkCard {
                 subtitle: "SQL".to_string(),
                 title: "ScyllaDB".to_string(),
-                link: Route::DatabaseExplorerSqlQueryToolPage{
-                    collection_id: collection_id.read().clone(),
-                    query_state: ScyllaQueryToolState::default().into()
+                    link: Route::DatabaseExplorerPage{
+                    explorer_route: DatabaseExplorerRoute::QueryToolPage{
+                        collection_id: collection_id.read().clone(),
+                        db_type: DatabaseType::Scylla,
+                        query_state: ScyllaQueryToolState::default().into()
+                    }.into()
                 },
-                "Freeform SQL Query"
+                "Freeform Scylla/Cassandra SQL Query"
             }
             LinkCard {
-                subtitle: "SQL".to_string(),
-                title: "ScyllaDB".to_string(),
-                link: Route::DatabaseExplorerSqlQueryToolPage{
-                    collection_id: collection_id.read().clone(),
-                    query_state: ScyllaQueryToolState::default().into()
+                subtitle: "Graph".to_string(),
+                title: "NebulaDB".to_string(),
+                link: Route::DatabaseExplorerPage{
+                    explorer_route: DatabaseExplorerRoute::QueryToolPage{
+                        collection_id: collection_id.read().clone(),
+                        db_type: DatabaseType::Nebula,
+                        query_state: ScyllaQueryToolState::default().into()
+                    }.into()
                 },
-                "Freeform SQL Query"
+                "Freeform Cypher/NebulaQL Query"
             }
             LinkCard {
-                subtitle: "SQL".to_string(),
-                title: "ScyllaDB".to_string(),
-                link: Route::DatabaseExplorerSqlQueryToolPage{
-                    collection_id: collection_id.read().clone(),
-                    query_state: ScyllaQueryToolState::default().into()
+                subtitle: "Index".to_string(),
+                title: "Meilisearch".to_string(),
+                link: Route::DatabaseExplorerPage{
+                    explorer_route: DatabaseExplorerRoute::QueryToolPage{
+                        collection_id: collection_id.read().clone(),
+                        db_type: DatabaseType::Meilisearch,
+                        query_state: ScyllaQueryToolState::default().into()
+                    }.into()
                 },
-                "Freeform SQL Query"
+                "Freeform Search Query"
             }
         }
         h2 { "SQL Tables"}
@@ -207,9 +296,11 @@ fn SQLTableCards(
                 LinkCard {
                     subtitle: "table".to_string(),
                     title: table.name.to_string(),
-                    link: Route::DatabaseExplorerCollectionPageSqlTable {
-                        collection_id: collection_id.read().clone(),
-                        table_name: table.name.clone()
+                    link: Route::DatabaseExplorerPage{
+                        explorer_route: DatabaseExplorerRoute::SqlTablePage {
+                            collection_id: collection_id.read().clone(),
+                            table_name: table.name.clone()
+                        }.into()
                     },
                     div {
                         p { "Row Count: ", SQLRowCountDisplayString{
@@ -256,9 +347,11 @@ fn GraphNodesCards(
                 LinkCard {
                     subtitle: "tag".to_string(),
                     title: tag.name.to_string(),
-                    link: Route::DatabaseExplorerCollectionPageGraphNodes {
-                        collection_id: collection_id.read().clone(),
-                        tag_name: tag.name.clone()
+                    link: Route::DatabaseExplorerPage{
+                        explorer_route: DatabaseExplorerRoute::GraphNodesPage {
+                            collection_id: collection_id.read().clone(),
+                            tag_name: tag.name.clone()
+                        }.into()
                     },
                     div {
                         p { "Column Count: {tag.columns.len()}" }
@@ -280,9 +373,12 @@ fn GraphEdgesCards(
                 LinkCard {
                     subtitle: "edge".to_string(),
                     title: edge.name.to_string(),
-                    link: Route::DatabaseExplorerCollectionPageGraphEdges {
-                        collection_id: collection_id.read().clone(),
-                        edge_name: edge.name.clone() },
+                    link: Route::DatabaseExplorerPage{
+                        explorer_route: DatabaseExplorerRoute::GraphEdgesPage {
+                            collection_id: collection_id.read().clone(),
+                            edge_name: edge.name.clone()
+                        }.into()
+                    },
                     div {
                         "..."
                     }
@@ -303,9 +399,12 @@ fn SearchIndexCards(
                 LinkCard {
                     subtitle: "field".to_string(),
                     title: field.0.clone().replace(":", ": "),
-                    link: Route::DatabaseExplorerCollectionPageSearchIndex {
-                        collection_id: collection_id.read().clone(),
-                        field_name: field.0.clone() },
+                    link: Route::DatabaseExplorerPage{
+                        explorer_route: DatabaseExplorerRoute::SearchIndexPage {
+                            collection_id: collection_id.read().clone(),
+                            field_name: field.0.clone()
+                        }.into()
+                    },
                     div {
                         p { "Row Count: {field.1}" }
                     }
@@ -320,12 +419,18 @@ fn DatabaseExplorerHeader(collection_id: CollectionId, title: String) -> Element
     rsx! {
         h1 {
             Link {
-                to: Route::DatabaseExplorerRootPage{},
+                to: Route::DatabaseExplorerPage{
+                    explorer_route: DatabaseExplorerRoute::RootPage.into()
+                },
                 "Database Explorer"
             }
             " > "
             Link {
-                to: Route::DatabaseExplorerCollectionPage { collection_id: collection_id.clone() },
+                to: Route::DatabaseExplorerPage{
+                    explorer_route: DatabaseExplorerRoute::CollectionPage {
+                        collection_id: collection_id.clone()
+                    }.into()
+                },
                 {make_page_title(0, "collection", &collection_id.to_string())}
             }
             " > "
@@ -335,7 +440,7 @@ fn DatabaseExplorerHeader(collection_id: CollectionId, title: String) -> Element
 }
 
 #[component]
-pub fn DatabaseExplorerCollectionPageSqlTable(
+fn DatabaseExplorerCollectionPageSqlTable(
     collection_id: CollectionId,
     table_name: DatabaseIdentifier,
 ) -> Element {
@@ -348,7 +453,7 @@ pub fn DatabaseExplorerCollectionPageSqlTable(
 }
 
 #[component]
-pub fn DatabaseExplorerCollectionPageGraphNodes(
+fn DatabaseExplorerCollectionPageGraphNodes(
     collection_id: CollectionId,
     tag_name: DatabaseIdentifier,
 ) -> Element {
@@ -360,7 +465,7 @@ pub fn DatabaseExplorerCollectionPageGraphNodes(
     }
 }
 #[component]
-pub fn DatabaseExplorerCollectionPageGraphEdges(
+fn DatabaseExplorerCollectionPageGraphEdges(
     collection_id: CollectionId,
     edge_name: DatabaseIdentifier,
 ) -> Element {
@@ -372,7 +477,7 @@ pub fn DatabaseExplorerCollectionPageGraphEdges(
     }
 }
 #[component]
-pub fn DatabaseExplorerCollectionPageSearchIndex(
+fn DatabaseExplorerCollectionPageSearchIndex(
     collection_id: CollectionId,
     field_name: String,
 ) -> Element {

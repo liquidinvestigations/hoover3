@@ -65,8 +65,7 @@ impl DataRowDisplay for CollectionUiRow {
 
 #[component]
 pub fn CollectionsAdminListPage() -> Element {
-    let mut c_list = use_resource(
-        move || async move { get_all_collections(()).await });
+    let mut c_list = use_resource(move || async move { get_all_collections(()).await });
     let collections = use_memo(move || {
         if let Some(Ok(v)) = c_list.read().as_ref() {
             v.clone()

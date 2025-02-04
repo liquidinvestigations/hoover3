@@ -1,16 +1,15 @@
 use std::time::Duration;
 
 use crate::{
-    api::{
-        db_explorer_run_scylla_query, get_collection_schema,
-    },
+    api::{db_explorer_run_query, get_collection_schema},
     components::{make_page_title, DynamicTable},
+    pages::DatabaseExplorerRoute,
     routes::{Route, UrlParam},
 };
 use dioxus::prelude::*;
 use dioxus_sdk::utils::timing::use_debounce;
 use futures_util::StreamExt;
-use hoover3_types::identifier::CollectionId;
+use hoover3_types::{db_schema::DatabaseType, identifier::CollectionId};
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize, Default)]
 pub struct ScyllaQueryToolState {
@@ -18,8 +17,9 @@ pub struct ScyllaQueryToolState {
 }
 
 #[component]
-pub fn DatabaseExplorerSqlQueryToolPage(
+pub fn DatabaseExplorerQueryToolPage(
     collection_id: ReadOnlySignal<CollectionId>,
+    db_type: ReadOnlySignal<DatabaseType>,
     query_state: ReadOnlySignal<UrlParam<ScyllaQueryToolState>>,
 ) -> Element {
     let (state, loaded) = UrlParam::convert_signals(query_state);
@@ -28,6 +28,7 @@ pub fn DatabaseExplorerSqlQueryToolPage(
         if *loaded.read() {
             _DatabaseExplorerSqlQueryToolPage{
                 collection_id: collection_id.read().clone(),
+                db_type: db_type.read().clone(),
                 state: state.read().clone()
             }
         }
@@ -37,6 +38,7 @@ pub fn DatabaseExplorerSqlQueryToolPage(
 #[component]
 fn _DatabaseExplorerSqlQueryToolPage(
     collection_id: ReadOnlySignal<CollectionId>,
+    db_type: ReadOnlySignal<DatabaseType>,
     state: ReadOnlySignal<ScyllaQueryToolState>,
 ) -> Element {
     let mut sql_editor = use_signal(move || state.peek().query.clone());
@@ -47,8 +49,12 @@ fn _DatabaseExplorerSqlQueryToolPage(
             if sql_query.trim().is_empty() {
                 continue;
             }
-            let result =
-                db_explorer_run_scylla_query((collection_id.peek().clone(), sql_query)).await;
+            let result = db_explorer_run_query((
+                collection_id.peek().clone(),
+                db_type.peek().clone(),
+                sql_query,
+            ))
+            .await;
             query_result.set(Some(result));
         }
     });
@@ -64,9 +70,13 @@ fn _DatabaseExplorerSqlQueryToolPage(
         if state.peek().query == new_query {
             run_sql.send(new_query.clone());
         }
-        navigator().replace(Route::DatabaseExplorerSqlQueryToolPage {
-            collection_id: collection_id.read().clone(),
-            query_state: UrlParam::new(ScyllaQueryToolState { query: new_query }),
+        navigator().replace(Route::DatabaseExplorerPage {
+            explorer_route: DatabaseExplorerRoute::QueryToolPage {
+                collection_id: collection_id.read().clone(),
+                db_type: db_type.read().clone(),
+                query_state: ScyllaQueryToolState { query: new_query },
+            }
+            .into(),
         });
     });
 
@@ -81,12 +91,18 @@ fn _DatabaseExplorerSqlQueryToolPage(
         article {
             h1 {
                 Link {
-                    to: Route::DatabaseExplorerRootPage{},
+                    to: Route::DatabaseExplorerPage{
+                        explorer_route: DatabaseExplorerRoute::RootPage.into()
+                    },
                     "Database Explorer"
                 }
                 " > "
                 Link {
-                    to: Route::DatabaseExplorerCollectionPage { collection_id: collection_id.read().clone() },
+                    to: Route::DatabaseExplorerPage{
+                        explorer_route: DatabaseExplorerRoute::CollectionPage {
+                            collection_id: collection_id.read().clone()
+                        }.into()
+                    },
                     {make_page_title(0, "collection", &collection_id.to_string())}
                 }
                 " > "
@@ -167,11 +183,14 @@ fn ScyllaQueryJumpLinks(collection_id: ReadOnlySignal<CollectionId>) -> Element 
                         for (query, query_str) in queries.iter() {
                             li {
                                 Link {
-                                    to: Route::DatabaseExplorerSqlQueryToolPage {
-                                        collection_id: collection_id.read().clone(),
-                                        query_state: UrlParam::new(ScyllaQueryToolState {
+                                    to: Route::DatabaseExplorerPage{
+                                        explorer_route: DatabaseExplorerRoute::QueryToolPage {
+                                            collection_id: collection_id.read().clone(),
+                                            db_type: DatabaseType::Scylla,
+                                            query_state: ScyllaQueryToolState {
                                             query: query_str(table.to_string()),
-                                        })
+                                            }
+                                        }.into()
                                     },
                                     "{query}"
                                 }

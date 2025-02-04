@@ -4,13 +4,7 @@ use crate::db_management::{with_redis_cache, DatabaseSpaceManager, MeilisearchDa
 
 pub async fn get_meilisearch_schema(c: &CollectionId) -> anyhow::Result<MeilisearchDatabaseSchema> {
     let c = c.clone();
-    with_redis_cache(
-        "meilisearch_get_schema",
-        60,
-        _get_meilisearch_schema,
-        &c,
-    )
-    .await
+    with_redis_cache("meilisearch_get_schema", 60, _get_meilisearch_schema, &c).await
 }
 
 async fn _get_meilisearch_schema(c: CollectionId) -> anyhow::Result<MeilisearchDatabaseSchema> {

@@ -1,6 +1,8 @@
 use charybdis::scylla::{CqlValue, Row};
 use hoover3_types::{
-    db_schema::{DatabaseColumnType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult},
+    db_schema::{
+        DatabaseColumnType, DatabaseType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult,
+    },
     identifier::{CollectionId, DatabaseIdentifier},
 };
 use scylla::{
@@ -10,7 +12,6 @@ use scylla::{
 };
 
 use crate::db_management::{with_redis_cache, DatabaseSpaceManager, ScyllaDatabaseHandle};
-
 
 /// Get Scylla table row count by running SQL request `SELECT COUNT * FROM ...`.
 /// Cache result in Redis for 60 seconds.
@@ -34,8 +35,40 @@ pub async fn scylla_row_count(
     .await
 }
 
+pub async fn db_explorer_run_query(
+    (collection_id, db_type, sql_query): (CollectionId, DatabaseType, String),
+) -> anyhow::Result<DynamicQueryResponse> {
+    match db_type {
+        DatabaseType::Scylla => db_explorer_run_scylla_query((collection_id, sql_query)).await,
+        DatabaseType::Nebula => db_explorer_run_nebula_query((collection_id, sql_query)).await,
+        DatabaseType::Meilisearch => {
+            db_explorer_run_meilisearch_query((collection_id, sql_query)).await
+        }
+    }
+}
+
+async fn db_explorer_run_nebula_query(
+    (collection_id, sql_query): (CollectionId, String),
+) -> anyhow::Result<DynamicQueryResponse> {
+    anyhow::bail!(
+        "not implemented, nebula collection_id: {:?}, sql_query: {:?}",
+        collection_id,
+        sql_query
+    )
+}
+
+async fn db_explorer_run_meilisearch_query(
+    (collection_id, sql_query): (CollectionId, String),
+) -> anyhow::Result<DynamicQueryResponse> {
+    anyhow::bail!(
+        "not implemented, meilisearch collection_id: {:?}, sql_query: {:?}",
+        collection_id,
+        sql_query
+    )
+}
+
 /// Run a Scylla query and return the result.
-pub async fn db_explorer_run_scylla_query(
+async fn db_explorer_run_scylla_query(
     (collection_id, sql_query): (CollectionId, String),
 ) -> anyhow::Result<DynamicQueryResponse> {
     let t0 = std::time::Instant::now();
@@ -57,6 +90,7 @@ pub async fn db_explorer_run_scylla_query(
         .map_err(|e| anyhow::anyhow!(format!("{:#?}", e)));
     let result = print_scylladb_result(result).map_err(|e| e.to_string());
     Ok(DynamicQueryResponse {
+        db_type: DatabaseType::Scylla,
         query: sql_query.clone(),
         result,
         elapsed_seconds: dt,

@@ -194,6 +194,7 @@ impl std::fmt::Display for DatabaseValue {
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub struct DynamicQueryResponse {
     pub query: String,
+    pub db_type: DatabaseType,
     pub elapsed_seconds: f64,
     pub result: Result<DynamicQueryResult, String>,
     pub next_page: Option<Vec<u8>>,
@@ -214,4 +215,11 @@ impl DynamicQueryResult {
             rows: result_rows,
         })
     }
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
+pub enum DatabaseType {
+    Scylla,
+    Nebula,
+    Meilisearch,
 }

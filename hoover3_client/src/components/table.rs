@@ -140,8 +140,7 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
         .filter(|x| T::can_edit(x))
         .cloned()
         .collect::<Vec<_>>();
-    let have_editable =
-        headers.iter().any(|e| T::can_edit(e)) && props.edited_cb.is_some();
+    let have_editable = headers.iter().any(|e| T::can_edit(e)) && props.edited_cb.is_some();
     let mut new_value = use_signal(BTreeMap::new);
     use_effect(move || {
         new_value.set(

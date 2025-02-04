@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-use base64::engine::general_purpose::STANDARD;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -62,7 +62,7 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut serialized = Vec::new();
         if ciborium::into_writer(self, &mut serialized).is_ok() {
-            write!(f, "{}", STANDARD.encode(serialized))?;
+            write!(f, "{}", URL_SAFE_NO_PAD.encode(serialized))?;
         }
         Ok(())
     }
@@ -90,7 +90,7 @@ where
     type Err = StateParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let decompressed = STANDARD
+        let decompressed = URL_SAFE_NO_PAD
             .decode(s.as_bytes())
             .map_err(StateParseError::DecodeError)?;
         let parsed = ciborium::from_reader(std::io::Cursor::new(decompressed))

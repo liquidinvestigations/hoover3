@@ -8,14 +8,13 @@ pub fn init_tracing() {
     log::info!("log init.");
 }
 
-fn init_logging() {    dioxus_logger::init(Level::INFO).expect("failed to init logger");
-tracing_log::LogTracer::builder()
-.with_max_level(log::LevelFilter::Info)
-.init()
-.expect("failed to init logger x2");
-
+fn init_logging() {
+    dioxus_logger::init(Level::INFO).expect("failed to init logger");
+    tracing_log::LogTracer::builder()
+        .with_max_level(log::LevelFilter::Info)
+        .init()
+        .expect("failed to init logger x2");
 }
-
 
 /// Experiment into manually configuring logging.
 /// Currenti issues:

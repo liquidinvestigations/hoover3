@@ -1,4 +1,5 @@
 mod url_param;
+use hoover3_types::db_schema::DatabaseType;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 pub use url_param::UrlParam;
@@ -16,19 +17,13 @@ use crate::pages::CollectionAdminDetailsPage;
 use crate::pages::CollectionsAdminListPage;
 use crate::pages::DashboardIframePage;
 use crate::pages::DashboardNavbarDropdown;
-use crate::pages::DatabaseExplorerCollectionPage;
-use crate::pages::DatabaseExplorerCollectionPageGraphEdges;
-use crate::pages::DatabaseExplorerCollectionPageGraphNodes;
-use crate::pages::DatabaseExplorerCollectionPageSearchIndex;
-use crate::pages::DatabaseExplorerCollectionPageSqlTable;
-use crate::pages::DatabaseExplorerRootPage;
-use crate::pages::DatabaseExplorerSqlQueryToolPage;
+use crate::pages::DatabaseExplorerPage;
+use crate::pages::DatabaseExplorerRoute;
 use crate::pages::DatasourceAdminDetailsPage;
 use crate::pages::DioxusTranslatePage;
 use crate::pages::DockerHealthPage;
 use crate::pages::HomePage;
 use crate::pages::NewDatasourceFormPage;
-use crate::pages::ScyllaQueryToolState;
 use crate::pages::ServerCallLogPage;
 
 #[derive(Debug, Clone, Routable, PartialEq)]
@@ -50,27 +45,9 @@ pub enum Route {
         #[route("/server-call-logs")]
         ServerCallLogPage {},
 
-        #[route("/database-explorer")]
-        DatabaseExplorerRootPage {},
-
-        #[route("/database-explorer/:collection_id")]
-        DatabaseExplorerCollectionPage {collection_id: CollectionId},
-
-        #[route("/database-explorer/:collection_id/sql-table/:table_name")]
-        DatabaseExplorerCollectionPageSqlTable {collection_id: CollectionId, table_name: DatabaseIdentifier},
-
-        #[route("/database-explorer/:collection_id/graph-nodes/:tag_name")]
-        DatabaseExplorerCollectionPageGraphNodes {collection_id: CollectionId, tag_name: DatabaseIdentifier},
-
-        #[route("/database-explorer/:collection_id/graph-edges/:edge_name")]
-        DatabaseExplorerCollectionPageGraphEdges {collection_id: CollectionId, edge_name: DatabaseIdentifier},
-
-        #[route("/database-explorer/:collection_id/search-index/:field_name")]
-        DatabaseExplorerCollectionPageSearchIndex {collection_id: CollectionId, field_name: String},
-
-        #[route("/database-explorer/:collection_id/sql-query-tool/#:query_state")]
-        DatabaseExplorerSqlQueryToolPage {collection_id: CollectionId, query_state: UrlParam<ScyllaQueryToolState>},
-    #[end_nest]
+        #[route("/database-explorer/:explorer_route")]
+        DatabaseExplorerPage {explorer_route: UrlParam<DatabaseExplorerRoute>},
+#[end_nest]
 
     #[nest("/admin")]
         #[route("/collections")]
@@ -116,7 +93,9 @@ fn Navbar(display_loading_icon: ReadOnlySignal<bool>) -> Element {
                     NavbarDropdown {
                         title: "Tools",
                         links: vec![
-                            ("DatabaseExplorer".to_string(), Route::DatabaseExplorerRootPage {}.to_string()),
+                            ("DatabaseExplorer".to_string(), Route::DatabaseExplorerPage {
+                                explorer_route: DatabaseExplorerRoute::RootPage.into()
+                            }.to_string()),
                             ("ServerCallLogPage".to_string(), Route::ServerCallLogPage {}.to_string()),
                             ("DioxusTranslate".to_string(), Route::DioxusTranslatePage {}.to_string()),
                             ("DockerHealth".to_string(), Route::DockerHealthPage {}.to_string()),

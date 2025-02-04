@@ -7,6 +7,7 @@ use hoover3_types::collection::*;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::db_schema::CollectionSchema;
+use hoover3_types::db_schema::DatabaseType;
 use hoover3_types::db_schema::DynamicQueryResponse;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadataBasic;
@@ -235,7 +236,7 @@ server_wrapper!(
 
 server_wrapper!(
     hoover3_database::client_query::database_explorer,
-    db_explorer_run_scylla_query,
-    (CollectionId, String),
+    db_explorer_run_query,
+    (CollectionId, DatabaseType, String),
     DynamicQueryResponse
 );
