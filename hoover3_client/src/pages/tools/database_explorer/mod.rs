@@ -248,7 +248,7 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
                     explorer_route: DatabaseExplorerRoute::QueryToolPage{
                         collection_id: collection_id.read().clone(),
                         db_type: DatabaseServiceType::Scylla,
-                        query_state: SqlQueryToolState::default().into()
+                        query_state: SqlQueryToolState::default()
                     }.into()
                 },
                 "Freeform Scylla/Cassandra SQL Query"
@@ -260,7 +260,7 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
                     explorer_route: DatabaseExplorerRoute::QueryToolPage{
                         collection_id: collection_id.read().clone(),
                         db_type: DatabaseServiceType::Nebula,
-                        query_state: SqlQueryToolState::default().into()
+                        query_state: SqlQueryToolState::default()
                     }.into()
                 },
                 "Freeform Cypher/NebulaQL Query"
@@ -272,7 +272,7 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
                     explorer_route: DatabaseExplorerRoute::QueryToolPage{
                         collection_id: collection_id.read().clone(),
                         db_type: DatabaseServiceType::Meilisearch,
-                        query_state: SqlQueryToolState::default().into()
+                        query_state: SqlQueryToolState::default()
                     }.into()
                 },
                 "Freeform Search Query"
