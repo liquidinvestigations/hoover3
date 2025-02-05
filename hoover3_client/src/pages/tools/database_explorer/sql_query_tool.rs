@@ -67,12 +67,10 @@ pub fn DatabaseExplorerQueryToolPage(
         });
     });
 
-    let placeholder = use_memo(move || {
-        match db_type.read().clone() {
-            DatabaseServiceType::Scylla => "SELECT count(*) FROM ...",
-            DatabaseServiceType::Meilisearch => "John Smith ...",
-            DatabaseServiceType::Nebula => "YIELD rand32(1, 6);",
-        }
+    let placeholder = use_memo(move || match db_type.read().clone() {
+        DatabaseServiceType::Scylla => "SELECT count(*) FROM ...",
+        DatabaseServiceType::Meilisearch => "John Smith ...",
+        DatabaseServiceType::Nebula => "YIELD rand32(1, 6);",
     });
 
     rsx! {

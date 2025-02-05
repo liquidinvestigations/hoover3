@@ -7,7 +7,8 @@ use std::collections::BTreeMap;
 use charybdis::scylla::{CqlValue, Row};
 use hoover3_types::{
     db_schema::{
-        DatabaseColumnType, DatabaseServiceType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult,
+        DatabaseColumnType, DatabaseServiceType, DatabaseValue, DynamicQueryResponse,
+        DynamicQueryResult,
     },
     identifier::{CollectionId, DatabaseIdentifier},
 };
@@ -17,7 +18,10 @@ use scylla::{
     QueryResult,
 };
 
-use crate::db_management::{nebula_execute_retry, with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle, NebulaDatabaseHandle, ScyllaDatabaseHandle};
+use crate::db_management::{
+    nebula_execute_retry, with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle,
+    NebulaDatabaseHandle, ScyllaDatabaseHandle,
+};
 
 /// Get Scylla table row count by running SQL request `SELECT COUNT * FROM ...`.
 /// Cache result in Redis for 60 seconds.
@@ -46,16 +50,20 @@ pub async fn scylla_row_count(
 pub async fn db_explorer_run_query(
     (collection_id, db_type, sql_query): (CollectionId, DatabaseServiceType, String),
 ) -> anyhow::Result<DynamicQueryResponse> {
-
     let t0 = std::time::Instant::now();
 
     let result = match db_type {
-        DatabaseServiceType::Scylla => db_explorer_run_scylla_query((collection_id, sql_query.clone())).await,
-        DatabaseServiceType::Nebula => db_explorer_run_nebula_query((collection_id, sql_query.clone())).await,
+        DatabaseServiceType::Scylla => {
+            db_explorer_run_scylla_query((collection_id, sql_query.clone())).await
+        }
+        DatabaseServiceType::Nebula => {
+            db_explorer_run_nebula_query((collection_id, sql_query.clone())).await
+        }
         DatabaseServiceType::Meilisearch => {
             db_explorer_run_meilisearch_query((collection_id, sql_query.clone())).await
         }
-    }.map_err(|e| format!("{:?} Query Error: {}", db_type, e));
+    }
+    .map_err(|e| format!("{:?} Query Error: {}", db_type, e));
 
     let t1 = std::time::Instant::now();
     let dt = t1.duration_since(t0).as_secs_f64();
@@ -83,33 +91,57 @@ async fn db_explorer_run_nebula_query(
 
     let resp = session.execute(&query_bin).await?;
     if resp.error_code != nebula_fbthrift_common_v3::types::ErrorCode::SUCCEEDED {
-        anyhow::bail!("Nebula Error Code: {}\nNebula Error Message: {}",
+        anyhow::bail!(
+            "Nebula Error Code: {}\nNebula Error Message: {}",
             resp.error_code,
-            String::from_utf8_lossy(&resp.error_msg.unwrap_or_default()));
+            String::from_utf8_lossy(&resp.error_msg.unwrap_or_default())
+        );
     };
     let Some(dataset) = resp.data else {
-        return Ok(DynamicQueryResult::from_single_string("OK - no data".to_string())?);
+        return Ok(DynamicQueryResult::from_single_string(
+            "OK - no data".to_string(),
+        )?);
     };
-    let column_names = dataset.column_names
-        .iter().map(|v| String::from_utf8_lossy(v).to_string())
+    let column_names = dataset
+        .column_names
+        .iter()
+        .map(|v| String::from_utf8_lossy(v).to_string())
         .collect::<Vec<_>>();
     if column_names.is_empty() {
-        return Ok(DynamicQueryResult::from_single_string("OK - no columns".to_string())?);
+        return Ok(DynamicQueryResult::from_single_string(
+            "OK - no columns".to_string(),
+        )?);
     }
     let rows = dataset.rows;
     if rows.is_empty() {
         return Ok(DynamicQueryResult {
-            columns: column_names.into_iter().map(|v| (v, DatabaseColumnType::Other("Unknown".to_string()))).collect(),
+            columns: column_names
+                .into_iter()
+                .map(|v| (v, DatabaseColumnType::Other("Unknown".to_string())))
+                .collect(),
             rows: vec![],
             next_page: None,
-        })
+        });
     }
     let first_row = rows.first().unwrap();
-    let first_row_values = first_row.values.iter().map(|v| nebula_value_to_database_type(v)).collect::<Vec<_>>();
-    let columns = column_names.into_iter().zip(first_row_values).collect::<Vec<_>>();
-    let rows = rows.into_iter().map(
-        |r| r.values.into_iter().map(
-            |v| nebula_value_to_database_value(v)).collect::<Vec<_>>()).collect::<Vec<_>>();
+    let first_row_values = first_row
+        .values
+        .iter()
+        .map(|v| nebula_value_to_database_type(v))
+        .collect::<Vec<_>>();
+    let columns = column_names
+        .into_iter()
+        .zip(first_row_values)
+        .collect::<Vec<_>>();
+    let rows = rows
+        .into_iter()
+        .map(|r| {
+            r.values
+                .into_iter()
+                .map(|v| nebula_value_to_database_value(v))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
     Ok(DynamicQueryResult {
         columns: columns,
         rows: rows,
@@ -125,14 +157,25 @@ fn nebula_value_to_database_value(v: NebulaValue) -> Option<DatabaseValue> {
         NebulaValue::bVal(b) => Some(DatabaseValue::Boolean(b)),
         NebulaValue::iVal(i) => Some(DatabaseValue::Int64(i)),
         NebulaValue::fVal(d) => Some(DatabaseValue::Double(d.0)),
-        NebulaValue::sVal(s) => Some(DatabaseValue::String(String::from_utf8_lossy(&s).to_string())),
+        NebulaValue::sVal(s) => Some(DatabaseValue::String(
+            String::from_utf8_lossy(&s).to_string(),
+        )),
         NebulaValue::dtVal(dt) => {
-             chrono::NaiveDate::from_ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32)
-            .map(move|d| d.and_hms_nano_opt(dt.hour as u32, dt.minute as u32, dt.sec as u32, dt.microsec as u32 * 1000)).flatten()
-            .map(|d| d.and_local_timezone(chrono::Utc).single()).flatten()
-            .map(|d| DatabaseValue::Timestamp(d))
-        },
-        _x=> Some(DatabaseValue::Other(format!("{:?}", _x))),
+            chrono::NaiveDate::from_ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32)
+                .map(move |d| {
+                    d.and_hms_nano_opt(
+                        dt.hour as u32,
+                        dt.minute as u32,
+                        dt.sec as u32,
+                        dt.microsec as u32 * 1000,
+                    )
+                })
+                .flatten()
+                .map(|d| d.and_local_timezone(chrono::Utc).single())
+                .flatten()
+                .map(|d| DatabaseValue::Timestamp(d))
+        }
+        _x => Some(DatabaseValue::Other(format!("{:?}", _x))),
     }
 }
 
@@ -151,7 +194,12 @@ async fn db_explorer_run_meilisearch_query(
     (collection_id, sql_query): (CollectionId, String),
 ) -> anyhow::Result<DynamicQueryResult> {
     let session = MeilisearchDatabaseHandle::collection_session(&collection_id).await?;
-    let result = session.search().with_query(&sql_query).with_hits_per_page(100).execute::<serde_json::Value>().await?;
+    let result = session
+        .search()
+        .with_query(&sql_query)
+        .with_hits_per_page(100)
+        .execute::<serde_json::Value>()
+        .await?;
     let result = result.hits;
     if result.is_empty() {
         return Ok(DynamicQueryResult {
@@ -175,20 +223,26 @@ async fn db_explorer_run_meilisearch_query(
     for (i, col) in column_map.keys().enumerate() {
         column_pos.insert(col.clone(), i);
     }
-    let rows = result.into_iter().map(|r| match r.result {
-        serde_json::Value::Object(o) => {
-            let mut pairs = o.into_iter().map(|(_k, v)| (_k, json_value_to_database_value(v))).collect::<BTreeMap<_, _>>();
-            for column in column_map.keys() {
-                if pairs.get(column).is_none() {
-                    pairs.insert(column.clone(), None);
+    let rows = result
+        .into_iter()
+        .map(|r| match r.result {
+            serde_json::Value::Object(o) => {
+                let mut pairs = o
+                    .into_iter()
+                    .map(|(_k, v)| (_k, json_value_to_database_value(v)))
+                    .collect::<BTreeMap<_, _>>();
+                for column in column_map.keys() {
+                    if pairs.get(column).is_none() {
+                        pairs.insert(column.clone(), None);
+                    }
                 }
+                let mut pairs = pairs.into_iter().collect::<Vec<_>>();
+                pairs.sort_by_key(|(_k, _v)| column_pos.get(&(_k.clone())).unwrap_or(&0));
+                pairs.into_iter().map(|(_k, v)| v).collect::<Vec<_>>()
             }
-            let mut pairs = pairs.into_iter().collect::<Vec<_>>();
-            pairs.sort_by_key(|(_k, _v)| column_pos.get(&(_k.clone())).unwrap_or(&0));
-            pairs.into_iter().map(|(_k, v)| v).collect::<Vec<_>>()
-        },
-        _ => vec![],
-    }).collect::<Vec<_>>();
+            _ => vec![],
+        })
+        .collect::<Vec<_>>();
 
     Ok(DynamicQueryResult {
         columns: column_map.into_iter().collect::<Vec<_>>(),
@@ -206,7 +260,7 @@ fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnTy
             } else {
                 Some(DatabaseColumnType::Int64)
             }
-        },
+        }
         serde_json::Value::Bool(_) => Some(DatabaseColumnType::Boolean),
         serde_json::Value::Array(_v) => {
             let Some(first_value) = _v.first() else {
@@ -216,16 +270,19 @@ fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnTy
                 return None;
             };
             Some(DatabaseColumnType::List(Box::new(_vtype)))
-        },
+        }
         serde_json::Value::Object(_o) => {
-            let columns = _o.iter().filter_map(|(k, v)| {
-                let Some(_vtype) = json_value_to_database_type(v) else {
-                    return None;
-                };
-                Some((k.to_string(), Box::new(_vtype)))
-            }).collect::<Vec<_>>();
+            let columns = _o
+                .iter()
+                .filter_map(|(k, v)| {
+                    let Some(_vtype) = json_value_to_database_type(v) else {
+                        return None;
+                    };
+                    Some((k.to_string(), Box::new(_vtype)))
+                })
+                .collect::<Vec<_>>();
             Some(DatabaseColumnType::Object(columns))
-        },
+        }
         serde_json::Value::Null => None,
     }
 }
@@ -239,14 +296,18 @@ fn json_value_to_database_value(v: serde_json::Value) -> Option<DatabaseValue> {
             } else {
                 Some(DatabaseValue::Int64(n.as_i64().unwrap()))
             }
-        },
+        }
         serde_json::Value::Bool(b) => Some(DatabaseValue::Boolean(b)),
-        serde_json::Value::Array(a) => {
-            Some(DatabaseValue::List(a.into_iter().filter_map(|v| json_value_to_database_value(v)).collect()))
-        },
-        serde_json::Value::Object(o) => {
-            Some(DatabaseValue::Object(o.into_iter().map(|(k, v)| (k.to_string(), json_value_to_database_value(v))).collect()))
-        },
+        serde_json::Value::Array(a) => Some(DatabaseValue::List(
+            a.into_iter()
+                .filter_map(|v| json_value_to_database_value(v))
+                .collect(),
+        )),
+        serde_json::Value::Object(o) => Some(DatabaseValue::Object(
+            o.into_iter()
+                .map(|(k, v)| (k.to_string(), json_value_to_database_value(v)))
+                .collect(),
+        )),
         _ => None,
     }
 }

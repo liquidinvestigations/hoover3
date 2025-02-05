@@ -255,7 +255,14 @@ pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
         .ok()
         .map(|r| r.rows.len())
         .unwrap_or(0);
-    let error_display = use_memo(move || data.read().result.as_ref().err().cloned().unwrap_or("".to_string()));
+    let error_display = use_memo(move || {
+        data.read()
+            .result
+            .as_ref()
+            .err()
+            .cloned()
+            .unwrap_or("".to_string())
+    });
     rsx! {
         small {
             style:"display:block;width:max-content;margin:auto; border: 1px solid gray; padding: 5px;",
