@@ -4,7 +4,7 @@ pub use sql_query_tool::*;
 use dioxus::prelude::*;
 use hoover3_types::{
     db_schema::{
-        DatabaseType, MeilisearchDatabaseSchema, NebulaDatabaseSchema, ScyllaDatabaseSchema,
+        DatabaseServiceType, MeilisearchDatabaseSchema, NebulaDatabaseSchema, ScyllaDatabaseSchema,
     },
     identifier::{CollectionId, DatabaseIdentifier},
 };
@@ -16,36 +16,46 @@ use crate::{
     routes::{Route, UrlParam},
 };
 
+/// Router for the database explorer sub-app.
+#[allow(missing_docs)]
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize, Default)]
 pub enum DatabaseExplorerRoute {
+    /// Route for the root page of the database explorer.
     #[default]
     RootPage,
-    CollectionPage {
-        collection_id: CollectionId,
-    },
+    /// Route for a collection page.
+    CollectionPage { collection_id: CollectionId },
+    /// Route for a SQL table page.
     SqlTablePage {
         collection_id: CollectionId,
         table_name: DatabaseIdentifier,
     },
+    /// Route for a graph node page.
     GraphNodesPage {
         collection_id: CollectionId,
         tag_name: DatabaseIdentifier,
     },
+    /// Route for a graph edge page.
     GraphEdgesPage {
         collection_id: CollectionId,
         edge_name: DatabaseIdentifier,
     },
+    /// Route for a search index page.
     SearchIndexPage {
         collection_id: CollectionId,
         field_name: String,
     },
+    /// Route for the SQL query tool page.
     QueryToolPage {
         collection_id: CollectionId,
-        db_type: DatabaseType,
-        query_state: ScyllaQueryToolState,
+        db_type: DatabaseServiceType,
+        query_state: SqlQueryToolState,
     },
 }
 
+/// Main Page that displays the database explorer.
+/// Because the UrlParam data is not available immediately after the component is mounted,
+/// we need to use a signal to delay the rendering of the page until the UrlParam is available.
 #[component]
 pub fn DatabaseExplorerPage(
     explorer_route: ReadOnlySignal<UrlParam<DatabaseExplorerRoute>>,
@@ -60,6 +70,8 @@ pub fn DatabaseExplorerPage(
         }
     }
 }
+
+/// Internal component that switches between the different pages of the database explorer.
 #[component]
 fn _DatabaseExplorerPage(explorer_route: ReadOnlySignal<DatabaseExplorerRoute>) -> Element {
     match explorer_route.read().clone() {
@@ -235,8 +247,8 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
                     link: Route::DatabaseExplorerPage{
                     explorer_route: DatabaseExplorerRoute::QueryToolPage{
                         collection_id: collection_id.read().clone(),
-                        db_type: DatabaseType::Scylla,
-                        query_state: ScyllaQueryToolState::default().into()
+                        db_type: DatabaseServiceType::Scylla,
+                        query_state: SqlQueryToolState::default().into()
                     }.into()
                 },
                 "Freeform Scylla/Cassandra SQL Query"
@@ -247,8 +259,8 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
                 link: Route::DatabaseExplorerPage{
                     explorer_route: DatabaseExplorerRoute::QueryToolPage{
                         collection_id: collection_id.read().clone(),
-                        db_type: DatabaseType::Nebula,
-                        query_state: ScyllaQueryToolState::default().into()
+                        db_type: DatabaseServiceType::Nebula,
+                        query_state: SqlQueryToolState::default().into()
                     }.into()
                 },
                 "Freeform Cypher/NebulaQL Query"
@@ -259,8 +271,8 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
                 link: Route::DatabaseExplorerPage{
                     explorer_route: DatabaseExplorerRoute::QueryToolPage{
                         collection_id: collection_id.read().clone(),
-                        db_type: DatabaseType::Meilisearch,
-                        query_state: ScyllaQueryToolState::default().into()
+                        db_type: DatabaseServiceType::Meilisearch,
+                        query_state: SqlQueryToolState::default().into()
                     }.into()
                 },
                 "Freeform Search Query"

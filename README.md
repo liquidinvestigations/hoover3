@@ -13,24 +13,20 @@
 - cargo binstall dioxus-cli@0.6.2
 - cargo binstall cargo-nextest
 - run ./test.sh
+- run ./rebuild_docs.sh
 - run ./migrate.sh
 - run ./start_client.sh
-
+- run ./start_worker.sh
 
 
 
 ## to do
 
 
-### basic features
-- [ ] admin view of all tables
-    - [ ] sort/filter by any column (meilisearch/clickhouse)
-    - [ ]
-- [ ]
 
 
 ### infra
 - [ ] [scylla monitoring stack](https://github.com/scylladb/scylla-monitoring.git)
-- [ ] signoz + opentelemetry (server + client; client mamy require proxy)
+- [ ] signoz + opentelemetry (server + client; client may require proxy)
     - [ ] trace tasks 0.1%
-    - [ ] trace api calls 100%
+    - [ ] trace api calls 100% with axum integration

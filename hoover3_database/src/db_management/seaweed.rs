@@ -22,6 +22,7 @@ impl S3Configs {
     }
 }
 
+/// Seaweed database handle type alias.
 pub type S3DatabaseHandle = S3Configs;
 
 impl DatabaseSpaceManager for S3DatabaseHandle {

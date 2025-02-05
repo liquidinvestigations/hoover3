@@ -1,7 +1,13 @@
+//! Database explorer module that provides functionality to execute and process queries
+//! across different database types (Scylla, Nebula, Meilisearch). Includes utilities
+//! for query execution, result conversion, and row counting.
+
+use std::collections::BTreeMap;
+
 use charybdis::scylla::{CqlValue, Row};
 use hoover3_types::{
     db_schema::{
-        DatabaseColumnType, DatabaseType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult,
+        DatabaseColumnType, DatabaseServiceType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult,
     },
     identifier::{CollectionId, DatabaseIdentifier},
 };
@@ -11,7 +17,7 @@ use scylla::{
     QueryResult,
 };
 
-use crate::db_management::{with_redis_cache, DatabaseSpaceManager, ScyllaDatabaseHandle};
+use crate::db_management::{nebula_execute_retry, with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle, NebulaDatabaseHandle, ScyllaDatabaseHandle};
 
 /// Get Scylla table row count by running SQL request `SELECT COUNT * FROM ...`.
 /// Cache result in Redis for 60 seconds.
@@ -35,76 +41,241 @@ pub async fn scylla_row_count(
     .await
 }
 
+/// Execute a query against the specified database type (Scylla, Nebula, or Meilisearch)
+/// and return the results in a standardized DynamicQueryResponse format.
 pub async fn db_explorer_run_query(
-    (collection_id, db_type, sql_query): (CollectionId, DatabaseType, String),
+    (collection_id, db_type, sql_query): (CollectionId, DatabaseServiceType, String),
 ) -> anyhow::Result<DynamicQueryResponse> {
-    match db_type {
-        DatabaseType::Scylla => db_explorer_run_scylla_query((collection_id, sql_query)).await,
-        DatabaseType::Nebula => db_explorer_run_nebula_query((collection_id, sql_query)).await,
-        DatabaseType::Meilisearch => {
-            db_explorer_run_meilisearch_query((collection_id, sql_query)).await
+
+    let t0 = std::time::Instant::now();
+
+    let result = match db_type {
+        DatabaseServiceType::Scylla => db_explorer_run_scylla_query((collection_id, sql_query.clone())).await,
+        DatabaseServiceType::Nebula => db_explorer_run_nebula_query((collection_id, sql_query.clone())).await,
+        DatabaseServiceType::Meilisearch => {
+            db_explorer_run_meilisearch_query((collection_id, sql_query.clone())).await
         }
-    }
+    }.map_err(|e| format!("{:?} Query Error: {}", db_type, e));
+
+    let t1 = std::time::Instant::now();
+    let dt = t1.duration_since(t0).as_secs_f64();
+    Ok(DynamicQueryResponse {
+        db_type: db_type,
+        query: sql_query.clone(),
+        result,
+        elapsed_seconds: dt,
+    })
 }
 
 async fn db_explorer_run_nebula_query(
     (collection_id, sql_query): (CollectionId, String),
-) -> anyhow::Result<DynamicQueryResponse> {
-    anyhow::bail!(
-        "not implemented, nebula collection_id: {:?}, sql_query: {:?}",
-        collection_id,
-        sql_query
-    )
+) -> anyhow::Result<DynamicQueryResult> {
+    let session = NebulaDatabaseHandle::collection_session(&collection_id).await?;
+    let mut session = session.lock().await;
+    let query_bin = sql_query.as_bytes().to_vec();
+    // let json_bytes = session.execute_json(&sql_query.as_bytes().to_vec()).await?;
+    // let json: serde_json::Value = serde_json::from_slice(&json_bytes)?;
+    // Ok(DynamicQueryResult {
+    //     columns: vec![("value".to_string(), DatabaseColumnType::String)],
+    //     rows: vec![vec![Some(DatabaseValue::String(json.to_string()))]],
+    //     next_page: None,
+    // })
+
+    let resp = session.execute(&query_bin).await?;
+    if resp.error_code != nebula_fbthrift_common_v3::types::ErrorCode::SUCCEEDED {
+        anyhow::bail!("Nebula Error Code: {}\nNebula Error Message: {}",
+            resp.error_code,
+            String::from_utf8_lossy(&resp.error_msg.unwrap_or_default()));
+    };
+    let Some(dataset) = resp.data else {
+        return Ok(DynamicQueryResult::from_single_string("OK - no data".to_string())?);
+    };
+    let column_names = dataset.column_names
+        .iter().map(|v| String::from_utf8_lossy(v).to_string())
+        .collect::<Vec<_>>();
+    if column_names.is_empty() {
+        return Ok(DynamicQueryResult::from_single_string("OK - no columns".to_string())?);
+    }
+    let rows = dataset.rows;
+    if rows.is_empty() {
+        return Ok(DynamicQueryResult {
+            columns: column_names.into_iter().map(|v| (v, DatabaseColumnType::Other("Unknown".to_string()))).collect(),
+            rows: vec![],
+            next_page: None,
+        })
+    }
+    let first_row = rows.first().unwrap();
+    let first_row_values = first_row.values.iter().map(|v| nebula_value_to_database_type(v)).collect::<Vec<_>>();
+    let columns = column_names.into_iter().zip(first_row_values).collect::<Vec<_>>();
+    let rows = rows.into_iter().map(
+        |r| r.values.into_iter().map(
+            |v| nebula_value_to_database_value(v)).collect::<Vec<_>>()).collect::<Vec<_>>();
+    Ok(DynamicQueryResult {
+        columns: columns,
+        rows: rows,
+        next_page: None,
+    })
+}
+
+use nebula_fbthrift_common_v3::types::Value as NebulaValue;
+
+fn nebula_value_to_database_value(v: NebulaValue) -> Option<DatabaseValue> {
+    match v {
+        NebulaValue::nVal(_null_type) => None,
+        NebulaValue::bVal(b) => Some(DatabaseValue::Boolean(b)),
+        NebulaValue::iVal(i) => Some(DatabaseValue::Int64(i)),
+        NebulaValue::fVal(d) => Some(DatabaseValue::Double(d.0)),
+        NebulaValue::sVal(s) => Some(DatabaseValue::String(String::from_utf8_lossy(&s).to_string())),
+        NebulaValue::dtVal(dt) => {
+             chrono::NaiveDate::from_ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32)
+            .map(move|d| d.and_hms_nano_opt(dt.hour as u32, dt.minute as u32, dt.sec as u32, dt.microsec as u32 * 1000)).flatten()
+            .map(|d| d.and_local_timezone(chrono::Utc).single()).flatten()
+            .map(|d| DatabaseValue::Timestamp(d))
+        },
+        _x=> Some(DatabaseValue::Other(format!("{:?}", _x))),
+    }
+}
+
+fn nebula_value_to_database_type(v: &NebulaValue) -> DatabaseColumnType {
+    match v {
+        NebulaValue::dtVal(_) => DatabaseColumnType::Timestamp,
+        NebulaValue::sVal(_) => DatabaseColumnType::String,
+        NebulaValue::iVal(_) => DatabaseColumnType::Int64,
+        NebulaValue::fVal(_) => DatabaseColumnType::Double,
+        NebulaValue::bVal(_) => DatabaseColumnType::Boolean,
+        _ => DatabaseColumnType::Other(format!("{:?}", v)),
+    }
 }
 
 async fn db_explorer_run_meilisearch_query(
     (collection_id, sql_query): (CollectionId, String),
-) -> anyhow::Result<DynamicQueryResponse> {
-    anyhow::bail!(
-        "not implemented, meilisearch collection_id: {:?}, sql_query: {:?}",
-        collection_id,
-        sql_query
-    )
+) -> anyhow::Result<DynamicQueryResult> {
+    let session = MeilisearchDatabaseHandle::collection_session(&collection_id).await?;
+    let result = session.search().with_query(&sql_query).with_hits_per_page(100).execute::<serde_json::Value>().await?;
+    let result = result.hits;
+    if result.is_empty() {
+        return Ok(DynamicQueryResult {
+            columns: vec![],
+            rows: vec![],
+            next_page: None,
+        });
+    }
+    let mut column_map = std::collections::BTreeMap::new();
+    for hit in result.iter() {
+        let hit = &hit.result;
+        if let serde_json::Value::Object(obj) = hit {
+            for (k, _v) in obj.iter() {
+                if let Some(_vtype) = json_value_to_database_type(_v) {
+                    column_map.insert(k.to_string(), _vtype);
+                }
+            }
+        }
+    }
+    let mut column_pos = std::collections::BTreeMap::new();
+    for (i, col) in column_map.keys().enumerate() {
+        column_pos.insert(col.clone(), i);
+    }
+    let rows = result.into_iter().map(|r| match r.result {
+        serde_json::Value::Object(o) => {
+            let mut pairs = o.into_iter().map(|(_k, v)| (_k, json_value_to_database_value(v))).collect::<BTreeMap<_, _>>();
+            for column in column_map.keys() {
+                if pairs.get(column).is_none() {
+                    pairs.insert(column.clone(), None);
+                }
+            }
+            let mut pairs = pairs.into_iter().collect::<Vec<_>>();
+            pairs.sort_by_key(|(_k, _v)| column_pos.get(&(_k.clone())).unwrap_or(&0));
+            pairs.into_iter().map(|(_k, v)| v).collect::<Vec<_>>()
+        },
+        _ => vec![],
+    }).collect::<Vec<_>>();
+
+    Ok(DynamicQueryResult {
+        columns: column_map.into_iter().collect::<Vec<_>>(),
+        rows,
+        next_page: None,
+    })
+}
+
+fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnType> {
+    match v {
+        serde_json::Value::String(_) => Some(DatabaseColumnType::String),
+        serde_json::Value::Number(_n) => {
+            if _n.is_f64() {
+                Some(DatabaseColumnType::Double)
+            } else {
+                Some(DatabaseColumnType::Int64)
+            }
+        },
+        serde_json::Value::Bool(_) => Some(DatabaseColumnType::Boolean),
+        serde_json::Value::Array(_v) => {
+            let Some(first_value) = _v.first() else {
+                return None;
+            };
+            let Some(_vtype) = json_value_to_database_type(first_value) else {
+                return None;
+            };
+            Some(DatabaseColumnType::List(Box::new(_vtype)))
+        },
+        serde_json::Value::Object(_o) => {
+            let columns = _o.iter().filter_map(|(k, v)| {
+                let Some(_vtype) = json_value_to_database_type(v) else {
+                    return None;
+                };
+                Some((k.to_string(), Box::new(_vtype)))
+            }).collect::<Vec<_>>();
+            Some(DatabaseColumnType::Object(columns))
+        },
+        serde_json::Value::Null => None,
+    }
+}
+
+fn json_value_to_database_value(v: serde_json::Value) -> Option<DatabaseValue> {
+    match v {
+        serde_json::Value::String(s) => Some(DatabaseValue::String(s.to_string())),
+        serde_json::Value::Number(n) => {
+            if n.is_f64() {
+                Some(DatabaseValue::Double(n.as_f64().unwrap()))
+            } else {
+                Some(DatabaseValue::Int64(n.as_i64().unwrap()))
+            }
+        },
+        serde_json::Value::Bool(b) => Some(DatabaseValue::Boolean(b)),
+        serde_json::Value::Array(a) => {
+            Some(DatabaseValue::List(a.into_iter().filter_map(|v| json_value_to_database_value(v)).collect()))
+        },
+        serde_json::Value::Object(o) => {
+            Some(DatabaseValue::Object(o.into_iter().map(|(k, v)| (k.to_string(), json_value_to_database_value(v))).collect()))
+        },
+        _ => None,
+    }
 }
 
 /// Run a Scylla query and return the result.
 async fn db_explorer_run_scylla_query(
     (collection_id, sql_query): (CollectionId, String),
-) -> anyhow::Result<DynamicQueryResponse> {
-    let t0 = std::time::Instant::now();
+) -> anyhow::Result<DynamicQueryResult> {
     let client = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
     let client_query = scylla::query::Query::new(sql_query.clone()).with_page_size(100);
     let result = client
         .execute_single_page(client_query, (), PagingState::default())
-        .await;
-    let t1 = std::time::Instant::now();
-    let dt = t1.duration_since(t0).as_secs_f64();
-    let next_page = match result.as_ref().ok().map(|r| r.1.clone()) {
-        Some(PagingStateResponse::HasMorePages { state: next_page }) => {
+        .await?;
+    let next_page = match result.1.clone() {
+        PagingStateResponse::HasMorePages { state: next_page } => {
             next_page.as_bytes_slice().map(|v| v.to_vec())
         }
         _ => None,
     };
-    let result = result
-        .map(|r| r.0)
-        .map_err(|e| anyhow::anyhow!(format!("{:#?}", e)));
-    let result = print_scylladb_result(result).map_err(|e| e.to_string());
-    Ok(DynamicQueryResponse {
-        db_type: DatabaseType::Scylla,
-        query: sql_query.clone(),
-        result,
-        elapsed_seconds: dt,
-        next_page,
-    })
+    print_scylladb_result(result.0, next_page)
 }
 
 /// Convert a Scylla query result into a DynamicQueryResult.
 fn print_scylladb_result(
-    result: anyhow::Result<QueryResult>,
+    result: QueryResult,
+    next_page: Option<Vec<u8>>,
 ) -> anyhow::Result<DynamicQueryResult> {
     let mut result_rows = vec![];
     let mut result_columns = vec![];
-    let result = result?;
 
     match result.into_rows_result() {
         Ok(rows_result) => {
@@ -132,6 +303,7 @@ fn print_scylladb_result(
     Ok(DynamicQueryResult {
         columns: result_columns,
         rows: result_rows,
+        next_page,
     })
 }
 

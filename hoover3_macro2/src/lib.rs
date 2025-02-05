@@ -1,3 +1,6 @@
+//! Implementation of the `#[activity]` and `#[workflow]` macros.
+//! If we implemented these in `hoover_macro` crate, a proc_macro crate, we couldn't unit test their internals.
+//! So we have to implement them in a separate crate that's not a proc_macro crate.
 pub use syn;
 
 use proc_macro2::TokenStream;

@@ -1,9 +1,12 @@
 //! The Hoover3 client library - the website frontend components and pages.
 
-pub(crate) mod api;
+// https://github.com/DioxusLabs/dioxus/issues/3690
+#![allow(missing_docs)]
+
+pub mod api;
 pub mod app;
-pub(crate) mod components;
-pub(crate) mod errors;
-pub(crate) mod pages;
-pub(crate) mod routes;
-mod time;
+pub mod components;
+pub mod errors;
+pub mod pages;
+pub mod routes;
+pub mod time;

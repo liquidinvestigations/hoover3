@@ -1,3 +1,5 @@
+//! Collection management module that provides functionality to create, update, and delete collections.
+
 use crate::db_management::redis::drop_redis_cache;
 use crate::db_management::redis::with_redis_cache;
 use crate::db_management::DatabaseSpaceManager;

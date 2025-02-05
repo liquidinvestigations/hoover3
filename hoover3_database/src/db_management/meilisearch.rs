@@ -1,3 +1,6 @@
+//! Meilisearch database management module that handles index operations and search functionality.
+//! Implements the DatabaseSpaceManager trait for managing Meilisearch indexes and provides
+//! utilities for task management and waiting.
 use std::{env, sync::Arc, time::Duration};
 
 use super::{CollectionId, DatabaseIdentifier, DatabaseSpaceManager};
@@ -7,6 +10,7 @@ use std::collections::HashMap;
 use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 
+/// Meilisearch database handle type alias.
 pub type MeilisearchDatabaseHandle = Client;
 
 fn new_client() -> Client {
@@ -15,6 +19,7 @@ fn new_client() -> Client {
     Client::new(url, Some(key)).expect("cannot build client")
 }
 
+/// Wait for a Meilisearch task to complete and return the result.
 pub async fn meilisearch_wait_for_task(task: TaskInfo) -> anyhow::Result<()> {
     let res = task
         .wait_for_completion(

@@ -1,3 +1,5 @@
+//! Docker health module that provides functionality to get the status of docker containers.
+
 use hoover3_types::docker_health::ContainerHealthUi;
 use std::path::PathBuf;
 

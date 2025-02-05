@@ -23,17 +23,24 @@ fn get_dash_links() -> Vec<(String, String)> {
         ),
         ("SEAWEEDFS VOL", "http://localhost:8082/ui/index.html"),
         ("SEAWEEDFS MAS", "http://localhost:8083"),
+        (
+            "CARGO DOCS",
+            "http://localhost:8087/hoover3_client/index.html",
+        ),
     ]
     .into_iter()
     .map(|(name, link)| (name.trim().to_string(), link.trim().to_string()))
     .collect()
 }
 
+/// Page that displays a dashboard iframe.
 #[component]
 pub fn DashboardIframePage(id: u8) -> Element {
     let src = get_dash_links()[id as usize].1.clone();
+
     rsx! {
         iframe {
+            id: "dashboard-iframe",
             class: "full-height",
             style: "width:100%;",
             src,
@@ -41,6 +48,7 @@ pub fn DashboardIframePage(id: u8) -> Element {
     }
 }
 
+/// Navbar dropdown that displays a list of dashboard links.
 #[component]
 pub fn DashboardNavbarDropdown() -> Element {
     let x = get_dash_links();

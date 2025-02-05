@@ -1,6 +1,10 @@
+//! Tracing and logging initialization - used by both frontend and backend.
+
 use dioxus_logger::tracing;
 use tracing::Level;
 
+/// Initialize tracing and log crates, using `dioxus_logger`
+/// TODO: distributed tracing (SigNoz).
 pub fn init_tracing() {
     init_logging();
 
@@ -21,8 +25,8 @@ fn init_logging() {
 ///     - tracing_wasm (which is used by dioxus_logger) is old/unmaintained and does not allow configuration of message format (only turning colors on/off).
 ///     - tracing_web, a different crate, is not compatible with dioxus-cli + fullstack (logs don't show up in terminal).
 ///     - other crates I tried cause some kind of panic in the browser.
-///     - https://github.com/old-storyai/tracing-wasm/issues/30
-///     - https://github.com/block-mesh/block-mesh-monorepo/blob/master/libs/logger-leptos/src/leptos_tracing.rs
+///     - <https://github.com/old-storyai/tracing-wasm/issues/30>
+///     - <https://github.com/block-mesh/block-mesh-monorepo/blob/master/libs/logger-leptos/src/leptos_tracing.rs>
 fn _init_logging_2() {
     #[cfg(target_arch = "wasm32")]
     {

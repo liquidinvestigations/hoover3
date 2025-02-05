@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+/// Page that displays a tool for translating HTML to DX.
 #[component]
 pub fn DioxusTranslatePage() -> Element {
     let mut html_code = use_signal(move || "".to_string());
@@ -17,6 +18,7 @@ pub fn DioxusTranslatePage() -> Element {
         });
     });
     rsx! {
+        "This page converts HTML code to rsx macros",
         textarea {
             placeholder: "<div>...</div>",
             value: "{html_code}",
@@ -24,6 +26,7 @@ pub fn DioxusTranslatePage() -> Element {
                 html_code.set(_e.value());
             },
         }
+        "Conversion Result:"
 
         div { class: "grid",
             div {

@@ -1,3 +1,6 @@
+//! Redis cache and lock management module that provides utilities for distributed caching
+//! and locking mechanisms. Includes functions for cache manipulation and distributed lock
+//! acquisition.
 use std::future::Future;
 
 use tokio::sync::OnceCell;
@@ -34,6 +37,9 @@ pub async fn redis_connection() -> anyhow::Result<redis::aio::MultiplexedConnect
         .clone())
 }
 
+/// Acquire a distributed lock on a Redis server and execute a function while holding the lock.
+/// The lock is automatically released after the function completes.
+/// Function execution timeout is 5 days. Lock acquisition timeout is 2 minutes.
 pub async fn with_redis_lock<F>(redis_lock_id: &str, func: F) -> anyhow::Result<F::Output>
 where
     F: Future + Send + 'static,
@@ -131,6 +137,9 @@ where
     Ok(())
 }
 
+/// Execute a function with a Redis cache. If the cache is hit, the function is not executed.
+/// If the cache is not hit, the function is executed and the result is cached.
+/// It also uses a lock, so only one instance for a given key is executed at one time.
 pub async fn with_redis_cache<K, F, T>(
     redis_cache_id: &str,
     ttl_sec: u32,

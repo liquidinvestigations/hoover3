@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::ops::Deref;
 
-// You can use a custom type with the hash segment as long as it implements Display, FromStr and Default
+/// Helper for saving structs in URL as base64 strings.
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq)]
 pub struct UrlParam<T> {
     value: Option<T>,
@@ -22,12 +22,28 @@ impl<T> Deref for UrlParam<T> {
 }
 
 impl<T: Default + Clone> UrlParam<T> {
+    /// Create a new UrlParam with a value.
     pub fn new(value: T) -> Self {
         Self { value: Some(value) }
     }
+
+    /// Check if the UrlParam is empty, as in it's never been initialized.
     pub fn is_empty(&self) -> bool {
         self.value.is_none()
     }
+
+    /// Convert a signal of `UrlParam<T>` to a signal of `T` and a signal of bool
+    /// indicating if the `UrlParam` has been initialized.
+    ///
+    /// This is required because of a bug/quirk in Dioxus where the value of the UrlParam signal
+    /// is not available immediately after the component is mounted. The page with default T value
+    /// will be loaded for a fraction of a second before the `UrlParam` is initialized from the URL.
+    ///
+    /// This short time is enough to initiate some backend calls that are immediately aborted, without
+    /// us being able to log their cancellation, which causes the loading spinner to be shown continuously.
+    ///
+    /// The work-around implemented here is to return a second boolean signal that is used to prevent
+    /// rendering the page until the `UrlParam` is initialized from the URL.
     pub fn convert_signals(
         current_path: ReadOnlySignal<UrlParam<T>>,
     ) -> (ReadOnlySignal<T>, ReadOnlySignal<bool>) {

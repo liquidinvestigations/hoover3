@@ -5,23 +5,9 @@ use crate::{
 use dioxus::prelude::*;
 use hoover3_types::docker_health::ContainerHealthUi;
 
-impl DataRowDisplay for ContainerHealthUi {
-    // fn get_headers() -> Vec<&'static str> {
-    //     vec!["Id", "Name", "Running", "Health"]
-    // }
+impl DataRowDisplay for ContainerHealthUi {}
 
-    // fn render_cell(&self, header_name: &str) -> Element {
-    //     let x = match header_name {
-    //         "Id" => self.container_id[0..12].to_string(),
-    //         "Name" => self.container_name.clone(),
-    //         "Running" => self.container_running.clone(),
-    //         "Health" => self.container_health.clone(),
-    //         _ => unreachable!(),
-    //     };
-    //     rsx!("{x}")
-    // }
-}
-
+/// Page that displays the health of Docker containers.
 #[component]
 pub fn DockerHealthPage() -> Element {
     let container_data = use_resource(move || async move { get_container_status(()).await });

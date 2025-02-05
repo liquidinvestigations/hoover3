@@ -1,3 +1,5 @@
+//! Integration tests for taskdef macros.
+
 use hoover3_taskdef::*;
 
 #[activity("taskdef_test_external_task_queue")]
@@ -13,7 +15,7 @@ fn test_function_sync2(_payload: u32) -> anyhow::Result<u32> {
 }
 
 #[workflow("taskdef_test_external_task_queue")]
-pub async fn sample_workflow3(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
+async fn sample_workflow3(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
     println!("sample_workflow 1 T={:?}", std::thread::current().id());
     let act1 = test_function_async2_activity::run(&ctx, arg).await?;
     println!("sample_workflow 2 T={:?}", std::thread::current().id());

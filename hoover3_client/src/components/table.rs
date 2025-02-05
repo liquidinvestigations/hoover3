@@ -3,11 +3,14 @@ use std::collections::BTreeMap;
 use dioxus::prelude::*;
 use hoover3_types::db_schema::{DynamicQueryResponse, DynamicQueryResult};
 
+/// Trait for displaying a data row in a table. The column names and their types are known at compile time.
 pub trait DataRowDisplay: serde::Serialize + for<'a> serde::Deserialize<'a> {
+    /// Get the headers of the table. These must be known at compile time.
     fn get_headers() -> Vec<&'static str> {
         // we have serde so we can poll the field names from there
         serde_aux::serde_introspection::serde_introspect::<Self>().to_vec()
     }
+    /// Render a cell in the table. Default implementation dumps the row as JSON and reads the column.
     fn render_cell(&self, header_name: &str) -> Element {
         use crate::errors::AnyhowErrorDioxusExt;
         // we have serde so we can dump to json and read the column. very inefficient
@@ -17,15 +20,28 @@ pub trait DataRowDisplay: serde::Serialize + for<'a> serde::Deserialize<'a> {
 
         rsx!("{j}")
     }
+    /// Check if a column can be edited.
+    /// These must be known at compile time.
+    /// Default implementation is false.
     fn can_edit(_header_name: &str) -> bool {
         false
     }
+    /// Get the values of the editable fields in the row.
+    /// This is required to populate forms to edit the row.
     fn get_editable_fields(&self) -> BTreeMap<String, String> {
         BTreeMap::new()
     }
+    /// Set the editable fields on the row.
+    /// This function is used to update a row from form values (input and textarea html elements).
     fn set_editable_fields(&mut self, _h: BTreeMap<String, String>) {}
 }
 
+/// Props for the HtmlTable component:
+/// - title: The title of the table.
+/// - data: The data to display.
+/// - extra: An optional extra column with a header and a callback to render on each row.
+/// - extra_buttons: An optional callback to render extra elements at the top of the table.
+///
 #[derive(PartialEq, Props, Clone)]
 pub struct HtmlTableProps_<T: 'static + Clone + PartialEq + DataRowDisplay> {
     title: String,
@@ -34,6 +50,10 @@ pub struct HtmlTableProps_<T: 'static + Clone + PartialEq + DataRowDisplay> {
     extra_buttons: Option<Callback<(), Element>>,
 }
 
+/// Component that displays a table of data, using the DataRowDisplay trait for rendering.
+/// The data is passed in as a vector of rows.
+///
+/// The component includes a filter function that uses the Debug trait and simple string matching.
 #[component]
 pub fn HtmlTable<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDisplay>(
     props: HtmlTableProps_<T>,
@@ -84,23 +104,26 @@ pub fn HtmlTable<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispl
                 }
             }
 
-            table { class: "striped",
-                thead {
-                    for k in headers.iter() {
-                        th { {k} }
+            div {
+                class:"overflow-auto", style: "max-width: 80%;",
+                table { class: "striped",
+                    thead {
+                        for k in headers.iter() {
+                            th { {k} }
+                        }
                     }
-                }
-                tbody {
-                    for item in filtered_data.read().iter() {
-                        tr {
-                            for k in T::get_headers().into_iter() {
-                                td {
-                                    {T::render_cell(item, k)}
+                    tbody {
+                        for item in filtered_data.read().iter() {
+                            tr {
+                                for k in T::get_headers().into_iter() {
+                                    td {
+                                        {T::render_cell(item, k)}
+                                    }
                                 }
-                            }
-                            if let Some((_, cb)) = props.extra {
-                                td {
-                                    {cb.call(item.clone())}
+                                if let Some((_, cb)) = props.extra {
+                                    td {
+                                        {cb.call(item.clone())}
+                                    }
                                 }
                             }
                         }
@@ -123,6 +146,10 @@ pub fn HtmlTable<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispl
     }
 }
 
+/// Props for the InfoCard component:
+/// - title: The title of the card.
+/// - data: The data to display.
+/// - edited_cb: An optional callback to call when the data is edited.
 #[derive(PartialEq, Props, Clone)]
 pub struct InfoCardProps_<T: 'static + Clone + PartialEq + DataRowDisplay> {
     title: ReadOnlySignal<Element>,
@@ -130,6 +157,8 @@ pub struct InfoCardProps_<T: 'static + Clone + PartialEq + DataRowDisplay> {
     edited_cb: Option<Callback<T>>,
 }
 
+/// Component that displays a card with a title,
+/// fields for a single row, and a form to edit the data if possible.
 #[component]
 pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDisplay>(
     props: InfoCardProps_<T>,
@@ -212,6 +241,9 @@ pub fn InfoCard<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispla
     }
 }
 
+/// Table component that displays the result of a dynamic query.
+/// The data format is not known at compile time.
+/// This specific component also displays metadata like the query execution time.
 #[component]
 pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
     let time_ms = use_memo(move || (data.read().elapsed_seconds * 10000.0).round() / 10.0);
@@ -223,6 +255,7 @@ pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
         .ok()
         .map(|r| r.rows.len())
         .unwrap_or(0);
+    let error_display = use_memo(move || data.read().result.as_ref().err().cloned().unwrap_or("".to_string()));
     rsx! {
         small {
             style:"display:block;width:max-content;margin:auto; border: 1px solid gray; padding: 5px;",
@@ -232,36 +265,41 @@ pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
             DynamicTableInner{data: result.clone()}
         } else {
             pre {
-                "Error: \n\n{data.read().result.as_ref():#?}"
+                "DynamicQueryResponse is Error: \n\n{error_display}"
             }
         }
-
     }
 }
 
+/// Table component that displays the result of a dynamic query.
+/// The data format is not known at compile time.
+/// This is the inner component that is used by DynamicTable. Renders only to a <table> element.
 #[component]
 pub fn DynamicTableInner(data: ReadOnlySignal<DynamicQueryResult>) -> Element {
     rsx! {
-        table { class: "striped",
-            thead {
-                for k in data.read().columns.iter() {
-                    th { key: "{k.0.clone()},{k.1}", {k.0.clone()} br{} pre{"{k.1}"} }
+        div {
+            class:"overflow-auto", style: "max-width: 80vw;",
+            table { class: "striped",
+                thead {
+                    for k in data.read().columns.iter() {
+                        th { key: "{k.0.clone()},{k.1}", {k.0.clone()} br{} pre{"{k.1}"} }
+                    }
                 }
-            }
-            tbody {
-                for row in data.read().rows.iter() {
-                    tr {
-                        for col in row.iter() {
-                            td {
-                                {
-                                    if let Some(col) = col {
-                                        let col = format!("{}", col);
-                                        if col.contains("\n") {
-                                            rsx!{pre{"{col}"}}
-                                        } else {
-                                            rsx!{"{col}"}
-                                        }
-                                    } else {rsx!()}
+                tbody {
+                    for row in data.read().rows.iter() {
+                        tr {
+                            for col in row.iter() {
+                                td {
+                                    {
+                                        if let Some(col) = col {
+                                            let col = format!("{}", col);
+                                            if col.contains("\n") {
+                                                rsx!{pre{"{col}"}}
+                                            } else {
+                                                rsx!{"{col}"}
+                                            }
+                                        } else {rsx!()}
+                                    }
                                 }
                             }
                         }

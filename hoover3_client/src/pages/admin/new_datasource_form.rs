@@ -50,6 +50,11 @@ impl DataRowDisplay for FsMetadataBasic {
     }
 }
 
+/// Admin Page that displays the form for creating a new data source. It shows a form and a file browser
+/// to select the folder for the data source.
+///
+/// Because of a UrlParam quirk, we need to split signals here and render the actual
+/// page in a helper component, [`_NewDatasourceFormPage`].
 #[component]
 pub fn NewDatasourceFormPage(
     collection_id: ReadOnlySignal<CollectionId>,
@@ -64,6 +69,7 @@ pub fn NewDatasourceFormPage(
     }
 }
 
+/// Actual page that displays the form for creating a new data source.
 #[component]
 fn _NewDatasourceFormPage(
     collection_id: ReadOnlySignal<CollectionId>,

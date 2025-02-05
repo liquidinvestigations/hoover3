@@ -1,4 +1,4 @@
-use crate::db_management::{nebula_execute, with_redis_cache};
+use crate::db_management::{nebula_execute_retry, with_redis_cache};
 use crate::migrate::schema_scylla::_get_scylla_schema;
 use crate::models::collection::_nebula_edges::get_all_nebula_edge_types;
 use anyhow::Result;
@@ -12,11 +12,12 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use tracing::info;
 
+/// API Client method to migrate the Nebula database for a collection.
 pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     info!("migrating nebula collection {}...", c);
 
     for edge_name in get_all_nebula_edge_types() {
-        nebula_execute::<()>(
+        nebula_execute_retry::<()>(
             c,
             &format!("CREATE EDGE IF NOT EXISTS `{}` ();", edge_name.name),
         )
@@ -40,7 +41,7 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     let qs = nebula_create_tags_query(&scylla_schema);
     for s in qs {
         println!("nebula create tags query: \n  {}", s);
-        nebula_execute::<()>(c, &s).await?;
+        nebula_execute_retry::<()>(c, &s).await?;
     }
     let nebula_schema = _nebula_get_schema(c.clone()).await?;
     check_nebula_schema(c, &scylla_schema, &nebula_schema).await?;
@@ -102,8 +103,8 @@ async fn check_nebula_schema(
         "INSERT VERTEX `datasource` (`datasource_id`) VALUES \"test___dummy\":(\"test___dummy\");";
     let drop_q = "DELETE VERTEX \"test___dummy\" WITH EDGE;";
     for _i in 0..60 {
-        if nebula_execute::<()>(collection_id, insert_q).await.is_ok()
-            && nebula_execute::<()>(collection_id, drop_q).await.is_ok()
+        if nebula_execute_retry::<()>(collection_id, insert_q).await.is_ok()
+            && nebula_execute_retry::<()>(collection_id, drop_q).await.is_ok()
         {
             return Ok(());
         }
@@ -112,6 +113,7 @@ async fn check_nebula_schema(
     anyhow::bail!("timed out on vertex insert test");
 }
 
+/// API Client method to get the Nebula database schema for a collection.
 pub async fn nebula_get_schema(c: &CollectionId) -> Result<NebulaDatabaseSchema> {
     let c = c.clone();
     with_redis_cache("nebula_get_schema", 60, _nebula_get_schema, &c).await
@@ -121,14 +123,14 @@ async fn _nebula_get_schema(c: CollectionId) -> Result<NebulaDatabaseSchema> {
     tracing::info!("nebula_get_schema {}", c.to_string());
     let mut schema = NebulaDatabaseSchema {
         tags: BTreeMap::new(),
-        edges: nebula_execute::<String>(&c, "SHOW EDGES;")
+        edges: nebula_execute_retry::<String>(&c, "SHOW EDGES;")
             .await?
             .into_iter()
             .filter_map(|s| DatabaseIdentifier::new(&s).ok())
             .map(|v| GraphEdgeType { name: v })
             .collect(),
     };
-    for tag in nebula_execute::<String>(&c, "SHOW TAGS;").await? {
+    for tag in nebula_execute_retry::<String>(&c, "SHOW TAGS;").await? {
         schema.tags.insert(
             DatabaseIdentifier::new(&tag)?,
             DatabaseTable {
@@ -158,7 +160,7 @@ async fn nebula_describe_tag(c: &CollectionId, tag: &str) -> Result<Vec<Database
     }
 
     for field in
-        nebula_execute::<DescribeTagResponse>(c, &format!("DESCRIBE TAG `{}`;", tag)).await?
+        nebula_execute_retry::<DescribeTagResponse>(c, &format!("DESCRIBE TAG `{}`;", tag)).await?
     {
         columns.push(DatabaseColumn {
             name: DatabaseIdentifier::new(&field._field_name)?,

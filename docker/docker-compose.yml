@@ -463,6 +463,7 @@ services:
       - hoover3
     volumes:
       - ./docker/nginx/nginx.conf:/local/nginx.conf
+      - ../target/doc:/local/doc
     command:         nginx -c /local/nginx.conf
 
     depends_on:
@@ -503,6 +504,7 @@ services:
       - 8084:8084
       - 8085:8085
       - 8086:8086
+      - 8087:8087
     restart: unless-stopped
 
 

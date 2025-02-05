@@ -10,6 +10,7 @@ use hoover3_types::tasks::UiWorkflowStatus;
 use hoover3_types::tasks::UiWorkflowStatusCode;
 use std::collections::BTreeMap;
 
+/// Admin Page that displays the details of a data source.
 #[component]
 pub fn DatasourceAdminDetailsPage(
     collection_id: CollectionId,
@@ -114,6 +115,7 @@ fn DatasourceInfoCard(c: CollectionId, ds: DatabaseIdentifier) -> Element {
     }
 }
 
+/// Component that displays the status of a workflow, including self-refreshing progress bar.
 #[component]
 pub fn WorkflowStatusDisplay(
     title: String,

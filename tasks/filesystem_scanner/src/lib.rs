@@ -1,3 +1,5 @@
+//! Filesystem scanner task implementation.
+
 use hoover3_database::charybdis::batch::ModelBatch;
 use hoover3_database::client_query;
 use hoover3_database::db_management::DatabaseSpaceManager;
@@ -20,13 +22,18 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 const FILESYSTEM_SCANNER_TASK_QUEUE: &str = "filesystem_scanner";
 
+/// Arguments for filesystem datasource scanning
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ScanDatasourceArgs {
+    /// Collection identifier
     pub collection_id: CollectionId,
+    /// Datasource identifier
     pub datasource_id: DatabaseIdentifier,
+    /// Optional path to scan, defaults to root if None
     pub path: Option<PathBuf>,
 }
 
+/// Collection of filesystem scanner task implementations
 pub type AllTasks = (
     fs_scan_datasource_workflow,
     fs_do_scan_datasource_activity,
@@ -34,6 +41,7 @@ pub type AllTasks = (
     fs_save_dir_scan_total_result_activity,
 );
 
+/// Initiates a filesystem scan operation
 pub async fn start_scan(
     (c_id, ds_id): (CollectionId, DatabaseIdentifier),
 ) -> Result<(), anyhow::Error> {
@@ -46,6 +54,7 @@ pub async fn start_scan(
     Ok(())
 }
 
+/// Waits for and returns filesystem scan results
 pub async fn wait_for_scan_results(
     (c_id, ds_id): (CollectionId, DatabaseIdentifier),
 ) -> Result<FsScanDatasourceResult, anyhow::Error> {
@@ -57,6 +66,7 @@ pub async fn wait_for_scan_results(
     fs_scan_datasource_workflow::client_wait_for_completion(&args).await
 }
 
+/// Retrieves current filesystem scan status
 pub async fn get_scan_status(
     (c_id, ds_id): (CollectionId, DatabaseIdentifier),
 ) -> Result<UiWorkflowStatus, anyhow::Error> {
@@ -68,6 +78,7 @@ pub async fn get_scan_status(
     fs_scan_datasource_workflow::client_get_status(&args).await
 }
 
+/// Workflow for scanning a filesystem datasource
 #[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_scan_datasource(
     wf_ctx: WfContext,
@@ -117,6 +128,7 @@ async fn fs_scan_datasource(
     Ok(WfExitValue::Normal(scan_result))
 }
 
+/// Activity for saving directory scan results
 #[activity(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_save_dir_scan_total_result(
     (args, scan_result): (Vec<ScanDatasourceArgs>, FsScanDatasourceResult),
@@ -155,6 +167,7 @@ async fn fs_save_dir_scan_total_result(
     Ok(())
 }
 
+/// Workflow for processing groups of filesystem scans, used to avoid large workflow history
 #[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_scan_datasource_group(
     wf_ctx: WfContext,
@@ -172,6 +185,7 @@ async fn fs_scan_datasource_group(
     Ok(WfExitValue::Normal(scan_result))
 }
 
+/// Activity for performing filesystem directory scanning
 #[activity(FILESYSTEM_SCANNER_TASK_QUEUE)]
 async fn fs_do_scan_datasource(
     arg: ScanDatasourceArgs,

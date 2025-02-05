@@ -1,3 +1,5 @@
+//! Protocol consisting of types and structures shared across frontend and backend.
+
 pub mod collection;
 pub mod datasource;
 pub mod db_schema;

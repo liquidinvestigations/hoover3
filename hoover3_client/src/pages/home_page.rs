@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-/// Home page
+/// Home page with main search interface.
 #[component]
 pub fn HomePage() -> Element {
     rsx! {
@@ -9,7 +9,7 @@ pub fn HomePage() -> Element {
 }
 
 #[component]
-pub fn Hero() -> Element {
+fn Hero() -> Element {
     rsx! {
         div { id: "hero", class: "full-height",
             div { class: "search-grid-container full-height",

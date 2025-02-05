@@ -1,6 +1,9 @@
+//! This module implements the `impl_model_callbacks` macro, which is used to add Charybdis callbacks to model structs.
+//! These callbacks are used to insert/update/delete rows in the secondary databases, Nebula and Meilisearch.
+
 use super::_nebula_edges::GraphEdgeIdentifier;
 use crate::db_management::meilisearch_wait_for_task;
-use crate::db_management::nebula_execute;
+use crate::db_management::nebula_execute_retry;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::MeilisearchDatabaseHandle;
 use crate::migrate::nebula_get_schema;
@@ -10,7 +13,7 @@ use hoover3_types::db_schema::NebulaDatabaseSchema;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 
-pub fn nebula_sql_insert_vertex(
+fn nebula_sql_insert_vertex(
     table_id: &DatabaseIdentifier,
     schema: NebulaDatabaseSchema,
     data: Vec<(String, serde_json::Value)>,
@@ -139,6 +142,7 @@ async fn test_nebula_sql_insert_edge() {
     );
 }
 
+/// Batch insert edges into a Nebula database.
 pub struct InsertEdgeBatch<T1: BaseModel, T2: BaseModel> {
     edge: GraphEdgeType,
     data: Vec<(String, String)>,
@@ -154,6 +158,7 @@ where
     <T1 as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
     <T2 as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
 {
+    /// Create a new empty batch.
     pub fn new(edge: impl GraphEdgeIdentifier) -> Self {
         Self {
             edge: edge.to_owned(),
@@ -162,21 +167,24 @@ where
         }
     }
 
+    /// Add a new edge to the batch.
     pub fn push(&mut self, from: &T1, to: &T2) {
         self.data
             .push((row_pk_hash::<T1>(from), row_pk_hash::<T2>(to)));
     }
 
+    /// Execute the batch insert, consuming the batch.
     pub async fn execute(self, db_extra: &DatabaseExtraCallbacks) -> anyhow::Result<()> {
         if self.data.is_empty() {
             return Ok(());
         }
         let query = nebula_sql_insert_edge(&self.edge, self.data)?;
-        nebula_execute::<()>(&db_extra.collection_id, &query).await?;
+        nebula_execute_retry::<()>(&db_extra.collection_id, &query).await?;
         Ok(())
     }
 }
 
+/// Compute a stable hash of a row's primary key, and concatenate it with table name.
 pub fn row_pk_hash<T>(data: &T) -> String
 where
     T: BaseModel,
@@ -191,6 +199,7 @@ where
     format!("{table_name}_{x}")
 }
 
+/// Get a JSON representation of a row for indexing in Meilisearch.
 pub fn get_search_index_json<T>(row: &T) -> anyhow::Result<serde_json::Value>
 where
     T: BaseModel + serde::Serialize,
@@ -331,15 +340,21 @@ fn test_flatten_index_data() {
     );
 }
 
+/// Extra runtime information for running database insert/update/delete operations across multiple databases.
+/// This struct consists of various database handles and schema information, to be used in row callbacks.
 pub struct DatabaseExtraCallbacks {
+    /// Unique identifier for the collection
     pub collection_id: CollectionId,
+    /// Schema of the Nebula database
     pub nebula_schema: NebulaDatabaseSchema,
+    /// Handle to the Meilisearch database
     pub search_index: std::sync::Arc<
         <meilisearch_sdk::client::Client as DatabaseSpaceManager>::CollectionSessionType,
     >,
 }
 
 impl DatabaseExtraCallbacks {
+    /// Create a new `DatabaseExtraCallbacks` instance by opening sessiosn and fetching schemas..
     pub async fn new(c: &CollectionId) -> anyhow::Result<Self> {
         let nebula_schema = nebula_get_schema(c).await?;
         let search_client = MeilisearchDatabaseHandle::collection_session(c).await?;
@@ -350,6 +365,7 @@ impl DatabaseExtraCallbacks {
         })
     }
 
+    /// Insert a batch of rows into the secondary databases, Nebula and Meilisearch.
     pub async fn insert<T>(&self, data: &[T]) -> anyhow::Result<()>
     where
         T: BaseModel + serde::Serialize + Send,
@@ -380,7 +396,7 @@ impl DatabaseExtraCallbacks {
 
         let nebula_insert_query =
             nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), nebula_data)?;
-        nebula_execute::<()>(&self.collection_id, &nebula_insert_query).await?;
+        nebula_execute_retry::<()>(&self.collection_id, &nebula_insert_query).await?;
 
         // takes too much time
         // meilisearch_wait_for_task(_search_result).await?;
@@ -388,6 +404,7 @@ impl DatabaseExtraCallbacks {
         Ok(())
     }
 
+    /// Delete a batch of rows from the secondary databases, Nebula and Meilisearch.
     pub async fn delete<T>(&self, data: &[T]) -> anyhow::Result<()>
     where
         T: BaseModel + Send,
@@ -415,7 +432,7 @@ impl DatabaseExtraCallbacks {
             DELETE VERTEX {nebula_pks} WITH EDGE;
             "
         );
-        nebula_execute::<()>(&self.collection_id, &nebula_delete_query).await?;
+        nebula_execute_retry::<()>(&self.collection_id, &nebula_delete_query).await?;
 
         // takes too much time
         meilisearch_wait_for_task(_search_result).await?;
@@ -424,6 +441,7 @@ impl DatabaseExtraCallbacks {
     }
 }
 
+/// Macro to implement Charybdis callbacks for a model struct.
 #[macro_export]
 macro_rules! impl_model_callbacks {
     ($name:ident) => {

@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+/// Component that displays a page title. Level is 0 for no wrapper, 1 for h1, 2 for h2, etc.
+/// Subtitle is rendered as a small gray text to the left of the title.
 #[component]
 pub fn PageTitle(level: u8, subtitle: String, title: String) -> Element {
     let spans = rsx! {
@@ -26,6 +28,7 @@ pub fn PageTitle(level: u8, subtitle: String, title: String) -> Element {
     }
 }
 
+/// Create a page title element. This is a helper function for use in other components.
 pub fn make_page_title(level: u8, subtitle: &str, title: &str) -> Element {
     rsx! {
         PageTitle {

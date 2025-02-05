@@ -3379,10 +3379,12 @@ dependencies = [
  "hoover3_tracing",
  "hoover3_types",
  "paste",
+ "regex",
  "serde",
  "serde-aux",
  "serde_json",
  "tokio",
+ "web-sys",
  "web-time",
 ]
 
@@ -3408,6 +3410,7 @@ dependencies = [
  "log",
  "meilisearch-sdk",
  "nebula-client",
+ "nebula-fbthrift-common-v3",
  "once_cell",
  "redis",
  "rslock",

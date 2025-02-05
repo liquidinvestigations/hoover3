@@ -1,1 +1,3 @@
+//! This module contains the table definitions for all the common models.
+
 pub mod collection;

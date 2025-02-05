@@ -6,8 +6,10 @@ use temporal_sdk_core::Url;
 use tokio::sync::OnceCell;
 use tracing::info;
 
+/// Temporal client wrapper
 pub type TemporalioClient = Arc<RetryClient<Client>>;
 
+/// Get a Temporal client from global client cache.
 pub async fn get_client() -> Result<TemporalioClient, anyhow::Error> {
     static CELL: OnceCell<TemporalioClient> = OnceCell::const_new();
     let client = CELL.get_or_init(|| async move {

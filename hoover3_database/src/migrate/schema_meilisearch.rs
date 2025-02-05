@@ -2,6 +2,7 @@ use hoover3_types::{db_schema::MeilisearchDatabaseSchema, identifier::Collection
 
 use crate::db_management::{with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle};
 
+/// API Client method to get the Meilisearch database schema for a collection.
 pub async fn get_meilisearch_schema(c: &CollectionId) -> anyhow::Result<MeilisearchDatabaseSchema> {
     let c = c.clone();
     with_redis_cache("meilisearch_get_schema", 60, _get_meilisearch_schema, &c).await

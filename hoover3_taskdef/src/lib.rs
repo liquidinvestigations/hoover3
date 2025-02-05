@@ -1,3 +1,5 @@
+//! Task definition macros, clients, workers - wrappers over Temporal SDK.
+
 extern crate paste;
 pub use paste::paste;
 

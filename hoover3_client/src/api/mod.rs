@@ -1,3 +1,5 @@
+//! This module contains the server wrappers for all the API functions.
+
 use std::path::PathBuf;
 
 use crate::routes::nav_push_server_call_event;
@@ -7,7 +9,7 @@ use hoover3_types::collection::*;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::db_schema::CollectionSchema;
-use hoover3_types::db_schema::DatabaseType;
+use hoover3_types::db_schema::DatabaseServiceType;
 use hoover3_types::db_schema::DynamicQueryResponse;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadataBasic;
@@ -15,17 +17,28 @@ use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::identifier::*;
 use hoover3_types::tasks::*;
 
+/// Struct records previous server calls, their timing and results.
+
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub struct ServerCallEvent {
+    /// Timestamp when the server call was initiated
     pub ts: f64,
+    /// Name of the server function that was called
     pub function: String,
+    /// String representation of the arguments passed to the function
     pub arg: String,
+    /// Whether the server call has completed
     pub is_finished: bool,
+    /// Whether the server call completed successfully
     pub is_successful: bool,
+    /// String representation of the return value
     pub ret: String,
+    /// Duration of the server call in seconds
     pub duration: f64,
 }
 
+/// Push a server start call event to the server call history.
+/// This causes the loading spinner to be shown.
 fn _before_call(function: &str, argument_val: &str, ts: f64) {
     nav_push_server_call_event(ServerCallEvent {
         ts,
@@ -38,6 +51,8 @@ fn _before_call(function: &str, argument_val: &str, ts: f64) {
     })
 }
 
+/// Push a server end call event to the server call history.
+/// This causes the loading spinner to be hidden if no other calls are running..
 fn _after_call(
     function: &str,
     argument_val: &str,
@@ -65,6 +80,7 @@ fn truncate(s: &str, max_chars: usize) -> &str {
     }
 }
 
+/// Result::flatten() is unstable/nightly, so we implement it here.
 pub fn flatten_result<T, E>(x: Result<Result<T, E>, E>) -> Result<T, E> {
     match x {
         Ok(r) => r,
@@ -75,18 +91,35 @@ pub fn flatten_result<T, E>(x: Result<Result<T, E>, E>) -> Result<T, E> {
 macro_rules! server_wrapper {
     ($ns:path,$id:ident,$arg:ty,$ret:ty) => {
         ::paste::paste! {
-            #[server]
-            pub async fn [<__ $id __>](c: $arg)
-            -> Result<$ret, ServerFnError>
-            {
-                let rv = $ns::$id(c.clone())
-                .await
-                .map_err(|e| ServerFnError::new(
-                    format!("{}: {e}", stringify!($id))));
-                rv
-            }
+            mod [<__ $id __>] {
+                use dioxus::prelude::*;
+                use super::*;
 
-            /// UI wrapper over a server function $id
+                #[server]
+                #[doc = "API Client wrapper - server part"]
+                pub async fn [<__ $id __>](c: $arg)
+                -> Result<$ret, ServerFnError>
+                {
+                    let rv = $ns::$id(c.clone())
+                    .await
+                    .map_err(|e| ServerFnError::new(
+                        format!("{}: {e:#?}", stringify!($id))));
+                    rv
+                }
+            }
+            pub use [<__ $id __>]::[<__ $id __>];
+
+            #[doc = "API Client wrapper - client part - for the backend function"]
+            #[doc = "[`"]
+            #[doc = stringify!($ns)]
+            #[doc = "::"]
+            #[doc = stringify!($id)]
+            #[doc = "`]"]
+            #[doc = "
+            This is the wrapper function that runs on the client.
+            It retries the server call up to 2 times, and logs the results
+            using _before_call and _after_call."]
+            #[allow(missing_docs)]
             pub async fn $id(c: $arg)
             -> Result<$ret, ServerFnError>
             {
@@ -100,7 +133,7 @@ macro_rules! server_wrapper {
                         let rv = async_std::future::timeout(
                             std::time::Duration::from_secs(30),
                             [<__ $id __>](c.clone())).await.map_err(|e| ServerFnError::new(
-                                format!("{}: timeout: {e}", stringify!($id))));
+                                format!("{}: timeout: {e:#?}", stringify!($id))));
                         let rv = flatten_result(rv);
                         let t1 = current_time();
                         let ret_str = format!("{rv:#?}");
@@ -237,6 +270,6 @@ server_wrapper!(
 server_wrapper!(
     hoover3_database::client_query::database_explorer,
     db_explorer_run_query,
-    (CollectionId, DatabaseType, String),
+    (CollectionId, DatabaseServiceType, String),
     DynamicQueryResponse
 );

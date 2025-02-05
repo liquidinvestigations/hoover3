@@ -1,3 +1,6 @@
+//! ScyllaDB database management module that implements connection pooling and query execution
+//! functionality. Provides implementations for the DatabaseSpaceManager trait and handles
+//! keyspace operations.
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 use scylla::{CachingSession, SessionBuilder};
 use std::collections::HashMap;
@@ -9,6 +12,7 @@ use super::{CollectionId, DatabaseIdentifier, DatabaseSpaceManager};
 
 pub struct ScyllaConnection(CachingSession<RandomState>);
 
+/// Scylla database handle type alias.
 pub type ScyllaDatabaseHandle = ScyllaConnection;
 
 impl ScyllaDatabaseHandle {

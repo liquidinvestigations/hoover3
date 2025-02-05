@@ -1,5 +1,8 @@
 use hoover3_macro::workflow;
 #[allow(non_camel_case_types)]
+///Macro-generated unit struct that holds our
+///test_macro_workflow
+/// workflow name, input/output types, and worker registration.
 pub struct test_macro_workflow_workflow;
 impl ::hoover3_taskdef::TemporalioDescriptorName for test_macro_workflow_workflow {
     fn name() -> &'static str {

@@ -1,3 +1,5 @@
+//! Task definition macros, clients, workers - wrappers over Temporal SDK.
+
 pub mod status_tree;
 
 use crate::client::get_client;
@@ -28,20 +30,28 @@ pub use temporal_sdk_core_protos::temporal::api::enums::v1::WorkflowExecutionSta
 pub use temporal_sdk_core_protos::temporal::api::workflowservice::v1::StartWorkflowExecutionResponse;
 use tracing::{info, warn};
 
+/// The default namespace for Temporalio tasks
 pub const TEMPORALIO_NAMESPACE: &str = "default";
+
 /// Global name for this Temporalio thing (activity, workflow)
 pub trait TemporalioDescriptorName {
+    /// The static name of the Temporalio thing (activity, workflow) - same as decorated function name.
     fn name() -> &'static str;
 }
 
 /// Trait to register a Temporalio thing (activity, workflow) into a worker
 pub trait TemporalioDescriptorRegister {
+    /// The name of the queue to register the Temporalio thing (activity, workflow) into.
     fn queue_name() -> &'static str;
+    /// Register the Temporalio thing (activity, workflow) into a given worker
     fn register(worker: &mut Worker) -> anyhow::Result<()>;
 }
 
+/// Trait to define the input and output types for a Temporalio thing (activity, workflow)
 pub trait TemporalioDescriptorValueTypes {
+    /// The input type for the Temporalio thing (activity, workflow)
     type Arg: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize + Clone;
+    /// The output type for the Temporalio thing (activity, workflow)
     type Ret: Send + Sync + 'static + for<'de> Deserialize<'de> + Serialize;
 }
 
@@ -80,12 +90,14 @@ impl_tuple_register!(T1, T2, T3, T4, T5, T6, T7, T8);
 impl_tuple_register!(T1, T2, T3, T4, T5, T6, T7, T8, T9);
 impl_tuple_register!(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
 
-/// implemented by the `make_activity` macro
+/// Trait implemented by the `make_activity` macro.
 pub trait TemporalioActivityDescriptor:
     TemporalioDescriptorName + TemporalioDescriptorRegister + TemporalioDescriptorValueTypes
 {
+    /// The function that implements the activity.
     fn func(arg: Self::Arg) -> impl Future<Output = Result<Self::Ret, anyhow::Error>> + Send;
 
+    /// Register the activity into a given worker
     fn register(worker: &mut Worker) -> anyhow::Result<()> {
         let n = Self::name();
         let act_fn = move |_ctx: ActContext, arg: Self::Arg| async move {
@@ -95,6 +107,7 @@ pub trait TemporalioActivityDescriptor:
         Ok(())
     }
 
+    /// Run the activity from a context, "blocking" the caller workflow until it finishes..
     fn run(
         wf_ctx: &WfContext,
         arg: Self::Arg,
@@ -141,6 +154,9 @@ pub trait TemporalioActivityDescriptor:
 macro_rules! make_activity {
     ($queue_name:expr,$id:ident,$arg:ty,$ret:ty) => {
         $crate::paste! {
+            #[doc = "Macro-generated unit struct that holds our "]
+            #[doc = stringify!($id)]
+            #[doc = " activity name, input/output types, and worker registration."]
             #[allow(non_camel_case_types)]
             pub struct [<$id _activity>];
             impl $crate::TemporalioDescriptorName for [<$id _activity>] {
@@ -171,6 +187,9 @@ pub use make_activity;
 macro_rules! make_activity_sync {
     ($queue_name:expr,$id:ident,$arg:ty,$ret:ty) => {
         $crate::paste! {
+            #[doc = "Macro-generated unit struct that holds our "]
+            #[doc = stringify!($id)]
+            #[doc = " activity name, input/output types, and worker registration."]
             #[allow(non_camel_case_types)]
             pub struct [<$id _activity>];
             impl $crate::TemporalioDescriptorName for [<$id _activity>] {
@@ -197,12 +216,16 @@ macro_rules! make_activity_sync {
 }
 pub use make_activity_sync;
 
+/// A future representing a child workflow that is either currently running or already completed
 pub enum ChildWorkflowFuture<T: Sized + TemporalioWorkflowDescriptor> {
+    /// Represents a currently executing child workflow
     Running(StartedChildWorkflow),
+    /// Represents a workflow that was already completed
     AlreadyCompleted(T::Arg, PhantomData<T>),
 }
 
 impl<T: Sized + TemporalioWorkflowDescriptor> ChildWorkflowFuture<T> {
+    /// Gets the result of the child workflow execution
     pub fn result(self) -> impl Future<Output = Result<T::Ret, anyhow::Error>> {
         use anyhow::Context;
         use temporal_sdk_core_protos::coresdk::child_workflow::child_workflow_result::Status as ChildWorkflowStatus;
@@ -235,15 +258,17 @@ impl<T: Sized + TemporalioWorkflowDescriptor> ChildWorkflowFuture<T> {
     }
 }
 
-/// implemented by the `make_workflow` macro
+/// Trait implemented by the `make_workflow` macro.
 pub trait TemporalioWorkflowDescriptor:
     TemporalioDescriptorName + TemporalioDescriptorRegister + TemporalioDescriptorValueTypes
 {
+    /// The function that implements the workflow.
     fn wf_func(
         ctx: WfContext,
         arg: Self::Arg,
     ) -> impl Future<Output = WorkflowResult<Self::Ret>> + Send;
 
+    /// Register the workflow into a given worker
     fn register(worker: &mut Worker) -> anyhow::Result<()> {
         let n = Self::name();
         let wf_fn = move |ctx: WfContext| async move {
@@ -254,6 +279,7 @@ pub trait TemporalioWorkflowDescriptor:
         Ok(())
     }
 
+    /// Generate a workflow id from an argument, using the stable hash of the argument.
     fn workflow_id(arg: &Self::Arg) -> String {
         format!(
             "{}_{}",
@@ -262,6 +288,7 @@ pub trait TemporalioWorkflowDescriptor:
         )
     }
 
+    /// Start a workflow using a HTTP client. If the workflow already exists, the function returns Ok without restarting it.
     fn client_start(arg: &Self::Arg) -> impl Future<Output = Result<(), anyhow::Error>> {
         async move {
             let workflow_id = Self::workflow_id(arg);
@@ -296,6 +323,8 @@ pub trait TemporalioWorkflowDescriptor:
             }
         }
     }
+
+    /// Run the workflow as a child workflow, "blocking" until the child workflow finishes, returning the result of the child workflow.
     fn run_as_child(
         wf_ctx: &WfContext,
         arg: Self::Arg,
@@ -306,6 +335,7 @@ pub trait TemporalioWorkflowDescriptor:
         async move { Self::start_as_child(wf_ctx, arg).await?.result().await }
     }
 
+    /// Run the workflow in parallel, returning a vector of results.
     #[allow(clippy::type_complexity)]
     fn run_parallel(
         wf_ctx: &WfContext,
@@ -342,6 +372,7 @@ pub trait TemporalioWorkflowDescriptor:
         }
     }
 
+    /// Start the workflow as a child workflow, returning a future that resolves to its result.
     fn start_as_child(
         wf_ctx: &WfContext,
         arg: Self::Arg,
@@ -396,6 +427,7 @@ pub trait TemporalioWorkflowDescriptor:
         }
     }
 
+    /// Get the status of a workflow using a HTTP client. Use this to check if the workflow is running or done or failed.
     fn client_get_status(
         arg: &Self::Arg,
     ) -> impl Future<Output = Result<UiWorkflowStatus, anyhow::Error>> {
@@ -412,6 +444,7 @@ pub trait TemporalioWorkflowDescriptor:
         }
     }
 
+    /// Get the result of a workflow using a HTTP client. If the workflow is not done, the function will return errors.
     fn client_get_result(
         arg: &Self::Arg,
     ) -> impl Future<Output = Result<Self::Ret, anyhow::Error>> {
@@ -423,6 +456,7 @@ pub trait TemporalioWorkflowDescriptor:
         }
     }
 
+    /// Wait for a workflow to complete using HTTP client, sleeping until it finishes, returning the result of the workflow.
     fn client_wait_for_completion(
         arg: &Self::Arg,
     ) -> impl Future<Output = Result<Self::Ret, anyhow::Error>> {
@@ -449,6 +483,9 @@ macro_rules! make_workflow {
     ($queue_name:expr,$id:ident,$arg:ty,$ret:ty) => {
         $crate::paste! {
             #[allow(non_camel_case_types)]
+            #[doc = "Macro-generated unit struct that holds our "]
+            #[doc = stringify!($id)]
+            #[doc = " workflow name, input/output types, and worker registration."]
             pub struct [<$id _workflow>];
             impl $crate::TemporalioDescriptorName for [<$id _workflow>] {
                 fn name() -> &'static str { stringify!($id) }
@@ -473,6 +510,7 @@ macro_rules! make_workflow {
 }
 pub use make_workflow;
 
+/// Converts a hex byte slice to a string representation
 fn bytes_to_hex_string(bytes: &[u8]) -> String {
     bytes
         .iter()
@@ -481,11 +519,12 @@ fn bytes_to_hex_string(bytes: &[u8]) -> String {
         .join("")
 }
 
+/// Generates a unique build identifier string
 fn build_id() -> String {
     bytes_to_hex_string(buildid::build_id().unwrap_or(b"unknown"))
 }
 
-/// build new worker using given activity list, workflow , client, etc.
+/// Creates a new Temporal worker with the specified configuration
 fn create_worker<T: TemporalioDescriptorRegister>(
     client: TemporalioClient,
 ) -> anyhow::Result<Worker> {
@@ -514,7 +553,7 @@ fn create_worker<T: TemporalioDescriptorRegister>(
     Ok(worker)
 }
 
-/// fetch status from client
+/// Retrieves the current status of a workflow execution
 async fn query_workflow_execution_status(
     workflow_id: &str,
 ) -> anyhow::Result<WorkflowExecutionStatus> {
@@ -529,7 +568,7 @@ async fn query_workflow_execution_status(
         .status())
 }
 
-/// fetch history from client and return last result payload
+/// Retrieves the final result payload from a completed workflow execution
 async fn query_workflow_execution_result(workflow_id: &str) -> anyhow::Result<Vec<u8>> {
     let client = get_client().await?;
     use temporal_sdk_core_protos::temporal::api::enums::v1::EventType::WorkflowExecutionCompleted;
@@ -555,6 +594,7 @@ async fn query_workflow_execution_result(workflow_id: &str) -> anyhow::Result<Ve
     anyhow::bail!("Workflow execution result not found");
 }
 
+/// Spawns a worker on a new thread and returns the join handle
 pub fn spawn_worker_on_thread<T: TemporalioDescriptorRegister>() -> std::thread::JoinHandle<()> {
     std::thread::spawn(move || {
         tracing::info!(
@@ -569,7 +609,7 @@ pub fn spawn_worker_on_thread<T: TemporalioDescriptorRegister>() -> std::thread:
     })
 }
 
-/// for execution directly in main thread; cannot be passed to tokio::task::spawn
+/// Runs a worker on the current thread until completion
 pub async fn run_worker<T: TemporalioDescriptorRegister>() -> anyhow::Result<()> {
     let client = get_client().await?;
     let mut worker = create_worker::<T>(client)?;
@@ -577,6 +617,7 @@ pub async fn run_worker<T: TemporalioDescriptorRegister>() -> anyhow::Result<()>
     Ok(())
 }
 
+/// Integration tests for the taskdef macros.
 pub mod test {
     use super::*;
 
@@ -593,7 +634,7 @@ pub mod test {
     }
 
     make_workflow!("taskdef_test_internal", sample_workflow2, u32, u32);
-    pub async fn sample_workflow2(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
+    async fn sample_workflow2(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
         println!("sample_workflow 1 T={:?}", std::thread::current().id());
         let act1 = test_function_async_activity::run(&ctx, arg).await?;
         println!("sample_workflow 2 T={:?}", std::thread::current().id());
@@ -629,6 +670,7 @@ pub mod test {
     }
 }
 
+/// Converts a Temporal workflow execution status to a UI-friendly status code
 fn convert_status(status: WorkflowExecutionStatus) -> UiWorkflowStatusCode {
     match status {
         WorkflowExecutionStatus::Unspecified => UiWorkflowStatusCode::Unspecified,

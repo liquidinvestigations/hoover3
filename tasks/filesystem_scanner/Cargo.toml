@@ -18,3 +18,7 @@ hoover3_types = {path="../../hoover3_types"}
 hoover3_tracing = {path="../../hoover3_tracing"}
 serde.workspace = true
 tokio.workspace = true
+
+[[bin]]
+name = "worker_filesystem_scanner"
+path = "src/main.rs"

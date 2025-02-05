@@ -1,4 +1,7 @@
 use hoover3_macro::activity;
+///Macro-generated unit struct that holds our
+///test_macro_activity
+/// activity name, input/output types, and worker registration.
 #[allow(non_camel_case_types)]
 pub struct test_macro_activity_activity;
 impl ::hoover3_taskdef::TemporalioDescriptorName for test_macro_activity_activity {

@@ -63,6 +63,7 @@ impl DataRowDisplay for CollectionUiRow {
     }
 }
 
+/// Admin Page that displays the list of collections.
 #[component]
 pub fn CollectionsAdminListPage() -> Element {
     let mut c_list = use_resource(move || async move { get_all_collections(()).await });
@@ -171,6 +172,7 @@ fn CollectionsCreateWidget(cb: Callback<CollectionId>) -> Element {
     }
 }
 
+/// Admin Page that displays the details of a collection and a list of data sources.
 #[component]
 pub fn CollectionAdminDetailsPage(collection_id: CollectionId) -> Element {
     rsx! {
@@ -179,6 +181,7 @@ pub fn CollectionAdminDetailsPage(collection_id: CollectionId) -> Element {
     }
 }
 
+/// Component that displays the details of a collection, including editing fields.
 #[component]
 fn CollectionInfoCard(c: CollectionId) -> Element {
     let c2 = c.clone();

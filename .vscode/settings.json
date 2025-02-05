@@ -1,6 +1,6 @@
 {
     "rust-analyzer.cargo.targetDir": "target/_rust_analyzer_",
-    // "rust-analyzer.cargo.features": ["hoover3_client/server", "hoover3_client/web"],
+    "rust-analyzer.cargo.features": ["hoover3_client/server", "hoover3_client/web"],
     "files.autoSave": "afterDelay",
     "terminal.integrated.enableMultiLinePasteWarning": "never",
     "explorer.confirmDelete": false,

@@ -1,7 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "hoover3_client", "hoover3_database", "hoover3_taskdef", "hoover3_macro", "hoover3_types", "tasks/filesystem_scanner", "hoover3_macro2", "hoover3_tracing",
+    "hoover3_client",
+    "hoover3_database",
+    "hoover3_taskdef",
+    "hoover3_macro",
+    "hoover3_types",
+    "tasks/filesystem_scanner",
+    "hoover3_macro2",
+    "hoover3_tracing",
 ]
 
 [workspace.package]
@@ -38,7 +45,7 @@ tracing-subscriber = "0.3.19"
 missing_docs = "warn"
 
 [workspace.lints.rustdoc]
-missing_crate_level_docs = "warn"
+missing_crate_level_docs = "deny"
 
 
 [profile.wasm-dev]

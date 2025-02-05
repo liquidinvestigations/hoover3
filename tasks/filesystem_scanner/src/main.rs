@@ -1,3 +1,6 @@
+//! Filesystem scanner worker binary entrypoint.
+
+/// Run filesystem scanner worker
 #[tokio::main]
 async fn main() {
     hoover3_tracing::init_tracing();

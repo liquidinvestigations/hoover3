@@ -38,6 +38,7 @@ impl DataRowDisplay for ServerCallEvent {
     }
 }
 
+/// Page that displays the server call log table.
 #[component]
 pub fn ServerCallLogPage() -> Element {
     let hist = read_server_call_history();

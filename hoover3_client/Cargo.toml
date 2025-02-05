@@ -10,7 +10,12 @@ rust-version.workspace = true
 [lints]
 workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "hoover3_client"
+
+[[bin]]
+name = "hoover3_client_main"
+path = "src/main.rs"
 
 [dependencies]
 hoover3_database = {path="../hoover3_database",optional=true}
@@ -37,6 +42,8 @@ base64.workspace = true
 ciborium = "0.2.2"
 futures-util.workspace = true
 async-std.workspace = true
+regex = "1.11.1"
+web-sys = { version = "0.3.77", features = ["Element"] }
 
 [features]
 default = []

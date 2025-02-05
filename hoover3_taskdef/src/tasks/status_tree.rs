@@ -1,3 +1,5 @@
+//! Workflow status tree - recursively fetch workflow status to get a final progress percentage.
+
 use anyhow::Context;
 use hoover3_types::tasks::TemporalioWorkflowStatusTree;
 use hoover3_types::tasks::UiWorkflowStatusCode;
@@ -13,6 +15,7 @@ use super::convert_status;
 use super::query_workflow_execution_status;
 const TREE_NODE_LIMIT: usize = 24;
 
+/// Retrieves a cached workflow status tree for the given workflow ID
 pub async fn get_workflow_status_tree(
     workflow_id: String,
 ) -> anyhow::Result<TemporalioWorkflowStatusTree> {
@@ -94,6 +97,7 @@ async fn _temporalio_get_workflow_status_tree(
     Ok(tree)
 }
 
+/// Lists child workflows and their execution counts for a given workflow ID
 pub async fn temporalio_list_children(
     client: &mut temporal_client::RetryClient<temporal_client::Client>,
     workflow_id: &str,

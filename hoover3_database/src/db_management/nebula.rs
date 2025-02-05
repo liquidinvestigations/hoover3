@@ -1,6 +1,6 @@
-/*
-cargo run -p nebula-demo-tokio --bin nebula_demo_tokio_v3_bb8_graph_pool 127.0.0.1 9669 root 'password'
-*/
+//! Nebula graph database management module that implements connection pooling and graph
+//! operations. Provides functionality for executing queries and managing graph spaces
+//! through the DatabaseSpaceManager trait.
 
 use std::{env, sync::Arc};
 use tracing::info;
@@ -17,9 +17,12 @@ use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 use nebula_client::v3::{graph::GraphQueryOutput, GraphQuery as _, GraphTransportResponseHandler};
 use serde::de::DeserializeOwned;
 use serde::Deserialize;
+use std::collections::HashMap;
+use tokio::sync::RwLock;
 use tokio::sync::{Mutex, OnceCell};
 
 use super::{CollectionId, DatabaseIdentifier, DatabaseSpaceManager};
+use tokio::time::Duration;
 
 type TManager = GraphConnectionManager<
     async_compat::Compat<tokio::net::TcpStream>,
@@ -29,11 +32,10 @@ type TManager = GraphConnectionManager<
 >;
 type TPool2 = Pool<TManager>;
 type TSession = PooledConnection<'static, TManager>;
-pub type NebulaDatabaseHandle = Mutex<TSession>;
-use std::collections::HashMap;
-use tokio::sync::RwLock;
 
-use tokio::time::Duration;
+/// Nebula database handle type alias.
+pub type NebulaDatabaseHandle = Mutex<TSession>;
+
 const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(60);
 
 async fn nebula_execute_once<T: DeserializeOwned + std::fmt::Debug>(
@@ -56,7 +58,9 @@ async fn nebula_execute_once<T: DeserializeOwned + std::fmt::Debug>(
     Ok(result?.data_set)
 }
 
-pub async fn nebula_execute<T: DeserializeOwned + std::fmt::Debug>(
+/// Execute a query against the Nebula database and deserialize rows into the given type.
+/// This function also retries the query for a few times if it fails.
+pub async fn nebula_execute_retry<T: DeserializeOwned + std::fmt::Debug>(
     collection: &CollectionId,
     query: &str,
 ) -> Result<Vec<T>, anyhow::Error> {

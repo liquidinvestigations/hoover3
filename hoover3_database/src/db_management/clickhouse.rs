@@ -1,9 +1,13 @@
+//! ClickHouse database management module that provides functionality for creating, managing,
+//! and interacting with ClickHouse databases. Implements the DatabaseSpaceManager trait for
+//! handling database spaces and sessions.
 use super::{DatabaseIdentifier, DatabaseSpaceManager};
 use clickhouse::{Client, Row};
 use serde::Deserialize;
 use std::{env, sync::Arc};
 use tokio::sync::OnceCell;
 
+/// ClickHouse database handle type alias.
 pub type ClickhouseDatabaseHandle = Client;
 
 fn clickhouse_url() -> String {

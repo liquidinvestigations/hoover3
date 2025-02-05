@@ -1,11 +1,16 @@
+//! Types and structures related to identifiers and their validation logic.
+
+/// Default keyspace name used in the database
 pub const DEFAULT_KEYSPACE_NAME: &str = "hoover3";
 
+/// Represents a unique collection identifier
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash,
 )]
 pub struct CollectionId(String);
 
 impl CollectionId {
+    /// Creates a new collection ID after validating the input string
     pub fn new(s: &str) -> Result<CollectionId, anyhow::Error> {
         if s.len() < 3 || s.len() > 32 {
             anyhow::bail!("collection id is too long or too short: {s}");
@@ -34,6 +39,7 @@ impl CollectionId {
         Ok(c)
     }
 
+    /// Generates the database/keyspace name for this collection
     pub fn database_name(&self) -> anyhow::Result<DatabaseIdentifier> {
         DatabaseIdentifier::new(format!("{}__{}", DEFAULT_KEYSPACE_NAME, self))
     }
@@ -53,6 +59,7 @@ impl std::fmt::Display for CollectionId {
     }
 }
 
+/// Represents a unique database identifier
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash,
 )]
@@ -74,6 +81,7 @@ fn get_regex() -> &'static RegexList {
 }
 
 impl DatabaseIdentifier {
+    /// Creates a new database identifier after validating the input string
     pub fn new(name: impl Into<String>) -> anyhow::Result<Self> {
         let name: String = name.into();
         if name.len() > 48 || name.len() < 3 {

@@ -1,3 +1,5 @@
+//! Datasource management module that provides functionality to create, update, and delete datasources.
+
 use crate::db_management::redis::drop_redis_cache;
 use crate::db_management::redis::with_redis_cache;
 use crate::db_management::redis::with_redis_lock;
@@ -32,6 +34,8 @@ pub async fn get_all_datasources(c: CollectionId) -> Result<Vec<DatasourceUiRow>
     Ok(v)
 }
 
+/// Create a new datasource in the given collection. Repeated calls using the same name will return the same datasource.
+/// A tokio spawn task is used to ensure the creation is finalized even if the user disconnects.
 pub async fn create_datasource(
     (c, name, settings): (CollectionId, DatabaseIdentifier, DatasourceSettings),
 ) -> Result<DatasourceUiRow> {
@@ -65,6 +69,7 @@ pub async fn create_datasource(
     .await?
 }
 
+/// Drop a datasource from the given collection. Dropping a non-existent datasource is a no-op.
 pub async fn drop_datasource((c, name): (CollectionId, DatabaseIdentifier)) -> anyhow::Result<()> {
     tokio::spawn(async move {
         let session = ScyllaDatabaseHandle::collection_session(&c).await?;
@@ -78,6 +83,7 @@ pub async fn drop_datasource((c, name): (CollectionId, DatabaseIdentifier)) -> a
     .await?
 }
 
+/// Get details for a single datasource in the given collection.
 pub async fn get_datasource(
     (c, name): (CollectionId, DatabaseIdentifier),
 ) -> Result<DatasourceUiRow> {

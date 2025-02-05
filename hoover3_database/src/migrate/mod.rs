@@ -1,10 +1,14 @@
-pub mod schema_nebula;
+//! This module contains the database migration functions,
+//! including mirroring the Scylla schema into other databases.
+
+mod schema_meilisearch;
+mod schema_nebula;
+mod schema_scylla;
+
 use hoover3_types::db_schema::CollectionSchema;
 use schema_meilisearch::get_meilisearch_schema;
 pub use schema_nebula::{_migrate_nebula_collection, nebula_get_schema};
 
-pub mod schema_meilisearch;
-pub mod schema_scylla;
 use anyhow::Context;
 use anyhow::Result;
 use schema_scylla::get_scylla_schema;
@@ -18,10 +22,10 @@ use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
 use super::db_management::redis::with_redis_lock;
 
-/// sometimes we run from workspace root. Sometimes we run from package root.
+/// Sometimes we run from workspace root. Sometimes we run from package root.
 /// We need to point to correct migration dirs; so we need to identify this package's dir.
 /// This function tries a few variations and finds the `hoover3_database` package root.
-pub(crate) fn get_package_dir() -> PathBuf {
+pub fn get_package_dir() -> PathBuf {
     let package_name = "hoover3_database";
     let p = std::env::current_dir().unwrap();
     let name = p.file_name().unwrap().to_str().unwrap();
@@ -53,6 +57,7 @@ pub(crate) fn get_package_dir() -> PathBuf {
     panic!("could not find package dir");
 }
 
+/// Migrate all databases for all collections.
 pub async fn migrate_all() -> Result<()> {
     info!("migrate()");
 
@@ -81,6 +86,7 @@ pub async fn migrate_all() -> Result<()> {
     Ok(())
 }
 
+/// Migrate the common database schema (the one not related to any collection).
 pub async fn migrate_common() -> Result<()> {
     with_redis_lock(
         "migrate_lock_common",
@@ -89,6 +95,7 @@ pub async fn migrate_common() -> Result<()> {
     .await?
 }
 
+/// Migrate databases for a single collection.
 pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
     let c = c.clone();
     with_redis_lock(&format!("migrate_lock_2_{}", c), async move {
@@ -97,6 +104,7 @@ pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
     .await?
 }
 
+/// Drop databases for a single collection.
 pub async fn drop_collection(c: &CollectionId) -> Result<()> {
     let c = c.clone();
     with_redis_lock(&format!("migrate_lock_2_{}", c), async move {
@@ -285,6 +293,7 @@ async fn test_create_drop_collection() {
     drop_collection(&c).await.unwrap();
 }
 
+/// API Client method to get all the database schemas for a collection.
 pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchema> {
     tracing::info!("get_collection_schema {}", c.to_string());
     Ok(CollectionSchema {

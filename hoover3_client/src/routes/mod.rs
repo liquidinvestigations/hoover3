@@ -1,3 +1,6 @@
+//! This module contains the routes for the Hoover3 client.
+//! Routes are the URLs that are used to navigate the client.
+
 mod url_param;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
@@ -25,46 +28,60 @@ use crate::pages::HomePage;
 use crate::pages::NewDatasourceFormPage;
 use crate::pages::ServerCallLogPage;
 
+/// The enum of all the routes for the Hoover3 client.
+/// To nest another route type object inside a page, use `UrlParam<T>`.
 #[derive(Debug, Clone, Routable, PartialEq)]
 #[rustfmt::skip]
+#[allow(missing_docs)]
 #[allow(clippy::empty_line_after_outer_attr)]
 pub enum Route {
     #[layout(NavbarLayout)]
 
+    /// Route to home page.
     #[route("/")]
     HomePage {},
 
     #[nest("/tools")]
+        /// Route to Dioxus HTML Translator
         #[route("/dioxus-translate")]
         DioxusTranslatePage {},
 
+        /// Route to Docker Health Checker
         #[route("/docker-health")]
         DockerHealthPage {},
 
+        /// Route to Server Call Logs
         #[route("/server-call-logs")]
         ServerCallLogPage {},
 
+        /// Route to Database Explorer
         #[route("/database-explorer/:explorer_route")]
         DatabaseExplorerPage {explorer_route: UrlParam<DatabaseExplorerRoute>},
-#[end_nest]
+    #[end_nest]
 
     #[nest("/admin")]
+        /// Route to Collections Admin List
         #[route("/collections")]
         CollectionsAdminListPage {},
 
+        /// Route to Collection Admin Details
         #[route("/collection/:collection_id")]
         CollectionAdminDetailsPage{collection_id: CollectionId},
 
+        /// Route to New Datasource Form
         #[route("/collection/:collection_id/new_datasource/#:current_path")]
         NewDatasourceFormPage {collection_id: CollectionId, current_path: UrlParam<PathBuf>},
 
+        /// Route to Datasource Admin Details
         #[route("/collection/:collection_id/datasource/:datasource_id")]
         DatasourceAdminDetailsPage {collection_id: CollectionId, datasource_id: DatabaseIdentifier},
     #[end_nest]
 
+    /// Route to Dashboard Iframe
     #[route("/dashboards/iframe/:id")]
     DashboardIframePage{id:u8},
 
+    /// Route to Page Not Found
     #[route("/:..route")]
     PageNotFound { route: Vec<String> },
 }
@@ -127,6 +144,7 @@ fn DisplayError(title: String, err: String) -> Element {
     }
 }
 
+/// Component for a dropdown menu in the navbar.
 #[component]
 pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
     rsx! {
@@ -143,17 +161,20 @@ pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
     }
 }
 
+/// Context provider for server call history.
 #[derive(Clone, Debug)]
 struct ServerCallHistory {
     cb: Callback<ServerCallEvent>,
     hist: ReadOnlySignal<BTreeMap<String, VecDeque<ServerCallEvent>>>,
 }
 
+/// Push a server call event to the server call history.
 pub fn nav_push_server_call_event(event: ServerCallEvent) {
     let ServerCallHistory { cb, .. } = use_context();
     cb.call(event);
 }
 
+/// Read the server call history.
 pub fn read_server_call_history() -> ReadOnlySignal<BTreeMap<String, VecDeque<ServerCallEvent>>> {
     let ServerCallHistory { hist, .. } = use_context();
     hist
@@ -230,6 +251,7 @@ fn NavbarLayout() -> Element {
     }
 }
 
+/// Component for displaying a page not found 404 wrong URL error.
 #[component]
 fn PageNotFound(route: Vec<String>) -> Element {
     rsx! {

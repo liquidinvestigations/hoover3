@@ -1,3 +1,5 @@
+//! List files and directories on disk.
+
 use crate::migrate::get_package_dir;
 use anyhow::{Context, Result};
 use hoover3_types::filesystem::FsMetadataBasic;
@@ -12,6 +14,7 @@ async fn data_root_path() -> Result<PathBuf> {
         .join("data"))
 }
 
+/// Get metadata for a single file or directory on disk.
 pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadataBasic> {
     let path = data_root_path().await?.join(relative_path).canonicalize()?;
     let relative_path = path
@@ -37,6 +40,7 @@ pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadataBasic
     })
 }
 
+/// List all files and directories in the given directory on disk.
 pub async fn list_directory(relative_path: PathBuf) -> Result<Vec<FsMetadataBasic>> {
     let path = data_root_path().await?.join(relative_path);
     info!("list_directory: {:?}", path);

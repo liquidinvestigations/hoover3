@@ -11,6 +11,7 @@ use hoover3_types::identifier::DatabaseIdentifier;
 use std::collections::BTreeMap;
 use tracing::info;
 
+/// API Client method to get the Scylla database schema for a collection.
 pub async fn get_scylla_schema(c: &CollectionId) -> Result<ScyllaDatabaseSchema> {
     let c = c.clone();
     let c2 = c.clone();
