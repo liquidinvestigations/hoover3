@@ -230,7 +230,7 @@ async fn db_explorer_run_meilisearch_query(
                     .map(|(_k, v)| (_k, json_value_to_database_value(v)))
                     .collect::<BTreeMap<_, _>>();
                 for column in column_map.keys() {
-                    if pairs.get(column).is_none() {
+                    if !pairs.contains_key(column) {
                         pairs.insert(column.clone(), None);
                     }
                 }
@@ -261,22 +261,13 @@ fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnTy
         }
         serde_json::Value::Bool(_) => Some(DatabaseColumnType::Boolean),
         serde_json::Value::Array(_v) => {
-            let Some(first_value) = _v.first() else {
-                return None;
-            };
-            let Some(_vtype) = json_value_to_database_type(first_value) else {
-                return None;
-            };
-            Some(DatabaseColumnType::List(Box::new(_vtype)))
+            Some(DatabaseColumnType::List(Box::new(json_value_to_database_type(_v.first()?)?)))
         }
         serde_json::Value::Object(_o) => {
             let columns = _o
                 .iter()
                 .filter_map(|(k, v)| {
-                    let Some(_vtype) = json_value_to_database_type(v) else {
-                        return None;
-                    };
-                    Some((k.to_string(), Box::new(_vtype)))
+                    Some((k.to_string(), Box::new(json_value_to_database_type(v)?)))
                 })
                 .collect::<Vec<_>>();
             Some(DatabaseColumnType::Object(columns))
