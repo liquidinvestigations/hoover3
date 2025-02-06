@@ -12,3 +12,11 @@ pub use server_call_log::ServerCallLogPage;
 
 mod database_explorer;
 pub use database_explorer::*;
+
+use dioxus::prelude::*;
+#[component]
+pub fn ToolsHomePage() -> Element {
+    rsx! {
+        "Tools Home Page"
+    }
+}

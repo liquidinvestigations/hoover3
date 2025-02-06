@@ -74,7 +74,7 @@ pub fn DatabaseExplorerQueryToolPage(
     });
 
     rsx! {
-        div { class: "container-fluid",
+        div {
         style: "display: grid; grid-template-columns: 1fr 6fr;",
 
         article {
@@ -110,7 +110,6 @@ pub fn DatabaseExplorerQueryToolPage(
                     oninput: move |_ev| {
                         let query  = _ev.value().to_string();
                         sql_editor.set(query);
-
                     },
                 }
                 button {
@@ -150,95 +149,116 @@ fn SqlQueryToolJumpLinks(
             .and_then(|s| s.as_ref().ok())
             .cloned()
     });
-    match db_type.read().clone() {
-        DatabaseServiceType::Scylla => {
-            rsx! {
-                ScyllaQueryJumpLinks {collection_id, schema}
-            }
+    let links = use_memo(move || {
+        let c_id = collection_id.read().clone();
+        let db_type = db_type.read().clone();
+        if let Some(schema) = schema.read().as_ref() {
+            get_sidebar_links(&c_id, &db_type, schema)
+        } else {
+            Default::default()
         }
-        DatabaseServiceType::Meilisearch => {
-            rsx! {
-                MeilisearchQueryJumpLinks {collection_id, schema}
-            }
-        }
-        DatabaseServiceType::Nebula => {
-            rsx! {
-                NebulaQueryJumpLinks {collection_id, schema}
-            }
+    });
+    rsx! {
+        QueryToolSidebarLinksDisplay {
+            links
         }
     }
 }
-#[component]
-fn ScyllaQueryJumpLinks(
-    collection_id: ReadOnlySignal<CollectionId>,
-    schema: ReadOnlySignal<Option<CollectionSchema>>,
-) -> Element {
-    let tables = use_memo(move || {
-        schema
-            .read()
-            .as_ref()
-            .map(|s| s.scylla.tables.keys().cloned().collect::<Vec<_>>())
-            .unwrap_or(vec![])
-    });
 
-    type QueryFn = Box<dyn Fn(String) -> String>;
-    let queries: Vec<(&str, QueryFn)> = vec![
+#[derive(Debug, Clone, PartialEq, Default)]
+struct QueryToolSidebarLinks {
+    top_links: Vec<(String, Route)>,
+    per_table_links: Vec<(String, Vec<(String, Route)>)>,
+}
+
+fn get_sidebar_links(
+    collection_id: &CollectionId,
+    db_type: &DatabaseServiceType,
+    schema: &CollectionSchema,
+) -> QueryToolSidebarLinks {
+    let make_link = |text: &str, query: &str| {
         (
-            "SELECT *",
-            Box::new(move |x| format!("SELECT * FROM {};", x)),
-        ),
-        (
-            "COUNT",
-            Box::new(move |x| format!("SELECT COUNT(*) FROM {};", x)),
-        ),
-        ("DESCRIBE", Box::new(move |x| format!("DESCRIBE {};", x))),
-    ];
+            text.to_string(),
+            Route::DatabaseExplorerPage {
+                explorer_route: DatabaseExplorerRoute::QueryToolPage {
+                    collection_id: collection_id.clone(),
+                    db_type: db_type.clone(),
+                    query_state: SqlQueryToolState {
+                        query: query.to_string(),
+                    },
+                }
+                .into(),
+            },
+        )
+    };
+
+    match db_type {
+        DatabaseServiceType::Scylla => {
+            let tables = schema.scylla.tables.keys().cloned().collect::<Vec<_>>();
+
+            let mut per_table_links = vec![];
+            for table in tables {
+                let table_name = &table.to_string();
+                per_table_links.push((
+                    table_name.to_string(),
+                    vec![
+                        make_link("SELECT *", &format!("SELECT * FROM {};", table_name)),
+                        make_link("COUNT", &format!("SELECT COUNT(*) FROM {};", table_name)),
+                        make_link("DESCRIBE", &format!("DESCRIBE {};", table_name)),
+                    ],
+                ));
+            }
+            QueryToolSidebarLinks {
+                top_links: vec![
+                    make_link(
+                        "Scylla Version",
+                        "SELECT version FROM system.versions LIMIT 1",
+                    ),
+                    make_link("Large Cells", "SELECT * FROM system.large_cells"),
+                    make_link("Large Partitions", "SELECT * FROM system.large_partitions"),
+                    make_link("Large Rows", "SELECT * FROM system.large_rows"),
+                    make_link(
+                        "View Builds",
+                        "SELECT * FROM system.views_builds_in_progress",
+                    ),
+                ],
+                per_table_links,
+            }
+        }
+
+        DatabaseServiceType::Meilisearch => QueryToolSidebarLinks {
+            top_links: vec![make_link("test", "test"), make_link("1234", "1234")],
+            per_table_links: vec![],
+        },
+        DatabaseServiceType::Nebula => QueryToolSidebarLinks {
+            top_links: vec![
+                make_link("throw dice", "YIELD rand32(1,7);"),
+                make_link("show sessions", "SHOW SESSIONS;"),
+            ],
+            per_table_links: vec![],
+        },
+    }
+}
+
+#[component]
+fn QueryToolSidebarLinksDisplay(links: ReadOnlySignal<QueryToolSidebarLinks>) -> Element {
     rsx! {
         ul {
-            for table in tables.read().iter() {
+            for (top_link, top_route) in links.read().top_links.iter() {
                 li {
-                    key: "{table}",
-                    h5 { {table.to_string()} }
+                    Link { to: top_route.clone(), "{top_link}" }
+                }
+            }
+            for (table_name, table_links) in links.read().per_table_links.iter() {
+                li {
+                    h5 { "{table_name}" }
                     ul {
-                        for (query, query_str) in queries.iter() {
-                            li {
-                                Link {
-                                    to: Route::DatabaseExplorerPage{
-                                        explorer_route: DatabaseExplorerRoute::QueryToolPage {
-                                            collection_id: collection_id.read().clone(),
-                                            db_type: DatabaseServiceType::Scylla,
-                                            query_state: SqlQueryToolState {
-                                            query: query_str(table.to_string()),
-                                            }
-                                        }.into()
-                                    },
-                                    "{query}"
-                                }
-                            }
+                        for (link_text, link_route) in table_links.iter() {
+                            li { Link { to: link_route.clone(), "{link_text}" } }
                         }
                     }
                 }
             }
         }
-    }
-}
-
-#[component]
-fn MeilisearchQueryJumpLinks(
-    collection_id: ReadOnlySignal<CollectionId>,
-    schema: ReadOnlySignal<Option<CollectionSchema>>,
-) -> Element {
-    rsx! {
-        "TODO Meilisearch"
-    }
-}
-
-#[component]
-fn NebulaQueryJumpLinks(
-    collection_id: ReadOnlySignal<CollectionId>,
-    schema: ReadOnlySignal<Option<CollectionSchema>>,
-) -> Element {
-    rsx! {
-        "TODO Nebula"
     }
 }

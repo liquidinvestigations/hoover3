@@ -66,3 +66,21 @@ pub fn DashboardNavbarDropdown() -> Element {
         NavbarDropdown { title: "Dashboards", links }
     }
 }
+
+#[component]
+pub fn DashboardsHomePage() -> Element {
+    rsx! {
+        h1 {
+            "System Dashboards"
+        }
+        for (id, (name, link)) in get_dash_links().into_iter().enumerate() {
+            p {
+                "{name}:"
+                Link {
+                    to: Route::DashboardIframePage { id: id as u8 }.to_string(),
+                    "{link}"
+                }
+            }
+        }
+    }
+}

@@ -280,7 +280,9 @@ pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
 
 /// Table component that displays the result of a dynamic query.
 /// The data format is not known at compile time.
-/// This is the inner component that is used by DynamicTable. Renders only to a <table> element.
+///
+/// This is the inner component that is used by DynamicTable.
+/// Renders only to a <table> element.
 #[component]
 pub fn DynamicTableInner(data: ReadOnlySignal<DynamicQueryResult>) -> Element {
     rsx! {
@@ -288,8 +290,8 @@ pub fn DynamicTableInner(data: ReadOnlySignal<DynamicQueryResult>) -> Element {
             class:"overflow-auto", style: "max-width: 80vw;",
             table { class: "striped",
                 thead {
-                    for k in data.read().columns.iter() {
-                        th { key: "{k.0.clone()},{k.1}", {k.0.clone()} br{} pre{"{k.1}"} }
+                    for (i, k) in data.read().columns.iter().enumerate() {
+                        th { key: "{k.0.clone()},{k.1}{i}", {k.0.clone()} br{} pre{"{k.1}"} }
                     }
                 }
                 tbody {

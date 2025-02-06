@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::routes::nav_push_server_call_event;
+use crate::app::nav_push_server_call_event;
 use crate::time::current_time;
 use dioxus::prelude::*;
 use hoover3_types::collection::*;
@@ -102,8 +102,11 @@ macro_rules! server_wrapper {
                 {
                     let rv = $ns::$id(c.clone())
                     .await
-                    .map_err(|e| ServerFnError::new(
-                        format!("{}: {e:#?}", stringify!($id))));
+                    .map_err(|e| {
+                        ::dioxus_logger::tracing::error!("Server: API method {} failed: {e:#?}", stringify!($id));
+                        ServerFnError::new(
+                            format!("{}: {e:#?}", stringify!($id)))
+                    });
                     rv
                 }
             }
@@ -148,6 +151,7 @@ macro_rules! server_wrapper {
                     if i == retry {
                         return rv;
                     }
+                    ::dioxus_logger::tracing::info!("Client: API method {} failed, retrying...", stringify!($id));
                     $crate::time::sleep(
                         std::time::Duration::from_secs_f32(
                             0.1+i as f32*0.1)).await;

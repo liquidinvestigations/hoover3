@@ -51,7 +51,6 @@ where
     let finalize_retry_count = 5 * (2 * 60 * 24); // 5 days
 
     let rl = redis_lockmanager().await;
-    // info!("lockmanager init OK for {redis_lock_id}");
 
     let mut retry_count = 0;
     let mut acq_retry_wait_secs = 0.016;
@@ -70,8 +69,6 @@ where
             anyhow::bail!("could not acquire lock after 2min",);
         }
     };
-
-    // info!("Lock {redis_lock_id} acquired!");
 
     retry_count = 0;
     let mut f = tokio::spawn(func);

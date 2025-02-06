@@ -15,18 +15,8 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
 
 use crate::api::ServerCallEvent;
-use crate::pages::CollectionAdminDetailsPage;
-use crate::pages::CollectionsAdminListPage;
-use crate::pages::DashboardIframePage;
-use crate::pages::DashboardNavbarDropdown;
-use crate::pages::DatabaseExplorerPage;
-use crate::pages::DatabaseExplorerRoute;
-use crate::pages::DatasourceAdminDetailsPage;
-use crate::pages::DioxusTranslatePage;
-use crate::pages::DockerHealthPage;
-use crate::pages::HomePage;
-use crate::pages::NewDatasourceFormPage;
-use crate::pages::ServerCallLogPage;
+use crate::app::ServerCallHistory;
+use crate::pages::*;
 
 /// The enum of all the routes for the Hoover3 client.
 /// To nest another route type object inside a page, use `UrlParam<T>`.
@@ -42,6 +32,10 @@ pub enum Route {
     HomePage {},
 
     #[nest("/tools")]
+        /// Tools home page - lists all the sub-pages
+        #[route("/")]
+        ToolsHomePage {},
+
         /// Route to Dioxus HTML Translator
         #[route("/dioxus-translate")]
         DioxusTranslatePage {},
@@ -54,57 +48,85 @@ pub enum Route {
         #[route("/server-call-logs")]
         ServerCallLogPage {},
 
-        /// Route to Database Explorer
-        #[route("/database-explorer/:explorer_route")]
-        DatabaseExplorerPage {explorer_route: UrlParam<DatabaseExplorerRoute>},
+        #[nest("/database-explorer")]
+            /// Route to Database Explorer Home Page
+            #[route("/")]
+            DatabaseExplorerRootPage {},
+
+            /// Route to Database Explorer
+            #[route("/:explorer_route")]
+            DatabaseExplorerPage {explorer_route: UrlParam<DatabaseExplorerRoute>},
+        #[end_nest]
+
+        #[nest("/dashboards")]
+            /// Route to Dashboard Home Page
+            #[route("/")]
+            DashboardsHomePage {},
+            /// Route to specific Dashboard Iframe
+            #[route("/:id")]
+            DashboardIframePage{id:u8},
+        #[end_nest]
     #[end_nest]
 
     #[nest("/admin")]
-        /// Route to Collections Admin List
-        #[route("/collections")]
-        CollectionsAdminListPage {},
+        /// Route to Admin Home Page
+        #[route("/")]
+        AdminHomePage {},
 
-        /// Route to Collection Admin Details
-        #[route("/collection/:collection_id")]
-        CollectionAdminDetailsPage{collection_id: CollectionId},
+        #[nest("/collections")]
+            /// Route to Collections Admin List
+            #[route("/")]
+            CollectionsAdminListPage {},
 
-        /// Route to New Datasource Form
-        #[route("/collection/:collection_id/new_datasource/#:current_path")]
-        NewDatasourceFormPage {collection_id: CollectionId, current_path: UrlParam<PathBuf>},
+            /// Route to Collection Admin Details
+            #[route("/:collection_id")]
+            CollectionAdminDetailsPage{collection_id: CollectionId},
 
-        /// Route to Datasource Admin Details
-        #[route("/collection/:collection_id/datasource/:datasource_id")]
-        DatasourceAdminDetailsPage {collection_id: CollectionId, datasource_id: DatabaseIdentifier},
+            /// Route to New Datasource Form
+            #[route("/:collection_id/new_datasource/#:current_path")]
+            NewDatasourceFormPage {collection_id: CollectionId, current_path: UrlParam<PathBuf>},
+
+            /// Route to Datasource Admin Details
+            #[route("/:collection_id/datasource/:datasource_id")]
+            DatasourceAdminDetailsPage {collection_id: CollectionId, datasource_id: DatabaseIdentifier},
+        #[end_nest]
     #[end_nest]
 
-    /// Route to Dashboard Iframe
-    #[route("/dashboards/iframe/:id")]
-    DashboardIframePage{id:u8},
-
-    /// Route to Page Not Found
+    /// Route to Page Not Found 404 error
     #[route("/:..route")]
     PageNotFound { route: Vec<String> },
 }
 
 #[component]
-fn Navbar(display_loading_icon: ReadOnlySignal<bool>) -> Element {
+fn Navbar() -> Element {
+    let ServerCallHistory {
+        show_pic,
+        loading_count,
+        ..
+    } = use_context();
     rsx! {
         nav { id: "navbar",
-
+            // title crumbs with links to parent pages
             ul {
                 li {
-                    Link { to: Route::HomePage {}, "Home" }
+                    NavbarTitleCrumbs {}
                 }
             }
+            // loading icon and count
             ul {
                 div { class: "loading_box",
-                    if *display_loading_icon.read() {
+
+                    if *show_pic.read() {
                         img { src: "/assets/img/loading.gif" }
+                        div { class: "loading_count", "{loading_count}" }
                     }
                 }
             }
+            // Dropdowns
             ul {
+                // dropdown with dashboard links
                 li { DashboardNavbarDropdown {} }
+                // dropdown with tools
                 li {
                     NavbarDropdown {
                         title: "Tools",
@@ -118,6 +140,7 @@ fn Navbar(display_loading_icon: ReadOnlySignal<bool>) -> Element {
                         ],
                     }
                 }
+                // dropdown with admin links
                 li {
                     NavbarDropdown {
                         title: "Admin",
@@ -126,6 +149,40 @@ fn Navbar(display_loading_icon: ReadOnlySignal<bool>) -> Element {
                         ],
                     }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn NavbarTitleCrumbs() -> Element {
+    let route = use_route::<Route>();
+    let mut parents = vec![];
+    let mut route2 = route.clone();
+    while let Some(route_parent) = route2.parent() {
+        route2 = route_parent.clone();
+        parents.push(route_parent);
+    }
+    parents.reverse();
+
+    rsx! {
+        div {
+            style: "overflow:hidden; white-space:nowrap; max-width: 50vw; margin:0.3rem; padding: 0.3rem;",
+            for parent in parents {
+                Link {
+                    style:"overflow:hidden; white-space:nowrap; max-width: 10vw; margin:0.3rem; padding: 0.3rem; display:inline;",
+                    to: parent.clone(),
+                    "{parent:?}"
+                }
+                span {
+                    style:"margin:0.3rem; padding: 0.3rem; display:inline;",
+                    " > "
+                }
+            }
+            Link {
+                style:"overflow:hidden; white-space:nowrap; max-width: 10vw; margin:0.3rem; padding: 0.3rem; display:inline;",
+                to:route.clone(),
+                " {route:?}"
             }
         }
     }
@@ -161,80 +218,19 @@ pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
     }
 }
 
-/// Context provider for server call history.
-#[derive(Clone, Debug)]
-struct ServerCallHistory {
-    cb: Callback<ServerCallEvent>,
-    hist: ReadOnlySignal<BTreeMap<String, VecDeque<ServerCallEvent>>>,
-}
-
-/// Push a server call event to the server call history.
-pub fn nav_push_server_call_event(event: ServerCallEvent) {
-    let ServerCallHistory { cb, .. } = use_context();
-    cb.call(event);
-}
-
-/// Read the server call history.
-pub fn read_server_call_history() -> ReadOnlySignal<BTreeMap<String, VecDeque<ServerCallEvent>>> {
-    let ServerCallHistory { hist, .. } = use_context();
-    hist
-}
-
 /// Component that wraps the main page with the navbar and error handler.
 /// Also initializes the component tracking backend server calls.
 #[component]
 fn NavbarLayout() -> Element {
-    let mut currently_loading = use_signal(HashSet::new);
-    let mut show_pic = use_signal(|| false);
-    use_effect(move || {
-        show_pic.set(!currently_loading.read().is_empty());
-    });
-    use_effect(move || {
-        let c = currently_loading.read();
-        info!("currently_loading: {:?}", c);
-    });
-
-    let mut hist = dioxus_sdk::storage::use_synced_storage::<
-        dioxus_sdk::storage::LocalStorage,
-        BTreeMap<String, VecDeque<ServerCallEvent>>,
-    >("BTreeMap_ServerCallEvent".to_string(), || {
-        BTreeMap::<String, VecDeque<ServerCallEvent>>::new()
-    });
-
-    // let mut hist = use_signal(|| BTreeMap::<String, VecDeque<ServerCallEvent>>::new());
-    use_context_provider(|| ServerCallHistory {
-        cb: Callback::new(move |event: ServerCallEvent| {
-            if event.is_finished {
-                currently_loading
-                    .write()
-                    .remove(&(event.function.clone(), event.arg.clone()));
-                let mut h = hist
-                    .peek()
-                    .get(&event.function)
-                    .unwrap_or(&VecDeque::new())
-                    .clone();
-                h.push_front(event.clone());
-                if h.len() > 10 {
-                    h.pop_back();
-                }
-                hist.write().insert(event.function, h);
-            } else {
-                currently_loading
-                    .write()
-                    .insert((event.function, event.arg));
-            }
-        }),
-        hist: ReadOnlySignal::new(hist),
-    });
     rsx! {
         div { class: "page-wrapper",
-            div { class: "container",
-                Navbar { display_loading_icon: show_pic }
+            div { class: "container-fluid",
+                Navbar { }
             }
 
             main {
                 class: "container-fluid",
-                style: "height:99%;overflow:scroll;",
+                style: "height:99%;overflow: auto;",
                 ErrorBoundary {
                     handle_error: |err_ctx: ErrorContext| rsx! {
                         DisplayError{title: "Error", err: format!("{:#?}", err_ctx)}

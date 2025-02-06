@@ -1,8 +1,8 @@
 use crate::time::current_time;
 use crate::{
     api::ServerCallEvent,
+    app::read_server_call_history,
     components::{DataRowDisplay, HtmlTable},
-    routes::read_server_call_history,
 };
 use dioxus::prelude::*;
 

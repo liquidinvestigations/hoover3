@@ -28,19 +28,19 @@
 }
 .sidebar-left {
     grid-area: sidebar-left;
-    overflow:scroll;
+    overflow: auto;
 }
 .sidebar-right {
     grid-area: sidebar-right;
-    overflow:scroll;
+    overflow: auto;
 }
 .sidebar-bottom {
     grid-area: sidebar-bottom;
-    overflow:scroll;
+    overflow: auto;
 }
 .search-main {
     grid-area: search-main;
-    overflow:scroll;
+    overflow: auto;
 }
 
 .debug-border {
@@ -59,10 +59,22 @@ nav {
 .loading_box {
     height: 3rem;
     width: 15rem;
+    position:relative;
 }
 .loading_box > img {
+    position:absolute;
     height:100%;
 }
+
+.loading_count {
+    position: absolute;
+    top: 0.3rem;
+    right: 8rem;
+    font-size: 1.5rem;
+    text-align: center;
+    color: gray;
+}
+
 button {
     min-width: 5rem;
     min-height: 2rem;
@@ -75,7 +87,7 @@ input {
 td {
     max-width: 35rem;
     max-height: 15rem;
-    overflow: scroll;
+    overflow: auto;
 }
 
 td > pre {

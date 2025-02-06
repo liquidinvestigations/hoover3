@@ -1,0 +1,47 @@
+name: Rust Tests
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust-lints:
+    name: "Rust Lints"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          # sudo apt-get update
+          # sudo apt-get install -y mold clang
+          echo "fs.aio-max-nr = 1048576" | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.84"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo tools
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/master/install-from-binstall-release.sh | bash
+          cargo binstall --no-confirm cargo-watch
+          cargo binstall --no-confirm dioxus-cli@0.6.2
+          cargo binstall --no-confirm cargo-nextest
+
+      - name: Start Docker services
+        run: ./start_docker.sh
+
+      - name: Run database migrations
+        run: ./migrate.sh
+
+      - name: Run tests
+        run: ./test.sh

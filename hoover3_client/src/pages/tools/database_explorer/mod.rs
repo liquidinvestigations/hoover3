@@ -75,7 +75,10 @@ pub fn DatabaseExplorerPage(
 #[component]
 fn _DatabaseExplorerPage(explorer_route: ReadOnlySignal<DatabaseExplorerRoute>) -> Element {
     match explorer_route.read().clone() {
-        DatabaseExplorerRoute::RootPage => rsx! {DatabaseExplorerRootPage{}},
+        DatabaseExplorerRoute::RootPage => {
+            navigator().replace(Route::DatabaseExplorerRootPage {});
+            rsx! {DatabaseExplorerRootPage{}}
+        }
         DatabaseExplorerRoute::CollectionPage { collection_id } => {
             rsx! {DatabaseExplorerCollectionPage{collection_id}}
         }
@@ -104,7 +107,7 @@ fn _DatabaseExplorerPage(explorer_route: ReadOnlySignal<DatabaseExplorerRoute>) 
 }
 
 #[component]
-fn DatabaseExplorerRootPage() -> Element {
+pub fn DatabaseExplorerRootPage() -> Element {
     let collections_res = use_resource(move || async move { get_all_collections(()).await });
     rsx! {
         h1 { "Database Explorer" }

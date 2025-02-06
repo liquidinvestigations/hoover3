@@ -198,6 +198,7 @@ async fn db_explorer_run_meilisearch_query(
         .with_hits_per_page(100)
         .execute::<serde_json::Value>()
         .await?;
+
     let result = result.hits;
     if result.is_empty() {
         return Ok(DynamicQueryResult {
@@ -212,6 +213,13 @@ async fn db_explorer_run_meilisearch_query(
         if let serde_json::Value::Object(obj) = hit {
             for (k, _v) in obj.iter() {
                 if let Some(_vtype) = json_value_to_database_type(_v) {
+                    if column_map.contains_key(k) {
+                        if let Some(old_value)  = column_map.get(k) {
+                            if old_value != &_vtype {
+                                panic!("different types for column: {:?}", k);
+                            }
+                        }
+                    }
                     column_map.insert(k.to_string(), _vtype);
                 }
             }

@@ -36,7 +36,7 @@ type TSession = PooledConnection<'static, TManager>;
 /// Nebula database handle type alias.
 pub type NebulaDatabaseHandle = Mutex<TSession>;
 
-const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(60);
+const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(30);
 
 async fn nebula_execute_once<T: DeserializeOwned + std::fmt::Debug>(
     collection: &CollectionId,
@@ -87,47 +87,15 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
     type CollectionSessionType = Self;
     async fn global_session() -> anyhow::Result<Arc<Self>> {
         use anyhow::Context;
-        Ok(Arc::new(Mutex::new(
-            _open_new_session(DEFAULT_KEYSPACE_NAME)
+        Ok(
+            open_cached_session(DEFAULT_KEYSPACE_NAME)
                 .await
-                .context("_open_new_session")?,
-        )))
+            .context("open new global session")?
+        )
     }
     async fn collection_session(_c: &CollectionId) -> Result<Arc<Self>, anyhow::Error> {
-        let current_timestamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs_f64();
-        // TODO - cache in memory hashmap and drop old collection sessions
-
-        #[allow(clippy::type_complexity)]
-        static HASH: OnceCell<RwLock<HashMap<CollectionId, (f64, Arc<NebulaDatabaseHandle>)>>> =
-            OnceCell::const_new();
-        let h = HASH
-            .get_or_init(|| async move { RwLock::new(HashMap::new()) })
-            .await;
-        // try to fetch from hashmap
-        {
-            let h = h.read().await;
-            if let Some(s) = h.get(_c) {
-                let created_at = s.0;
-                if current_timestamp - created_at < NEBULA_SESSION_CACHE_DURATION_SECONDS {
-                    return Ok(s.1.clone());
-                }
-            }
-        }
-        // if not found, open new session
-        let s = {
-            let mut h = h.write().await;
-            let s = {
-                Arc::new(Mutex::new(
-                    _open_new_session(&_c.database_name()?.to_string()).await?,
-                ))
-            };
-            h.insert(_c.clone(), (current_timestamp, s.clone()));
-            s
-        };
-        Ok(s)
+        let collection_space = _c.database_name()?.to_string();
+        Ok(open_cached_session(&collection_space).await?)
     }
 
     async fn list_spaces(&self) -> anyhow::Result<Vec<DatabaseIdentifier>> {
@@ -219,10 +187,64 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
     }
 }
 
-static NEBULA_POOL: OnceCell<Arc<TPool2>> = OnceCell::const_new();
-async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
-    info!("_open_new_session({:?})", space);
+async fn open_cached_session(space: &str) -> anyhow::Result<Arc<Mutex<TSession>>> {
+    let _c = space.to_string();
+    let current_timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs_f64();
+        // TODO - cache in memory hashmap and drop old collection sessions
 
+    #[allow(clippy::type_complexity)]
+    static HASH: OnceCell<RwLock<HashMap<String, (f64, Arc<NebulaDatabaseHandle>)>>> =
+        OnceCell::const_new();
+    let h = HASH
+        .get_or_init(|| async move { RwLock::new(HashMap::new()) })
+        .await;
+    // try to fetch from hashmap
+    {
+        let h = h.read().await;
+        if let Some(s) = h.get(&_c) {
+            let created_at = s.0;
+            if current_timestamp - created_at < NEBULA_SESSION_CACHE_DURATION_SECONDS {
+                return Ok(s.1.clone());
+            }
+        }
+    }
+    // if not found, open new session
+    let s = {
+        let mut h = h.write().await;
+        // drop old sessions
+        let old_count = h.len();
+        h.retain(|_, (created_at, _)| {
+            current_timestamp - *created_at < NEBULA_SESSION_CACHE_DURATION_SECONDS
+        });
+        let s = {
+                open_new_session(&_c).await?
+        };
+        h.insert(_c.clone(), (current_timestamp, s.clone()));
+
+        let new_count = h.len();
+        if new_count != old_count {
+            info!("nebula session cache: {old_count} -> {new_count}");
+        }
+        s
+    };
+    Ok(s)
+}
+
+async fn open_new_session(space: &str) -> anyhow::Result<Arc<Mutex<TSession>>> {
+    let mut session = _do_open_new_session(space).await.context("open nebula session")?;
+
+    // check session actually works
+    if let Err(e) = session.query(&b"YIELD 1+1;".to_vec()).await {
+        anyhow::bail!("nebula session check failed: {e}");
+    }
+    Ok(Arc::new(Mutex::new(session)))
+}
+
+async fn _do_open_new_session(space: &str) -> anyhow::Result<TSession> {
+    static NEBULA_POOL: OnceCell<Arc<TPool2>> = OnceCell::const_new();
     let pool = NEBULA_POOL
         .get_or_init(|| async {
             info!("pool init for nebula space ({:?})", space);
@@ -253,11 +275,17 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
                 .expect("create nebula pool");
 
             info!("pool OK for nebula space ({:?}).", space);
-            Arc::new(pool)
+            let pool = Arc::new(pool);
+
+            // if connection is not polled often enough, it will be closed by the server
+            // so we need to keep it alive
+            spawn_nebula_pool_keep_alive();
+
+            pool
         })
         .await;
 
-    info!("starting nebula session for {space}...");
+    // info!("starting nebula session for {space}...");
 
     let mut session = pool.get().await?;
 
@@ -298,6 +326,21 @@ async fn _open_new_session(space: &str) -> anyhow::Result<TSession> {
         }
     }
 
-    info!(" nebula session OK for {space}.");
     Ok(session)
+}
+
+
+fn spawn_nebula_pool_keep_alive() -> tokio::task::JoinHandle<()> {
+    let _h = tokio::task::spawn(
+        async move {
+            tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
+            loop {
+                if let Err(e) = NebulaDatabaseHandle::global_session().await {
+                    tracing::error!("nebula session keep alive failed: {e:#?}");
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+            }
+        }
+    );
+    _h
 }
