@@ -31,6 +31,7 @@ jobs:
           cargo binstall --no-confirm cargo-watch
           cargo binstall --no-confirm dioxus-cli@0.6.2
           cargo binstall --no-confirm cargo-nextest
+          cargo binstall --no-confirm cargo-expand
 
       - name: Start Docker services
         shell: bash
