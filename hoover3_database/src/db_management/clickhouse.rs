@@ -21,7 +21,7 @@ impl DatabaseSpaceManager for ClickhouseDatabaseHandle {
         Ok(CLICKHOUSE_CLIENT
             .get_or_init(|| async {
                 let url = clickhouse_url();
-                Arc::new(Client::default().with_url(url))
+                Arc::new(Client::default().with_url(url).with_user("hoover3").with_password("hoover3"))
             })
             .await
             .clone())
@@ -30,7 +30,9 @@ impl DatabaseSpaceManager for ClickhouseDatabaseHandle {
         // TODO cache these creds
         let c = Client::default()
             .with_url(clickhouse_url())
-            .with_database(c.database_name()?.to_string());
+            .with_database(c.database_name()?.to_string())
+            .with_user("hoover3")
+            .with_password("hoover3");
         Ok(Arc::new(c))
     }
     async fn space_exists(&self, name: &DatabaseIdentifier) -> anyhow::Result<bool> {

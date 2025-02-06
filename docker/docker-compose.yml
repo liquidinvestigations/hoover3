@@ -16,6 +16,10 @@ services:
       - 9000:9000
     volumes:
       - /var/lib/clickhouse
+    environment:
+      - CLICKHOUSE_DB=hoover3
+      - CLICKHOUSE_USER=hoover3
+      - CLICKHOUSE_PASSWORD=hoover3
     healthcheck:
       test: wget --no-verbose --tries=1 http://127.0.0.1:8123/ping || exit 1
       interval: 13s
@@ -36,6 +40,8 @@ services:
     image: ghcr.io/duyet/clickhouse-monitoring:2cc8058
     environment:
       - "CLICKHOUSE_HOST=http://clickhouse:8123"
+      - CLICKHOUSE_USER=hoover3
+      - CLICKHOUSE_PASSWORD=hoover3
     depends_on:
       clickhouse:
         condition: service_healthy

@@ -27,6 +27,10 @@ fn get_dash_links() -> Vec<(String, String)> {
             "CARGO DOCS",
             "http://localhost:8087/hoover3_client/index.html",
         ),
+        (
+            "CLICKHOUSE",
+            "http://localhost:3000/0/database/system",
+        ),
     ]
     .into_iter()
     .map(|(name, link)| (name.trim().to_string(), link.trim().to_string()))
