@@ -31,7 +31,8 @@ pub fn App() -> Element {
 
     // workaround for browser back button: manually set the PopState callback
     // https://github.com/DioxusLabs/dioxus/issues/1657
-    let mut _callback_keep_alive_forever_pls: Signal<Option<Box<web_sys::wasm_bindgen::JsValue>>> = use_signal(|| None);
+    let mut _callback_keep_alive_forever_pls: Signal<Option<Box<web_sys::wasm_bindgen::JsValue>>> =
+        use_signal(|| None);
     // web_sys functions crash if called directly; must use async for any of these.
     #[cfg(feature = "web")]
     use_future(move || async move {
@@ -74,7 +75,6 @@ pub fn App() -> Element {
         }
     }
 }
-
 
 /// Context containing the current app URL as string.
 ///

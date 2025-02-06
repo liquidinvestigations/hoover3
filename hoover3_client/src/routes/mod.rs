@@ -6,15 +6,10 @@ use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 pub use url_param::UrlParam;
 
-use std::collections::BTreeMap;
-use std::collections::HashSet;
-use std::collections::VecDeque;
 use std::path::PathBuf;
 
 use dioxus::prelude::*;
-use dioxus_logger::tracing::info;
 
-use crate::api::ServerCallEvent;
 use crate::app::ServerCallHistory;
 use crate::pages::*;
 

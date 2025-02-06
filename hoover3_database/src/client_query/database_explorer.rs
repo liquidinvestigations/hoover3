@@ -19,8 +19,8 @@ use scylla::{
 };
 
 use crate::db_management::{
-    with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle,
-    NebulaDatabaseHandle, ScyllaDatabaseHandle,
+    with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle, NebulaDatabaseHandle,
+    ScyllaDatabaseHandle,
 };
 
 /// Get Scylla table row count by running SQL request `SELECT COUNT * FROM ...`.
@@ -98,9 +98,7 @@ async fn db_explorer_run_nebula_query(
         );
     };
     let Some(dataset) = resp.data else {
-        return DynamicQueryResult::from_single_string(
-            "OK - no data".to_string(),
-        );
+        return DynamicQueryResult::from_single_string("OK - no data".to_string());
     };
     let column_names = dataset
         .column_names
@@ -108,9 +106,7 @@ async fn db_explorer_run_nebula_query(
         .map(|v| String::from_utf8_lossy(v).to_string())
         .collect::<Vec<_>>();
     if column_names.is_empty() {
-        return DynamicQueryResult::from_single_string(
-            "OK - no columns".to_string(),
-        );
+        return DynamicQueryResult::from_single_string("OK - no columns".to_string());
     }
     let rows = dataset.rows;
     if rows.is_empty() {
@@ -214,7 +210,7 @@ async fn db_explorer_run_meilisearch_query(
             for (k, _v) in obj.iter() {
                 if let Some(_vtype) = json_value_to_database_type(_v) {
                     if column_map.contains_key(k) {
-                        if let Some(old_value)  = column_map.get(k) {
+                        if let Some(old_value) = column_map.get(k) {
                             if old_value != &_vtype {
                                 panic!("different types for column: {:?}", k);
                             }
@@ -268,9 +264,9 @@ fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnTy
             }
         }
         serde_json::Value::Bool(_) => Some(DatabaseColumnType::Boolean),
-        serde_json::Value::Array(_v) => {
-            Some(DatabaseColumnType::List(Box::new(json_value_to_database_type(_v.first()?)?)))
-        }
+        serde_json::Value::Array(_v) => Some(DatabaseColumnType::List(Box::new(
+            json_value_to_database_type(_v.first()?)?,
+        ))),
         serde_json::Value::Object(_o) => {
             let columns = _o
                 .iter()
