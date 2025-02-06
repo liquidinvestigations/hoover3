@@ -1,4 +1,4 @@
-name: Rust Tests
+name: "Rust Tests"
 
 on: [push, pull_request]
 

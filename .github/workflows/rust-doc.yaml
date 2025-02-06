@@ -1,4 +1,4 @@
-name: Build and Deploy Docs
+name: "Rust Docs"
 
 on: [push, pull_request]
 
@@ -8,11 +8,7 @@ env:
 jobs:
   rust-doc:
     name: "Rust Docs"
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     permissions:
       contents: write
 
@@ -25,6 +21,11 @@ jobs:
           toolchain: "1.84"
 
       - uses: Swatinem/rust-cache@v2
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build documentation
         run: ./rebuild_docs.sh
