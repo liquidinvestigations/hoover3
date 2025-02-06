@@ -69,7 +69,9 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
-<a href="#71" id="71">71</a></pre></div><pre class="rust"><code><span class="doccomment">//! ClickHouse database management module that provides functionality for creating, managing,
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a></pre></div><pre class="rust"><code><span class="doccomment">//! ClickHouse database management module that provides functionality for creating, managing,
 //! and interacting with ClickHouse databases. Implements the DatabaseSpaceManager trait for
 //! handling database spaces and sessions.
 </span><span class="kw">use super</span>::{DatabaseIdentifier, DatabaseSpaceManager};
@@ -92,7 +94,7 @@
         <span class="prelude-val">Ok</span>(CLICKHOUSE_CLIENT
             .get_or_init(|| <span class="kw">async </span>{
                 <span class="kw">let </span>url = clickhouse_url();
-                Arc::new(Client::default().with_url(url))
+                Arc::new(Client::default().with_url(url).with_user(<span class="string">"hoover3"</span>).with_password(<span class="string">"hoover3"</span>))
             })
             .<span class="kw">await
             </span>.clone())
@@ -101,7 +103,9 @@
         <span class="comment">// TODO cache these creds
         </span><span class="kw">let </span>c = Client::default()
             .with_url(clickhouse_url())
-            .with_database(c.database_name()<span class="question-mark">?</span>.to_string());
+            .with_database(c.database_name()<span class="question-mark">?</span>.to_string())
+            .with_user(<span class="string">"hoover3"</span>)
+            .with_password(<span class="string">"hoover3"</span>);
         <span class="prelude-val">Ok</span>(Arc::new(c))
     }
     <span class="kw">async fn </span>space_exists(<span class="kw-2">&amp;</span><span class="self">self</span>, name: <span class="kw-2">&amp;</span>DatabaseIdentifier) -&gt; anyhow::Result&lt;bool&gt; {
