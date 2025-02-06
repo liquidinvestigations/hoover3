@@ -71,7 +71,12 @@
 <a href="#70" id="70">70</a>
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
-<a href="#73" id="73">73</a></pre></div><pre class="rust"><code><span class="doccomment">//! ClickHouse database management module that provides functionality for creating, managing,
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a></pre></div><pre class="rust"><code><span class="doccomment">//! ClickHouse database management module that provides functionality for creating, managing,
 //! and interacting with ClickHouse databases. Implements the DatabaseSpaceManager trait for
 //! handling database spaces and sessions.
 </span><span class="kw">use super</span>::{DatabaseIdentifier, DatabaseSpaceManager};
@@ -94,7 +99,12 @@
         <span class="prelude-val">Ok</span>(CLICKHOUSE_CLIENT
             .get_or_init(|| <span class="kw">async </span>{
                 <span class="kw">let </span>url = clickhouse_url();
-                Arc::new(Client::default().with_url(url).with_user(<span class="string">"hoover3"</span>).with_password(<span class="string">"hoover3"</span>))
+                Arc::new(
+                    Client::default()
+                        .with_url(url)
+                        .with_user(<span class="string">"hoover3"</span>)
+                        .with_password(<span class="string">"hoover3"</span>),
+                )
             })
             .<span class="kw">await
             </span>.clone())
