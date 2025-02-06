@@ -16,13 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system dependencies
-        run: |
-          # sudo apt-get update
-          # sudo apt-get install -y mold clang
-          # echo "fs.aio-max-nr = 1048576" | sudo tee -a /etc/sysctl.conf
-          # sudo sysctl -p
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -36,6 +29,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install cargo tools
+        shell: bash
         run: |
           curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/master/install-from-binstall-release.sh | bash
           cargo binstall --no-confirm cargo-watch
@@ -43,10 +37,13 @@ jobs:
           cargo binstall --no-confirm cargo-nextest
 
       - name: Start Docker services
+        shell: bash
         run: ./start_docker.sh
 
       - name: Run database migrations
+        shell: bash
         run: ./migrate.sh
 
       - name: Run tests
+        shell: bash
         run: ./test.sh
