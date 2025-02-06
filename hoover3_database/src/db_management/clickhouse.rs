@@ -21,7 +21,12 @@ impl DatabaseSpaceManager for ClickhouseDatabaseHandle {
         Ok(CLICKHOUSE_CLIENT
             .get_or_init(|| async {
                 let url = clickhouse_url();
-                Arc::new(Client::default().with_url(url).with_user("hoover3").with_password("hoover3"))
+                Arc::new(
+                    Client::default()
+                        .with_url(url)
+                        .with_user("hoover3")
+                        .with_password("hoover3"),
+                )
             })
             .await
             .clone())
