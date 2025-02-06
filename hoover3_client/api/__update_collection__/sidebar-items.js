@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["__update_collection__"],"struct":["UpdateCollection"]};

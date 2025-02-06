@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create_datasource","drop_datasource","get_all_datasources","get_datasource"]};

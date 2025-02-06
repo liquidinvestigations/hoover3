@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FAVICON"],"fn":["App","nav_push_server_call_event","read_server_call_history","use_init_server_call_history"],"struct":["GlobalUrlContext","ServerCallHistory"]};

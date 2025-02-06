@@ -1,0 +1,2 @@
+window.ALL_CRATES = ["hoover3_client","hoover3_client_main","hoover3_database","hoover3_filesystem_scanner","hoover3_macro","hoover3_macro2","hoover3_taskdef","hoover3_tracing","hoover3_types","migrate","worker_filesystem_scanner"];
+//{"start":21,"fragment_lengths":[16,22,19,29,16,17,18,18,16,10,28]}

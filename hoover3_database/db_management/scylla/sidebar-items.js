@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["_open_new_session"],"struct":["ScyllaConnection"],"type":["ScyllaDatabaseHandle"]};

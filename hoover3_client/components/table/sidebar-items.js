@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["DynamicTable","DynamicTableInner","HtmlTable","InfoCard"],"struct":["DynamicTableInnerProps","DynamicTableProps","HtmlTableProps_","InfoCardProps_"],"trait":["DataRowDisplay"]};

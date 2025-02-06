@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["sample_workflow2","test_function_async","test_function_sync"],"struct":["sample_workflow2_workflow","test_function_async_activity","test_function_sync_activity"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["delete_datasource_db_row","delete_datasource_db_row_query","find_datasource_db_row","find_datasource_db_row_query","find_first_datasource_db_row","partial_datasource_db_row","update_datasource_db_row_query"],"struct":["DatasourceDbRow"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_KEYSPACE_NAME"],"fn":["get_regex"],"static":["REGEX"],"struct":["CollectionId","DatabaseIdentifier","RegexList"]};

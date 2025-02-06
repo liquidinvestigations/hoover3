@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["DatasourcePathPicker","NewDatasourceFormPage","_NewDatasourceFormPage","display_file_name","display_path","format_time"],"struct":["DatasourcePathPickerProps","NewDatasourceFormPageProps","_NewDatasourceFormPageProps"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["__get_all_collections__"],"struct":["GetAllCollections"]};

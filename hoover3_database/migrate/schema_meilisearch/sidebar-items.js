@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["_get_meilisearch_schema","get_meilisearch_schema"]};

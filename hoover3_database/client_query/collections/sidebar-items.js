@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["_get_all_collections","create_new_collection","drop_collection","get_all_collections","get_single_collection","update_collection"]};

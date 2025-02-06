@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["activity","extract_activity_arg_type","extract_activity_return_type","extract_workflow_arg_type","extract_workflow_return_type","workflow"]};

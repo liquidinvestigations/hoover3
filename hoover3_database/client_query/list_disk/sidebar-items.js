@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["data_root_path","get_path_metadata","list_directory"]};

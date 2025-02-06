@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["ButtonGroup","CollectionAdminDetailsPage","CollectionDatasourceListCard","CollectionInfoCard","CollectionsAdminListPage","CollectionsCreateWidget"],"struct":["ButtonGroupProps","CollectionAdminDetailsPageProps","CollectionDatasourceListCardProps","CollectionInfoCardProps","CollectionsCreateWidgetProps"]};

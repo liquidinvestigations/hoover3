@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["DatabaseExplorerQueryToolPage","QueryToolSidebarLinksDisplay","SqlQueryToolJumpLinks","get_sidebar_links"],"struct":["DatabaseExplorerQueryToolPageProps","QueryToolSidebarLinks","QueryToolSidebarLinksDisplayProps","SqlQueryToolJumpLinksProps","SqlQueryToolState"]};

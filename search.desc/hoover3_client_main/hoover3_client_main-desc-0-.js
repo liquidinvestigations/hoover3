@@ -1,0 +1,1 @@
+searchState.loadedDescShard("hoover3_client_main", 0, "The Hoover3 client - the website frontend entrypoint.\nMain dioxus Entrypoint. Sets up launch configurations for …")

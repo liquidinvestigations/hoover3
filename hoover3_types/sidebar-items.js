@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["collection","datasource","db_schema","docker_health","filesystem","identifier","stable_hash","tasks"]};

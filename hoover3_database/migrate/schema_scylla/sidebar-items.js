@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["_get_scylla_schema","get_scylla_schema","get_scylla_table_schema"]};

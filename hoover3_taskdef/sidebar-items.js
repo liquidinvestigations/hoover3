@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"attr":["activity","workflow"],"fn":["get_client"],"macro":["make_activity","make_activity_sync","make_workflow","paste"],"mod":["client","tasks"],"struct":["Client","RetryClient"],"type":["TemporalioClient"]};

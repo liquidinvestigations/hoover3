@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["NEBULA_QUERY_TIMEOUT","NEBULA_SESSION_CACHE_DURATION_SECONDS"],"fn":["_do_open_new_session","nebula_execute_once","nebula_execute_retry","open_cached_session","open_new_session","spawn_nebula_pool_keep_alive"],"type":["NebulaDatabaseHandle","TManager","TPool2","TSession"]};

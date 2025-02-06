@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["collections","database_explorer","datasources","docker_health","list_disk"]};

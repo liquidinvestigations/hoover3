@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["__create_new_collection__"],"struct":["CreateNewCollection"]};

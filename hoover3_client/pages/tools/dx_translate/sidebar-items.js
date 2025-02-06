@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["DioxusTranslatePage","dx_translate"],"struct":["DxTranslate"]};

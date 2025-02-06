@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["impl_model_callbacks"],"mod":["client_query","db_management","migrate","models"]};

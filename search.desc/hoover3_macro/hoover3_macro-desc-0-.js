@@ -1,0 +1,1 @@
+searchState.loadedDescShard("hoover3_macro", 0, "Procedural macros for Hoover3 workflow engine.\nAttribute macro for defining activities. Its only argument …\nAttribute macro for defining workflows. Its only argument …")

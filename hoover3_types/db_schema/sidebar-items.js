@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["DatabaseColumnType","DatabaseServiceType","DatabaseValue"],"struct":["CollectionSchema","DatabaseColumn","DatabaseTable","DynamicQueryResponse","DynamicQueryResult","GraphEdgeType","MeilisearchDatabaseSchema","NebulaDatabaseSchema","ScyllaDatabaseSchema"]};

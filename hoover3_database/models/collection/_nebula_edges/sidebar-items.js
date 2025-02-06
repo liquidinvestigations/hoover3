@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_all_nebula_edge_types"],"macro":["declare_edge"],"struct":["FilesystemParentEdge"],"trait":["GraphEdgeIdentifier"]};

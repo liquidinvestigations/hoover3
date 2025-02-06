@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["S3Configs"],"type":["S3DatabaseHandle"]};

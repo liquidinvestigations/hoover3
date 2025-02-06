@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_search_index_json","row_pk_hash"],"macro":["impl_model_callbacks"],"mod":["_model_extra","_nebula_edges","datasource","filesystem"],"struct":["DatabaseExtraCallbacks","InsertEdgeBatch"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["AdminHomePage"],"mod":["collections","datasources","new_datasource_form"]};

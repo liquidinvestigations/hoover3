@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["UiWorkflowStatusCode"],"struct":["TemporalioWorkflowStatusTree","UiWorkflowStatus"]};

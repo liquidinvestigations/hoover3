@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Route"],"fn":["DisplayError","Navbar","NavbarDropdown","NavbarLayout","NavbarTitleCrumbs","PageNotFound"],"mod":["url_param"],"struct":["DisplayErrorProps","NavbarDropdownProps","PageNotFoundProps","UrlParam"]};

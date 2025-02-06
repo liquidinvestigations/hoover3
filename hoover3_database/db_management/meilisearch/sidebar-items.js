@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["meilisearch_wait_for_task","new_client"],"type":["MeilisearchDatabaseHandle"]};

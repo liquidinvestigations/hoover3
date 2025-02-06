@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["clickhouse_url"],"type":["ClickhouseDatabaseHandle"]};

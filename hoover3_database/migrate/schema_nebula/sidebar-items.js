@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["_migrate_nebula_collection","_nebula_get_schema","check_nebula_schema","nebula_create_tag_column_query","nebula_create_tag_query","nebula_create_tags_query","nebula_describe_tag","nebula_get_schema"]};

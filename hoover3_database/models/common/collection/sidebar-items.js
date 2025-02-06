@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"macro":["delete_collection_db_row","delete_collection_db_row_query","find_collection_db_row","find_collection_db_row_query","find_first_collection_db_row","partial_collection_db_row","update_collection_db_row_query"],"struct":["CollectionDbRow"]};
