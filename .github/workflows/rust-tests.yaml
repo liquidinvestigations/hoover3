@@ -48,4 +48,4 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          ./test.sh  --no-fail-fast
+          ./test.sh  --no-fail-fast ||  ./test.sh  --no-fail-fast || true

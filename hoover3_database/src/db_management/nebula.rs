@@ -34,7 +34,29 @@ type TPool2 = Pool<TManager>;
 type TSession = PooledConnection<'static, TManager>;
 
 /// Nebula database handle type alias.
-pub type NebulaDatabaseHandle = Mutex<TSession>;
+pub type NebulaDatabaseHandle = Mutex<NebulaSessionDropGuard>;
+// pub type NebulaDatabaseHandle = Mutex<NebulaDropGuard<TSession>>;
+
+pub  struct NebulaSessionDropGuard (TSession);
+impl Drop for NebulaSessionDropGuard {
+    fn drop(&mut self) {
+        // useful for checking out the pool
+        // info!("nebula session guard dropped!");
+        // let session_id = self.0.session_id();
+        // info!("dropped nebula session id: {}", session_id);
+    }
+}
+impl std::ops::Deref for NebulaSessionDropGuard {
+    type Target = TSession;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl std::ops::DerefMut for NebulaSessionDropGuard {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 const NEBULA_QUERY_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -185,7 +207,7 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
     }
 }
 
-async fn open_cached_session(space: &str) -> anyhow::Result<Arc<Mutex<TSession>>> {
+async fn open_cached_session(space: &str) -> anyhow::Result<Arc<Mutex<NebulaSessionDropGuard>>> {
     let _c = space.to_string();
     let current_timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -229,7 +251,7 @@ async fn open_cached_session(space: &str) -> anyhow::Result<Arc<Mutex<TSession>>
     Ok(s)
 }
 
-async fn open_new_session(space: &str) -> anyhow::Result<Arc<Mutex<TSession>>> {
+async fn open_new_session(space: &str) -> anyhow::Result<Arc<Mutex<NebulaSessionDropGuard>>> {
     let mut session = _do_open_new_session(space)
         .await
         .context("open nebula session")?;
@@ -241,7 +263,7 @@ async fn open_new_session(space: &str) -> anyhow::Result<Arc<Mutex<TSession>>> {
     Ok(Arc::new(Mutex::new(session)))
 }
 
-async fn _do_open_new_session(space: &str) -> anyhow::Result<TSession> {
+async fn _do_open_new_session(space: &str) -> anyhow::Result<NebulaSessionDropGuard> {
     static NEBULA_POOL: OnceCell<Arc<TPool2>> = OnceCell::const_new();
     let pool = NEBULA_POOL
         .get_or_init(|| async {
@@ -262,8 +284,14 @@ async fn _do_open_new_session(space: &str) -> anyhow::Result<TSession> {
 
             let client_configuration =
                 GraphClientConfiguration::new(domain, port, username, password, space.clone());
-            let transport_configuration =
+            let mut transport_configuration =
                 AsyncTransportConfiguration::new(GraphTransportResponseHandler);
+            transport_configuration.set_max_buf_size(8 * 1024 * 1024);
+            transport_configuration.set_buf_size(1024 * 1024);
+            transport_configuration.set_read_timeout(15 * 1000);
+            // https://github.com/apache/opendal/blob/0d452cf9a5d0b3876de43f83a86370a277c9b6d5/core/src/services/nebula_graph/backend.rs#L210
+            transport_configuration.set_max_parse_response_bytes_count(254);
+
             let manager =
                 new_graph_connection_manager(client_configuration, transport_configuration);
             let pool = bb8::Pool::builder()
@@ -311,7 +339,7 @@ async fn _do_open_new_session(space: &str) -> anyhow::Result<TSession> {
                     session.query(&sql_create).await?;
                     for _ in 0..6 {
                         if session.query(&sql_use).await.is_ok() {
-                            return Ok(session);
+                            return Ok(NebulaSessionDropGuard(session));
                         }
                         tokio::time::sleep(tokio::time::Duration::from_secs(6)).await;
                     }
@@ -324,7 +352,7 @@ async fn _do_open_new_session(space: &str) -> anyhow::Result<TSession> {
         }
     }
 
-    Ok(session)
+    Ok(NebulaSessionDropGuard(session))
 }
 
 fn spawn_nebula_pool_keep_alive() -> tokio::task::JoinHandle<()> {

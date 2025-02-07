@@ -90,12 +90,16 @@ pub enum DatabaseColumnType {
     Boolean,
     /// Timestamp value
     Timestamp,
-    /// Complex object type with named fields and their types
-    Object(Vec<(String, Box<DatabaseColumnType>)>),
+    /// Object type with named fields and their types
+    Object(BTreeMap<String, Box<DatabaseColumnType>>),
     /// List/array of values of a specific type
     List(Box<DatabaseColumnType>),
     /// Custom or unknown data type
     Other(String),
+    /// Graph Vertex - contains multiple tags, each with multiple fields
+    GraphVertex(BTreeMap<String, BTreeMap<String, Box<DatabaseColumnType>>>),
+    /// Graph Edge
+    GraphEdge,
 }
 
 impl std::fmt::Display for DatabaseColumnType {
@@ -120,6 +124,8 @@ impl std::fmt::Display for DatabaseColumnType {
             Self::Boolean => write!(f, "Boolean"),
             Self::Timestamp => write!(f, "Timestamp"),
             Self::Other(o) => write!(f, "Other: {}", o),
+            Self::GraphVertex(g) => write!(f, "GraphVertex: {:#?}", g),
+            Self::GraphEdge => write!(f, "GraphEdge"),
         }
     }
 }
@@ -216,6 +222,25 @@ pub enum DatabaseValue {
     List(Vec<DatabaseValue>),
     /// Complex object with optional field values
     Object(BTreeMap<String, Option<DatabaseValue>>),
+    /// Graph Vertex - one ID + one or more tags
+    GraphVertex {
+        /// Vertex ID - short string
+        id: String,
+        /// Vertex tags - map of tag name to map of field name to value
+        tags: BTreeMap<String, BTreeMap<String, Option<DatabaseValue>>>,
+    },
+    /// Graph Edge
+    GraphEdge {
+        /// Edge Type
+        edge_type: String,
+        /// Source vertex ID
+        source_vertex: String,
+        /// Target vertex ID
+        target_vertex: String,
+        /// Ranking, as in nebula feature "a" -> "b" @ 0 {}
+        ranking: i64,
+        // TODO: edge properties.
+    }
 }
 
 impl std::fmt::Display for DatabaseValue {
@@ -244,6 +269,12 @@ impl std::fmt::Display for DatabaseValue {
                     .collect::<Vec<String>>()
                     .join(",\n")
             ),
+            Self::GraphVertex { id, tags } => {
+                write!(f, "GraphVertex {{ id: {}, tags: {:#?} }}", id, tags)
+            }
+            Self::GraphEdge { .. } => {
+                write!(f, "{:#?}", self)
+            }
         }
     }
 }

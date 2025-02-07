@@ -8,7 +8,7 @@ members = [
     "hoover3_types",
     "tasks/filesystem_scanner",
     "hoover3_macro2",
-    "hoover3_tracing",
+    "hoover3_tracing", "packages/seekstorm-client",
 ]
 
 [workspace.package]

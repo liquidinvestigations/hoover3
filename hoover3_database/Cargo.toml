@@ -54,12 +54,21 @@ charybdis-migrate = "0.7.12"
 
 ########## NEBULA ############
 ##############################
+# not nebula
 fbthrift-transport = { version = "0.9", features = ["impl_tokio"] }
-nebula-client = { version = "0.7", features = ["graph","storage","meta"] }
 bb8 = { version = "0.8" }
-bb8-nebula = { version = "0.9", features = ["graph"]}
 async-compat = {version = "0.2.4"}
+
+# nebula original
+# bb8-nebula = { version = "0.9", features = ["graph"]}
 nebula-fbthrift-common-v3 = {version = "0.3.0"}
+# nebula-client = { version = "0.7", features = ["graph","storage","meta"] }
+
+# nebula forks
+bb8-nebula = { path = "../third-party/nebula-rust/bb8-nebula", features = ["graph"]}
+# nebula-fbthrift-common-v3 = {path = "../third-party/nebula-rust/nebula-fbthrift/nebula-fbthrift-common-v3"}
+nebula-client = { path = "../third-party/nebula-rust/nebula-client", features = ["graph","storage","meta"] }
+
 
 ########## CLICKHOUSE ########
 ##############################

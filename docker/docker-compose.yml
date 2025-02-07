@@ -639,7 +639,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4096M
+          memory: 14096M
 
 
   console:
@@ -690,6 +690,30 @@ services:
         limits:
           memory: 4096M
 
+
+# ========================
+#        SEEKSTORM
+# ========================
+  seekstorm:
+    container_name: seekstorm
+    image: wolfgarbe/seekstorm_server:v0.12.11
+    volumes:
+      - /seekstorm_index
+    environment:
+      - MASTER_KEY_SECRET=1234
+    ports:
+      - 80:80
+    networks:
+      - hoover3
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 2000M
+    restart: unless-stopped
 
 
 

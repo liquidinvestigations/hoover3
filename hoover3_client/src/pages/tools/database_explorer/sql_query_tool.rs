@@ -230,13 +230,24 @@ fn get_sidebar_links(
             top_links: vec![make_link("test", "test"), make_link("1234", "1234")],
             per_table_links: vec![],
         },
-        DatabaseServiceType::Nebula => QueryToolSidebarLinks {
-            top_links: vec![
-                make_link("throw dice", "YIELD rand32(1,7);"),
-                make_link("show sessions", "SHOW SESSIONS;"),
-            ],
-            per_table_links: vec![],
-        },
+        DatabaseServiceType::Nebula => {
+            let mut per_table_links = vec![];
+            for (tag_name, _table) in schema.nebula.tags.iter() {
+                per_table_links.push((format!("{} (tag)", tag_name), vec![
+                    make_link("GET VERTEX", &format!("MATCH (v:{}) RETURN v LIMIT 100;", tag_name)),
+                    make_link("outgoing edges", &format!("MATCH (our_v:{})-[the_edge]->(other_v) RETURN our_v, the_edge, other_v LIMIT 100;", tag_name)),
+                    make_link("incoming edges", &format!("MATCH (other_v)-[the_edge]->(our_v:{}) RETURN other_v, the_edge, our_v LIMIT 100;", tag_name)),
+                    make_link("describe", &format!("DESCRIBE TAG {};", tag_name)),
+                ]));
+            }
+            QueryToolSidebarLinks {
+                top_links: vec![
+                    make_link("throw dice", "YIELD rand32(1,7), rand32(1,7);"),
+                    make_link("show sessions", "SHOW SESSIONS;"),
+                ],
+                per_table_links: per_table_links,
+            }
+        }
     }
 }
 

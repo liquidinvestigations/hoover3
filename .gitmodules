@@ -1,0 +1,3 @@
+[submodule "third-party/nebula-rust"]
+	path = third-party/nebula-rust
+	url = https://github.com/liquidinvestigations/nebula-rust

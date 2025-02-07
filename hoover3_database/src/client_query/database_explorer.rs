@@ -124,7 +124,7 @@ async fn db_explorer_run_nebula_query(
         .values
         .iter()
         .map(nebula_value_to_database_type)
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
     let columns = column_names
         .into_iter()
         .zip(first_row_values)
@@ -169,19 +169,90 @@ fn nebula_value_to_database_value(v: NebulaValue) -> Option<DatabaseValue> {
                 .and_then(|d| d.and_local_timezone(chrono::Utc).single())
                 .map(DatabaseValue::Timestamp)
         }
+        NebulaValue::vVal(_v) => {
+            let NebulaValue::sVal(vertex_id) = _v.vid.as_ref() else {
+                return None;
+            };
+            let vertex_id = String::from_utf8_lossy(&vertex_id).to_string();
+            let tags = _v
+                .tags
+                .iter()
+                .map(|tag| {
+                    let tag_name = String::from_utf8_lossy(&tag.name).to_string();
+                    let props = tag
+                        .props
+                        .iter()
+                        .map(|(k, v)| {
+                            let field_name = String::from_utf8_lossy(k).to_string();
+                            (field_name, nebula_value_to_database_value(v.clone()))
+                        })
+                        .collect();
+                    (tag_name, props)
+                })
+                .collect();
+
+            Some(DatabaseValue::GraphVertex {
+                id: vertex_id,
+                tags,
+            })
+        }
+        NebulaValue::eVal(edge) => {
+            let NebulaValue::sVal(src_id) = edge.src.as_ref() else {
+                tracing::error!("Source vertex ID is not a string");
+                return None;
+            };
+            let NebulaValue::sVal(dst_id) = edge.dst.as_ref() else {
+                tracing::error!("Target vertex ID is not a string");
+                return None;
+            };
+            Some(DatabaseValue::GraphEdge {
+                edge_type: String::from_utf8_lossy(&edge.name).to_string(),
+                source_vertex: String::from_utf8_lossy(&src_id).to_string(),
+                target_vertex: String::from_utf8_lossy(&dst_id).to_string(),
+                ranking: edge.ranking,
+            })
+        }
         _x => Some(DatabaseValue::Other(format!("{:?}", _x))),
     }
 }
 
-fn nebula_value_to_database_type(v: &NebulaValue) -> DatabaseColumnType {
-    match v {
+fn nebula_value_to_database_type(v: &NebulaValue) -> anyhow::Result<DatabaseColumnType> {
+    use anyhow::Context;
+    Ok(match v {
         NebulaValue::dtVal(_) => DatabaseColumnType::Timestamp,
         NebulaValue::sVal(_) => DatabaseColumnType::String,
         NebulaValue::iVal(_) => DatabaseColumnType::Int64,
         NebulaValue::fVal(_) => DatabaseColumnType::Double,
         NebulaValue::bVal(_) => DatabaseColumnType::Boolean,
+        NebulaValue::vVal(_v) => {
+            let NebulaValue::sVal(vertex_id) = _v.vid.as_ref() else {
+                anyhow::bail!("Vertex ID is not a string");
+            };
+            let _vertex_id = String::from_utf8_lossy(&vertex_id).to_string();
+            let tags: anyhow::Result<_> = _v
+                .tags
+                .iter()
+                .map(move |tag| {
+                    let tag_name = String::from_utf8_lossy(&tag.name).to_string();
+                    let props: anyhow::Result<_> = tag
+                        .props
+                        .iter()
+                        .map(|(k, v)| {
+                            let field_name = String::from_utf8_lossy(k).to_string();
+                            let field_type = nebula_value_to_database_type(v)
+                                .context("nebula extract field type")?;
+                            anyhow::Result::Ok((field_name, Box::new(field_type)))
+                        })
+                        .collect::<Result<BTreeMap<_, _>, _>>();
+                    anyhow::Result::Ok((tag_name, props?))
+                })
+                .collect::<Result<BTreeMap<_, _>, _>>();
+
+            DatabaseColumnType::GraphVertex(tags?)
+        }
+        NebulaValue::eVal(_) => DatabaseColumnType::GraphEdge,
         _ => DatabaseColumnType::Other(format!("{:?}", v)),
-    }
+    })
 }
 
 async fn db_explorer_run_meilisearch_query(
@@ -273,7 +344,7 @@ fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnTy
                 .filter_map(|(k, v)| {
                     Some((k.to_string(), Box::new(json_value_to_database_type(v)?)))
                 })
-                .collect::<Vec<_>>();
+                .collect::<BTreeMap<_, _>>();
             Some(DatabaseColumnType::Object(columns))
         }
         serde_json::Value::Null => None,
