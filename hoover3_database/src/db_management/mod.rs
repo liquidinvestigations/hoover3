@@ -22,6 +22,9 @@ pub use scylla::ScyllaDatabaseHandle;
 mod seaweed;
 pub use seaweed::S3DatabaseHandle;
 
+mod seekstorm;
+pub use seekstorm::SeekstormDatabaseHandle;
+
 use std::sync::Arc;
 
 /// Trait defining the interface for managing database spaces and sessions.
@@ -52,58 +55,65 @@ pub trait DatabaseSpaceManager {
     async fn drop_space(&self, name: &DatabaseIdentifier) -> Result<(), anyhow::Error>;
 }
 
-async fn _test_db_session<T: DatabaseSpaceManager>() {
+async fn _test_db_session<T: DatabaseSpaceManager>() -> Result<(), anyhow::Error> {
     let test_db_name = "test_1_xxxyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"; // len = 48
-    let test_db_name = DatabaseIdentifier::new(test_db_name).unwrap();
-    let s = T::global_session().await.unwrap();
+    let test_db_name = DatabaseIdentifier::new(test_db_name)?;
+    let s = T::global_session().await?;
 
     for _i in 0..3 {
-        s.create_space(&test_db_name).await.unwrap();
-        assert!(s.list_spaces().await.unwrap().contains(&test_db_name));
-        assert!(s.space_exists(&test_db_name).await.unwrap());
+        s.create_space(&test_db_name).await?;
+        assert!(s.list_spaces().await?.contains(&test_db_name));
+        assert!(s.space_exists(&test_db_name).await?);
     }
 
     for _i in 0..3 {
-        s.drop_space(&test_db_name).await.unwrap();
-        assert!(!s.space_exists(&test_db_name).await.unwrap());
-        assert!(!s.list_spaces().await.unwrap().contains(&test_db_name));
+        s.drop_space(&test_db_name).await?;
+        assert!(!s.space_exists(&test_db_name).await?);
+        assert!(!s.list_spaces().await?.contains(&test_db_name));
     }
 
     for _i in 0..3 {
-        s.create_space(&test_db_name).await.unwrap();
-        assert!(s.list_spaces().await.unwrap().contains(&test_db_name));
-        assert!(s.space_exists(&test_db_name).await.unwrap());
-        s.drop_space(&test_db_name).await.unwrap();
-        assert!(!s.space_exists(&test_db_name).await.unwrap());
-        assert!(!s.list_spaces().await.unwrap().contains(&test_db_name));
+        s.create_space(&test_db_name).await?;
+        assert!(s.list_spaces().await?.contains(&test_db_name));
+        assert!(s.space_exists(&test_db_name).await?);
+        s.drop_space(&test_db_name).await?;
+        assert!(!s.space_exists(&test_db_name).await?);
+        assert!(!s.list_spaces().await?.contains(&test_db_name));
     }
+    Ok(())
 }
 
 #[tokio::test]
-async fn test_db_sessions_seaweed() {
+async fn test_db_sessions_seaweed() -> Result<(), anyhow::Error> {
     use seaweed::S3DatabaseHandle;
-    _test_db_session::<S3DatabaseHandle>().await;
+    _test_db_session::<S3DatabaseHandle>().await
 }
 
 #[tokio::test]
-async fn test_db_sessions_clickhouse() {
+async fn test_db_sessions_clickhouse() -> Result<(), anyhow::Error> {
     use clickhouse::ClickhouseDatabaseHandle;
-    _test_db_session::<ClickhouseDatabaseHandle>().await;
+    _test_db_session::<ClickhouseDatabaseHandle>().await
 }
 
 #[tokio::test]
-async fn test_db_sessions_meilisearch() {
+async fn test_db_sessions_meilisearch() -> Result<(), anyhow::Error> {
     use meilisearch::MeilisearchDatabaseHandle;
-    _test_db_session::<MeilisearchDatabaseHandle>().await;
+    _test_db_session::<MeilisearchDatabaseHandle>().await
 }
 
 #[tokio::test]
-async fn test_db_sessions_nebula() {
+async fn test_db_sessions_nebula() -> Result<(), anyhow::Error> {
     use nebula::NebulaDatabaseHandle;
-    _test_db_session::<NebulaDatabaseHandle>().await;
+    _test_db_session::<NebulaDatabaseHandle>().await
 }
 
 #[tokio::test]
-async fn test_db_sessions_scylla() {
-    _test_db_session::<scylla::ScyllaDatabaseHandle>().await;
+async fn test_db_sessions_scylla() -> Result<(), anyhow::Error> {
+    _test_db_session::<scylla::ScyllaDatabaseHandle>().await
 }
+
+#[tokio::test]
+async fn test_db_sessions_seekstorm() -> Result<(), anyhow::Error> {
+    _test_db_session::<SeekstormDatabaseHandle>().await
+}
+

@@ -49,7 +49,7 @@ scylla = { version = "0.15.1", features = ["full-serialization"] }
 charybdis = {version="0.7.11", features = ["migrate"]}
 charybdis_macros = "0.7.11"
 charybdis-migrate = "0.7.12"
-
+scylla-cql = { version = "0.4.1", features = ["chrono-04", "serde"] }
 
 
 ########## NEBULA ############
@@ -60,14 +60,13 @@ bb8 = { version = "0.8" }
 async-compat = {version = "0.2.4"}
 
 # nebula original
-# bb8-nebula = { version = "0.9", features = ["graph"]}
 nebula-fbthrift-common-v3 = {version = "0.3.0"}
-# nebula-client = { version = "0.7", features = ["graph","storage","meta"] }
+bb8-nebula = { version = "0.9", features = ["graph"]}
+nebula-client = { version = "0.7", features = ["graph","storage","meta"] }
 
 # nebula forks
-bb8-nebula = { path = "../third-party/nebula-rust/bb8-nebula", features = ["graph"]}
-# nebula-fbthrift-common-v3 = {path = "../third-party/nebula-rust/nebula-fbthrift/nebula-fbthrift-common-v3"}
-nebula-client = { path = "../third-party/nebula-rust/nebula-client", features = ["graph","storage","meta"] }
+# bb8-nebula = { path = "../third-party/nebula-rust/bb8-nebula", features = ["graph"]}
+# nebula-client = { path = "../third-party/nebula-rust/nebula-client", features = ["graph","storage","meta"] }
 
 
 ########## CLICKHOUSE ########
@@ -90,4 +89,8 @@ rust-s3 = "0.35.1"
 ##############################
 redis = {version="0.27.5", features = ["aio", "tokio-comp"] }
 rslock = { version = "0.6.0", features = ["tokio-comp"], default-features = false }
-scylla-cql = { version = "0.4.1", features = ["chrono-04", "serde"] }
+
+
+########### SEEKSTORM ############
+##############################
+seekstorm_client = { path = "../packages/seekstorm-client" }

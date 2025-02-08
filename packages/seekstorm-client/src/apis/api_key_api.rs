@@ -61,10 +61,11 @@ pub async fn create_apikey_api(configuration: &configuration::Configuration, api
     let resp = configuration.client.execute(req).await?;
 
     let status = resp.status();
-
     if !status.is_client_error() && !status.is_server_error() {
         let content = resp.text().await?;
-        serde_json::from_str(&content).map_err(Error::from)
+        // Bad API generator! YML said text/plain, the generated code does json
+        // serde_json::from_str(&content).map_err(Error::from)
+        Ok(content)
     } else {
         let content = resp.text().await?;
         let entity: Option<CreateApikeyApiError> = serde_json::from_str(&content).ok();
@@ -73,9 +74,8 @@ pub async fn create_apikey_api(configuration: &configuration::Configuration, api
 }
 
 /// Deletes an API and returns the number of remaining API keys. Expects the Base64 encoded master API key in the header.  WARNING: This will delete all indices and documents associated with the API key.
-pub async fn delete_apikey_api(configuration: &configuration::Configuration, apikey: &str) -> Result<i64, Error<DeleteApikeyApiError>> {
+pub async fn delete_apikey_api(configuration: &configuration::Configuration, apikey_master: &str, apikey_to_delete: &str) -> Result<i64, Error<DeleteApikeyApiError>> {
     // add a prefix to parameters to efficiently prevent name collisions
-    let p_apikey = apikey;
 
     let uri_str = format!("{}/api/v1/apikey", configuration.base_path);
     let mut req_builder = configuration.client.request(reqwest::Method::DELETE, &uri_str);
@@ -83,7 +83,10 @@ pub async fn delete_apikey_api(configuration: &configuration::Configuration, api
     if let Some(ref user_agent) = configuration.user_agent {
         req_builder = req_builder.header(reqwest::header::USER_AGENT, user_agent.clone());
     }
-    req_builder = req_builder.header("apikey", p_apikey.to_string());
+    req_builder = req_builder.header("apikey", apikey_master);
+    req_builder = req_builder.body(serde_json::json!({
+        "apikey_base64": apikey_to_delete,
+    }).to_string());
 
     let req = req_builder.build()?;
     let resp = configuration.client.execute(req).await?;
@@ -92,6 +95,7 @@ pub async fn delete_apikey_api(configuration: &configuration::Configuration, api
 
     if !status.is_client_error() && !status.is_server_error() {
         let content = resp.text().await?;
+        println!("content: {}", content);
         serde_json::from_str(&content).map_err(Error::from)
     } else {
         let content = resp.text().await?;

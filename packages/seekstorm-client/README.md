@@ -1,4 +1,12 @@
-# Rust API client for openapi
+# Rust API client for seekstorm
+
+Client generated with openapi-generator, see `generate.sh`
+
+
+Auto-generated readme starts below.
+
+---
+
 
 Search engine library & multi-tenancy server
 

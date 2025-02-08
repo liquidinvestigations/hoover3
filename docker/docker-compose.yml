@@ -714,6 +714,7 @@ services:
           cpus: '1'
           memory: 2000M
     restart: unless-stopped
+    # command: echo "create" | ./seekstorm_server local_ip="127.0.0.1" local_port=80 index_path="/seekstorm_index"
 
 
 
