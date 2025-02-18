@@ -31,4 +31,3 @@ impl FacetFilterOneOf10F64 {
         }
     }
 }
-

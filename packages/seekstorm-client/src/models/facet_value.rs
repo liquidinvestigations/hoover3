@@ -40,4 +40,3 @@ impl Default for FacetValue {
         Self::FacetValueOneOf(Default::default())
     }
 }
-

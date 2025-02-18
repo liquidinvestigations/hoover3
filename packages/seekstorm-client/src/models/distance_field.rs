@@ -29,7 +29,12 @@ pub struct DistanceField {
 
 impl DistanceField {
     /// DistanceField defines a field for proximity search.
-    pub fn new(field: String, distance: String, base: Vec<f64>, unit: models::DistanceUnit) -> DistanceField {
+    pub fn new(
+        field: String,
+        distance: String,
+        base: Vec<f64>,
+        unit: models::DistanceUnit,
+    ) -> DistanceField {
         DistanceField {
             field,
             distance,
@@ -38,4 +43,3 @@ impl DistanceField {
         }
     }
 }
-

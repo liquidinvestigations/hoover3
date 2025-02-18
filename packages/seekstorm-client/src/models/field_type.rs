@@ -47,7 +47,6 @@ pub enum FieldType {
     Point,
     #[serde(rename = "Text")]
     Text,
-
 }
 
 impl std::fmt::Display for FieldType {
@@ -78,4 +77,3 @@ impl Default for FieldType {
         Self::U8
     }
 }
-

@@ -1,0 +1,3 @@
+[profile.default]
+# warn after 30s, terminate after 60s
+slow-timeout = { period = "30s", terminate-after = 2 , grace-period = "1s" }

@@ -36,7 +36,18 @@ pub struct SearchResultObject {
 }
 
 impl SearchResultObject {
-    pub fn new(time: i32, query: String, offset: i32, length: i32, count: i32, count_total: i32, query_terms: Vec<String>, results: Vec<serde_json::Value>, facets: std::collections::HashMap<String, Vec<Vec<serde_json::Value>>>, suggestions: Vec<String>) -> SearchResultObject {
+    pub fn new(
+        time: i32,
+        query: String,
+        offset: i32,
+        length: i32,
+        count: i32,
+        count_total: i32,
+        query_terms: Vec<String>,
+        results: Vec<serde_json::Value>,
+        facets: std::collections::HashMap<String, Vec<Vec<serde_json::Value>>>,
+        suggestions: Vec<String>,
+    ) -> SearchResultObject {
         SearchResultObject {
             time,
             query,
@@ -51,4 +62,3 @@ impl SearchResultObject {
         }
     }
 }
-

@@ -8,8 +8,10 @@ members = [
     "hoover3_types",
     "tasks/filesystem_scanner",
     "hoover3_macro2",
-    "hoover3_tracing", "packages/seekstorm-client",
+    "hoover3_tracing",
+    "packages/seekstorm-client",
 ]
+exclude = ["third-party"]
 
 [workspace.package]
 repository = ""

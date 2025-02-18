@@ -22,9 +22,6 @@ pub struct FacetValueOneOf10 {
 impl FacetValueOneOf10 {
     /// 32-bit floating point number
     pub fn new(f32: f32) -> FacetValueOneOf10 {
-        FacetValueOneOf10 {
-            f32,
-        }
+        FacetValueOneOf10 { f32 }
     }
 }
-

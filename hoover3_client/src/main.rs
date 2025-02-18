@@ -14,7 +14,12 @@ pub fn main() {
 
     #[cfg(feature = "server")]
     {
-        tokio::runtime::Runtime::new()
+        tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .worker_threads(8)
+            .max_blocking_threads(64)
+            .thread_name("hoover3_client")
+            .build()
             .unwrap()
             .block_on(async move {
                 use dioxus::prelude::DioxusRouterExt;

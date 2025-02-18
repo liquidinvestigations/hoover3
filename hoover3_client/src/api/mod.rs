@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use hoover3_types::collection::*;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
-use hoover3_types::db_schema::CollectionSchema;
+use hoover3_types::db_schema::CollectionSchemaDynamic;
 use hoover3_types::db_schema::DatabaseServiceType;
 use hoover3_types::db_schema::DynamicQueryResponse;
 use hoover3_types::docker_health::*;
@@ -261,7 +261,7 @@ server_wrapper!(
     hoover3_database::migrate,
     get_collection_schema,
     CollectionId,
-    CollectionSchema
+    CollectionSchemaDynamic
 );
 
 server_wrapper!(

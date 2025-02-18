@@ -10,6 +10,10 @@ use std::collections::HashMap;
 use tokio::sync::OnceCell;
 use tokio::sync::RwLock;
 
+use hoover3_types::db_schema::MeilisearchDatabaseSchema;
+
+use crate::db_management::with_redis_cache;
+
 /// Meilisearch database handle type alias.
 pub type MeilisearchDatabaseHandle = Client;
 
@@ -136,4 +140,31 @@ impl DatabaseSpaceManager for MeilisearchDatabaseHandle {
             }
         }
     }
+    async fn migrate_collection_space(_c: &CollectionId) -> Result<(), anyhow::Error> {
+        // TODO: implement
+        Ok(())
+    }
+}
+
+/// API Client method to get the Meilisearch database schema for a collection.
+pub async fn query_meilisearch_schema(
+    c: &CollectionId,
+) -> anyhow::Result<MeilisearchDatabaseSchema> {
+    let c = c.clone();
+    with_redis_cache("query_meilisearch_schema", 60, _get_meilisearch_schema, &c).await
+}
+
+async fn _get_meilisearch_schema(c: CollectionId) -> anyhow::Result<MeilisearchDatabaseSchema> {
+    tracing::info!("get_meilisearch_schema {}", c.to_string());
+    let client = MeilisearchDatabaseHandle::collection_session(&c).await?;
+    let stats = client.get_stats().await?;
+
+    Ok(MeilisearchDatabaseSchema {
+        doc_count: stats.number_of_documents as i64,
+        fields: stats
+            .field_distribution
+            .into_iter()
+            .map(|(k, v)| (k, v as i64))
+            .collect(),
+    })
 }

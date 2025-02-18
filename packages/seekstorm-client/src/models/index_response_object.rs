@@ -39,7 +39,16 @@ pub struct IndexResponseObject {
 }
 
 impl IndexResponseObject {
-    pub fn new(id: i64, name: String, schema: std::collections::HashMap<String, models::SchemaField>, indexed_doc_count: i32, operations_count: i64, query_count: i64, version: String, facets_minmax: std::collections::HashMap<String, models::MinMaxFieldJson>) -> IndexResponseObject {
+    pub fn new(
+        id: i64,
+        name: String,
+        schema: std::collections::HashMap<String, models::SchemaField>,
+        indexed_doc_count: i32,
+        operations_count: i64,
+        query_count: i64,
+        version: String,
+        facets_minmax: std::collections::HashMap<String, models::MinMaxFieldJson>,
+    ) -> IndexResponseObject {
         IndexResponseObject {
             id,
             name,
@@ -52,4 +61,3 @@ impl IndexResponseObject {
         }
     }
 }
-

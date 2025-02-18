@@ -37,4 +37,3 @@ impl Default for FacetFilter {
         Self::FacetFilterOneOf(Default::default())
     }
 }
-

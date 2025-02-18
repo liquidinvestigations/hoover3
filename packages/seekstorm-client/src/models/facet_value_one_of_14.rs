@@ -21,9 +21,6 @@ pub struct FacetValueOneOf14 {
 impl FacetValueOneOf14 {
     /// Point value: latitude/lat, longitude/lon
     pub fn new(point: Vec<f64>) -> FacetValueOneOf14 {
-        FacetValueOneOf14 {
-            point,
-        }
+        FacetValueOneOf14 { point }
     }
 }
-

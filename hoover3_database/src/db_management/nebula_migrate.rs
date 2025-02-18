@@ -1,5 +1,5 @@
+use crate::db_management::scylla_migrate::get_scylla_code_schema;
 use crate::db_management::{nebula_execute_retry, with_redis_cache};
-use crate::migrate::schema_scylla::_get_scylla_schema;
 use crate::models::collection::_nebula_edges::get_all_nebula_edge_types;
 use anyhow::Result;
 use hoover3_types::db_schema::{
@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use tracing::info;
 
 /// API Client method to migrate the Nebula database for a collection.
-pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
+pub async fn migrate_nebula_collection(c: &CollectionId) -> Result<()> {
     info!("migrating nebula collection {}...", c);
 
     for edge_name in get_all_nebula_edge_types() {
@@ -23,9 +23,9 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
         )
         .await?;
     }
-    let scylla_schema = _get_scylla_schema(c.clone()).await?;
+    let scylla_schema = get_scylla_code_schema()?;
     // if we already have all the tags, skip the create
-    if let Ok(nebula_schema) = _nebula_get_schema(c.clone()).await {
+    if let Ok(nebula_schema) = _query_nebula_get_schema(c.clone()).await {
         if check_nebula_schema(c, &scylla_schema, &nebula_schema)
             .await
             .is_ok()
@@ -43,7 +43,7 @@ pub async fn _migrate_nebula_collection(c: &CollectionId) -> Result<()> {
         println!("nebula create tags query: \n  {}", s);
         nebula_execute_retry::<()>(c, &s).await?;
     }
-    let nebula_schema = _nebula_get_schema(c.clone()).await?;
+    let nebula_schema = _query_nebula_get_schema(c.clone()).await?;
     check_nebula_schema(c, &scylla_schema, &nebula_schema).await?;
     info!("migrating nebula collection {} OK.", c);
     Ok(())
@@ -117,13 +117,14 @@ async fn check_nebula_schema(
     anyhow::bail!("timed out on vertex insert test");
 }
 
-/// API Client method to get the Nebula database schema for a collection.
-pub async fn nebula_get_schema(c: &CollectionId) -> Result<NebulaDatabaseSchema> {
+/// API Client method to get the Nebula database schema for a collection. Query the database with 60s cache.
+pub async fn query_nebula_schema(c: &CollectionId) -> Result<NebulaDatabaseSchema> {
     let c = c.clone();
-    with_redis_cache("nebula_get_schema", 60, _nebula_get_schema, &c).await
+    with_redis_cache("query_nebula_schema", 60, _query_nebula_get_schema, &c).await
 }
 
-async fn _nebula_get_schema(c: CollectionId) -> Result<NebulaDatabaseSchema> {
+/// Query database schema without caching.
+async fn _query_nebula_get_schema(c: CollectionId) -> Result<NebulaDatabaseSchema> {
     tracing::info!("nebula_get_schema {}", c.to_string());
     let mut schema = NebulaDatabaseSchema {
         tags: BTreeMap::new(),

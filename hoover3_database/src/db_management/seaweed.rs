@@ -99,4 +99,8 @@ impl DatabaseSpaceManager for S3DatabaseHandle {
         Bucket::delete(&self._get_bucket(name)).await?;
         Ok(())
     }
+    async fn migrate_collection_space(_c: &CollectionId) -> Result<(), anyhow::Error> {
+        // TODO: implement
+        Ok(())
+    }
 }

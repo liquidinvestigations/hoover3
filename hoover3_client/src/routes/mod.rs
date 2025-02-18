@@ -204,8 +204,8 @@ pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
             summary { {title} }
             ul {
                 for (link_name , link) in links {
-                    li { key: link,
-                        Link { to: link, {link_name} }
+                    li { key: link.clone(),
+                        Link { to: link.clone(), {link_name} }
                     }
                 }
             }

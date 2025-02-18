@@ -31,4 +31,3 @@ impl FacetFilterOneOf6I32 {
         }
     }
 }
-

@@ -293,7 +293,7 @@ async fn fs_do_scan_datasource(
 }
 
 #[tokio::test]
-async fn test_fs_do_scan_datasource() -> anyhow::Result<()> {
+async fn test_fs_do_scan_datasource_small() -> anyhow::Result<()> {
     hoover3_database::migrate::migrate_common().await?;
     use hoover3_types::tasks::UiWorkflowStatusCode;
     let collection_id = CollectionId::new("test_fs_do_scan_datasource")?;

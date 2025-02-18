@@ -813,6 +813,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cap"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f125eb85b84a24c36b02ed1d22c9dd8632f53b3cde6e4d23512f94021030003"
+
+[[package]]
 name = "cc"
 version = "1.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -868,9 +874,7 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "charybdis"
-version = "0.7.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "053ad00feec7ed57a49cfafe74eb12533dc77cf52be8975094494a9e20f15a8d"
+version = "0.7.11"
 dependencies = [
  "bigdecimal",
  "charybdis-migrate",
@@ -886,9 +890,7 @@ dependencies = [
 
 [[package]]
 name = "charybdis-migrate"
-version = "0.7.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d317e3a996efe3f304f063c0e0eb37ce2f93b74c53aa2e5196238c1085b6e8d"
+version = "0.7.12"
 dependencies = [
  "charybdis_parser",
  "clap",
@@ -896,15 +898,14 @@ dependencies = [
  "openssl",
  "regex",
  "scylla",
+ "serde_json",
  "strip-ansi-escapes",
  "tokio",
 ]
 
 [[package]]
 name = "charybdis_macros"
-version = "0.7.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1146256cd57a51e9527ee80b5b01896a8263b808c8946347a01bc05b1da10bf"
+version = "0.7.11"
 dependencies = [
  "charybdis_parser",
  "proc-macro2",
@@ -914,9 +915,7 @@ dependencies = [
 
 [[package]]
 name = "charybdis_parser"
-version = "0.7.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22438e1b122267f530064788f5a2a3e954ad7a8b735ba85fe8bc5ca680ad8b54"
+version = "0.7.11"
 dependencies = [
  "colored",
  "darling",
@@ -3401,6 +3400,7 @@ dependencies = [
  "charybdis",
  "charybdis-migrate",
  "charybdis_macros",
+ "charybdis_parser",
  "chrono",
  "clickhouse",
  "fbthrift-transport",
@@ -3507,6 +3507,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
+ "cap",
  "chrono",
  "regex",
  "serde",

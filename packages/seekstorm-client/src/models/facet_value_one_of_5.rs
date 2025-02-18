@@ -22,9 +22,6 @@ pub struct FacetValueOneOf5 {
 impl FacetValueOneOf5 {
     /// Signed 8-bit integer
     pub fn new(i8: i32) -> FacetValueOneOf5 {
-        FacetValueOneOf5 {
-            i8,
-        }
+        FacetValueOneOf5 { i8 }
     }
 }
-

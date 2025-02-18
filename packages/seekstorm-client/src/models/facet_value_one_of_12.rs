@@ -22,9 +22,6 @@ pub struct FacetValueOneOf12 {
 impl FacetValueOneOf12 {
     /// String value
     pub fn new(string: String) -> FacetValueOneOf12 {
-        FacetValueOneOf12 {
-            string,
-        }
+        FacetValueOneOf12 { string }
     }
 }
-

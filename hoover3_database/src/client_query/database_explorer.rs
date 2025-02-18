@@ -432,7 +432,8 @@ fn print_scylladb_result(
     })
 }
 
-fn convert_scylla_column_type(c: &ColumnType) -> DatabaseColumnType {
+/// Convert a Scylla column type to a dynamic DatabaseColumnType.
+pub fn convert_scylla_column_type(c: &ColumnType) -> DatabaseColumnType {
     match c {
         ColumnType::Text => DatabaseColumnType::String,
         ColumnType::TinyInt => DatabaseColumnType::Int8,

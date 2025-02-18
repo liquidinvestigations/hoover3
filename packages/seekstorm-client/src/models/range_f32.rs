@@ -25,10 +25,6 @@ pub struct RangeF32 {
 impl RangeF32 {
     /// F32 range filter
     pub fn new(start: f32, end: f32) -> RangeF32 {
-        RangeF32 {
-            start,
-            end,
-        }
+        RangeF32 { start, end }
     }
 }
-

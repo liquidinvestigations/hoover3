@@ -19,7 +19,6 @@ pub enum SortOrder {
     Ascending,
     #[serde(rename = "Descending")]
     Descending,
-
 }
 
 impl std::fmt::Display for SortOrder {
@@ -36,4 +35,3 @@ impl Default for SortOrder {
         Self::Ascending
     }
 }
-

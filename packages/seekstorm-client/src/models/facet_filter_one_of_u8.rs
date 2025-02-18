@@ -31,4 +31,3 @@ impl FacetFilterOneOfU8 {
         }
     }
 }
-

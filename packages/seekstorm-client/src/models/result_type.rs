@@ -21,7 +21,6 @@ pub enum ResultType {
     Topk,
     #[serde(rename = "TopkCount")]
     TopkCount,
-
 }
 
 impl std::fmt::Display for ResultType {
@@ -39,4 +38,3 @@ impl Default for ResultType {
         Self::Count
     }
 }
-

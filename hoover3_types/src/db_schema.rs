@@ -4,9 +4,10 @@ use std::collections::BTreeMap;
 
 use crate::identifier::{CollectionId, DatabaseIdentifier};
 
-/// Represents the complete schema for a collection across different database types
+/// Represents the complete schema for a collection across different database types.
+/// This type is supposed to be obtained by querying the database for the schema.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-pub struct CollectionSchema {
+pub struct CollectionSchemaDynamic {
     /// Unique identifier for the collection
     pub collection_id: CollectionId,
     /// Schema information for Scylla database
@@ -240,7 +241,7 @@ pub enum DatabaseValue {
         /// Ranking, as in nebula feature "a" -> "b" @ 0 {}
         ranking: i64,
         // TODO: edge properties.
-    }
+    },
 }
 
 impl std::fmt::Display for DatabaseValue {

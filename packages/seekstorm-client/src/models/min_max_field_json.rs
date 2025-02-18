@@ -23,10 +23,6 @@ pub struct MinMaxFieldJson {
 impl MinMaxFieldJson {
     /// MinMaxFieldJson is a JSON representation of the minimum and maximum value of a field.
     pub fn new(min: Option<serde_json::Value>, max: Option<serde_json::Value>) -> MinMaxFieldJson {
-        MinMaxFieldJson {
-            min,
-            max,
-        }
+        MinMaxFieldJson { min, max }
     }
 }
-

@@ -21,7 +21,6 @@ pub enum RangeType {
     CountAboveRange,
     #[serde(rename = "CountBelowRange")]
     CountBelowRange,
-
 }
 
 impl std::fmt::Display for RangeType {
@@ -39,4 +38,3 @@ impl Default for RangeType {
         Self::CountWithinRange
     }
 }
-

@@ -10,7 +10,7 @@ use dioxus::prelude::*;
 use dioxus_sdk::utils::timing::use_debounce;
 use futures_util::StreamExt;
 use hoover3_types::{
-    db_schema::{CollectionSchema, DatabaseServiceType},
+    db_schema::{CollectionSchemaDynamic, DatabaseServiceType},
     identifier::CollectionId,
 };
 
@@ -174,7 +174,7 @@ struct QueryToolSidebarLinks {
 fn get_sidebar_links(
     collection_id: &CollectionId,
     db_type: &DatabaseServiceType,
-    schema: &CollectionSchema,
+    schema: &CollectionSchemaDynamic,
 ) -> QueryToolSidebarLinks {
     let make_link = |text: &str, query: &str| {
         (

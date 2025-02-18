@@ -31,4 +31,3 @@ impl FacetFilterOneOf8Timestamp {
         }
     }
 }
-

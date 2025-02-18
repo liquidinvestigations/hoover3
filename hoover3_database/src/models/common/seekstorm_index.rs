@@ -1,7 +1,7 @@
 //! This module contains the table definitions for the collections table.
 
 use charybdis::macros::charybdis_model;
-use charybdis::types::{Text, Timestamp, Int};
+use charybdis::types::{BigInt, Text};
 
 /// Database representation of a collection in the system.
 /// This struct maps directly to a row in the collections table on the common `hoover3`` keyspace.
@@ -22,5 +22,5 @@ pub struct SeekstormIndexInfo {
     /// Seekstorm API key for this index
     pub seekstorm_api_key: Text,
     /// Seekstorm index id for this index
-    pub seekstorm_index_id: Int,
+    pub seekstorm_index_id: BigInt,
 }

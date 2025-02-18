@@ -22,9 +22,6 @@ pub struct FacetValueOneOf9 {
 impl FacetValueOneOf9 {
     /// Unix timestamp: the number of seconds since 1 January 1970
     pub fn new(timestamp: i64) -> FacetValueOneOf9 {
-        FacetValueOneOf9 {
-            timestamp,
-        }
+        FacetValueOneOf9 { timestamp }
     }
 }
-

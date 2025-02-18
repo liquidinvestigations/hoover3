@@ -19,7 +19,6 @@ pub enum DistanceUnit {
     Kilometers,
     #[serde(rename = "Miles")]
     Miles,
-
 }
 
 impl std::fmt::Display for DistanceUnit {
@@ -36,4 +35,3 @@ impl Default for DistanceUnit {
         Self::Kilometers
     }
 }
-

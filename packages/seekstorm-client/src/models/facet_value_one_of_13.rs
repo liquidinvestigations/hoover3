@@ -22,9 +22,6 @@ pub struct FacetValueOneOf13 {
 impl FacetValueOneOf13 {
     /// String set value
     pub fn new(string_set: Vec<String>) -> FacetValueOneOf13 {
-        FacetValueOneOf13 {
-            string_set,
-        }
+        FacetValueOneOf13 { string_set }
     }
 }
-

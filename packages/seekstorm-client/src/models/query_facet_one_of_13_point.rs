@@ -32,7 +32,13 @@ pub struct QueryFacetOneOf13Point {
 
 impl QueryFacetOneOf13Point {
     /// Range segment definition for numerical facet field values of type Point (distance between base of type Point and facet field of type Point)
-    pub fn new(field: String, range_type: models::RangeType, ranges: Vec<Vec<serde_json::Value>>, base: Vec<f64>, unit: models::DistanceUnit) -> QueryFacetOneOf13Point {
+    pub fn new(
+        field: String,
+        range_type: models::RangeType,
+        ranges: Vec<Vec<serde_json::Value>>,
+        base: Vec<f64>,
+        unit: models::DistanceUnit,
+    ) -> QueryFacetOneOf13Point {
         QueryFacetOneOf13Point {
             field,
             range_type,
@@ -42,4 +48,3 @@ impl QueryFacetOneOf13Point {
         }
     }
 }
-

@@ -23,7 +23,6 @@ pub enum TokenizerType {
     UnicodeAlphanumericFolded,
     #[serde(rename = "UnicodeAlphanumericZH")]
     UnicodeAlphanumericZh,
-
 }
 
 impl std::fmt::Display for TokenizerType {
@@ -42,4 +41,3 @@ impl Default for TokenizerType {
         Self::AsciiAlphabetic
     }
 }
-

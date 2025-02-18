@@ -27,7 +27,11 @@ pub struct QueryFacetOneOf8Timestamp {
 
 impl QueryFacetOneOf8Timestamp {
     /// Range segment definition for numerical facet field values of type Unix timestamp
-    pub fn new(field: String, range_type: models::RangeType, ranges: Vec<Vec<serde_json::Value>>) -> QueryFacetOneOf8Timestamp {
+    pub fn new(
+        field: String,
+        range_type: models::RangeType,
+        ranges: Vec<Vec<serde_json::Value>>,
+    ) -> QueryFacetOneOf8Timestamp {
         QueryFacetOneOf8Timestamp {
             field,
             range_type,
@@ -35,4 +39,3 @@ impl QueryFacetOneOf8Timestamp {
         }
     }
 }
-

@@ -23,7 +23,6 @@ pub enum QueryType {
     Phrase,
     #[serde(rename = "Not")]
     Not,
-
 }
 
 impl std::fmt::Display for QueryType {
@@ -42,4 +41,3 @@ impl Default for QueryType {
         Self::Union
     }
 }
-

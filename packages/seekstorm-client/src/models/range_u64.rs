@@ -25,10 +25,6 @@ pub struct RangeU64 {
 impl RangeU64 {
     /// U64 range filter
     pub fn new(start: i64, end: i64) -> RangeU64 {
-        RangeU64 {
-            start,
-            end,
-        }
+        RangeU64 { start, end }
     }
 }
-

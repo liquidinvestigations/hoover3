@@ -3,6 +3,7 @@
 //! handling database spaces and sessions.
 use super::{DatabaseIdentifier, DatabaseSpaceManager};
 use clickhouse::{Client, Row};
+use hoover3_types::identifier::CollectionId;
 use serde::Deserialize;
 use std::{env, sync::Arc};
 use tokio::sync::OnceCell;
@@ -73,6 +74,11 @@ impl DatabaseSpaceManager for ClickhouseDatabaseHandle {
             .with_option("wait_end_of_query", "1")
             .execute()
             .await?;
+        Ok(())
+    }
+
+    async fn migrate_collection_space(_c: &CollectionId) -> Result<(), anyhow::Error> {
+        // TODO: implement
         Ok(())
     }
 }

@@ -32,7 +32,8 @@ use tracing::{info, warn};
 
 /// The default namespace for Temporalio tasks
 pub const TEMPORALIO_NAMESPACE: &str = "default";
-
+const MAX_CONCURRENCY: usize = 8;
+const MAX_BLOCKING_THREADS: usize = 64;
 /// Global name for this Temporalio thing (activity, workflow)
 pub trait TemporalioDescriptorName {
     /// The static name of the Temporalio thing (activity, workflow) - same as decorated function name.
@@ -535,8 +536,6 @@ fn create_worker<T: TemporalioDescriptorRegister>(
     let worker_build_id = format!("{queue_name}__{}", build_id());
     info!("worker build_id: {:?}", worker_build_id);
 
-    const MAX_CONCURRENCY: usize = 8;
-
     let worker_config = WorkerConfigBuilder::default()
         .max_outstanding_activities(MAX_CONCURRENCY)
         .max_outstanding_workflow_tasks(MAX_CONCURRENCY)
@@ -601,16 +600,25 @@ pub fn spawn_worker_on_thread<T: TemporalioDescriptorRegister>() -> std::thread:
             "_run_on_new_thread_forever INSIDE  T={:?}",
             std::thread::current().id()
         );
-        use tokio::runtime::Builder;
-        let rt = Builder::new_multi_thread().enable_all().build().unwrap();
-        rt.block_on(async move {
-            run_worker::<T>().await.unwrap();
-        });
+        run_worker::<T>().expect("worker runs");
     })
 }
 
+/// Create tokio runtime and run a worker on it
+pub fn run_worker<T: TemporalioDescriptorRegister>() -> anyhow::Result<()> {
+    use tokio::runtime::Builder;
+    let rt = Builder::new_multi_thread()
+        .enable_all()
+        .worker_threads(MAX_CONCURRENCY)
+        .max_blocking_threads(MAX_BLOCKING_THREADS)
+        .thread_name("hoover3_worker")
+        .build()
+        .unwrap();
+    rt.block_on(async move { run_worker_async::<T>().await })
+}
+
 /// Runs a worker on the current thread until completion
-pub async fn run_worker<T: TemporalioDescriptorRegister>() -> anyhow::Result<()> {
+async fn run_worker_async<T: TemporalioDescriptorRegister>() -> anyhow::Result<()> {
     let client = get_client().await?;
     let mut worker = create_worker::<T>(client)?;
     worker.run().await?;

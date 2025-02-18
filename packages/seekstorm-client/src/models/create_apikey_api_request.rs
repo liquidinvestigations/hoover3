@@ -33,7 +33,13 @@ pub struct CreateApikeyApiRequest {
 
 impl CreateApikeyApiRequest {
     /// Quota per API key
-    pub fn new(indices_max: i64, indices_size_max: i64, documents_max: i64, operations_max: i64, rate_limit: i64) -> CreateApikeyApiRequest {
+    pub fn new(
+        indices_max: i64,
+        indices_size_max: i64,
+        documents_max: i64,
+        operations_max: i64,
+        rate_limit: i64,
+    ) -> CreateApikeyApiRequest {
         CreateApikeyApiRequest {
             indices_max,
             indices_size_max,
@@ -43,4 +49,3 @@ impl CreateApikeyApiRequest {
         }
     }
 }
-

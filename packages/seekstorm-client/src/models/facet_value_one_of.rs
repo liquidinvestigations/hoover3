@@ -22,9 +22,6 @@ pub struct FacetValueOneOf {
 impl FacetValueOneOf {
     /// Boolean value
     pub fn new(bool: bool) -> FacetValueOneOf {
-        FacetValueOneOf {
-            bool,
-        }
+        FacetValueOneOf { bool }
     }
 }
-

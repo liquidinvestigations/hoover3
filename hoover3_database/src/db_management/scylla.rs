@@ -8,6 +8,8 @@ use std::{collections::hash_map::RandomState, sync::Arc};
 use tokio::sync::{OnceCell, RwLock};
 use tracing::info;
 
+use crate::db_management::scylla_migrate::get_scylla_code_schema_json;
+
 use super::{CollectionId, DatabaseIdentifier, DatabaseSpaceManager};
 
 pub struct ScyllaConnection(CachingSession<RandomState>);
@@ -15,21 +17,18 @@ pub struct ScyllaConnection(CachingSession<RandomState>);
 /// Scylla database handle type alias.
 pub type ScyllaDatabaseHandle = ScyllaConnection;
 
-impl ScyllaDatabaseHandle {
-    pub async fn open_session(space: DatabaseIdentifier) -> anyhow::Result<Arc<ScyllaConnection>> {
-        _open_new_session(space).await
-    }
-}
-
 impl DatabaseSpaceManager for ScyllaDatabaseHandle {
     type CollectionSessionType = Self;
     async fn global_session() -> anyhow::Result<Arc<Self>> {
         static SCYLLA_CONNECTION_GLOBAL: OnceCell<Arc<ScyllaConnection>> = OnceCell::const_new();
         Ok(SCYLLA_CONNECTION_GLOBAL
             .get_or_init(|| async {
-                _open_new_session(DatabaseIdentifier::new(DEFAULT_KEYSPACE_NAME).unwrap())
-                    .await
-                    .unwrap()
+                _open_new_session(
+                    DatabaseIdentifier::new(DEFAULT_KEYSPACE_NAME).unwrap(),
+                    true,
+                )
+                .await
+                .unwrap()
             })
             .await
             .clone())
@@ -50,7 +49,7 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         // if not found, open new session
         let s = {
             let mut h = h.write().await;
-            let s = _open_new_session(_c.database_name()?).await?;
+            let s = _open_new_session(_c.database_name()?, false).await?;
             h.insert(_c.clone(), s.clone());
             s
         };
@@ -114,6 +113,25 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
 
         Ok(())
     }
+    async fn migrate_collection_space(_c: &CollectionId) -> Result<(), anyhow::Error> {
+        info!("scylla_migrate_collection {}", _c.to_string());
+        let session = ScyllaDatabaseHandle::collection_session(_c).await?;
+        let space_name = _c.database_name()?.to_string();
+
+        let schema_json = get_scylla_code_schema_json()?;
+
+        let migration = charybdis::migrate::MigrationBuilder::new()
+            .keyspace(space_name.clone())
+            .drop_and_replace(false)
+            .code_schema_override_json(schema_json)
+            .build(session.get_session())
+            .await;
+
+        migration.run().await;
+        info!("execute collection {space_name} migration OK");
+
+        Ok(())
+    }
 }
 
 impl std::ops::Deref for ScyllaConnection {
@@ -124,23 +142,31 @@ impl std::ops::Deref for ScyllaConnection {
     }
 }
 
-async fn _open_new_session(space: DatabaseIdentifier) -> anyhow::Result<Arc<ScyllaConnection>> {
+async fn _open_new_session(
+    space: DatabaseIdentifier,
+    create_if_missing: bool,
+) -> anyhow::Result<Arc<ScyllaConnection>> {
     let space = space.to_string();
     let uri = "127.0.0.1:6642";
     info!("connect {}", uri);
 
-    let s1 = match SessionBuilder::new()
-        .known_node(uri)
-        .use_keyspace(&space, false)
-        .compression(Some(scylla::frame::Compression::Lz4))
-        .build()
-        .await
-    {
-        Ok(s) => s,
-        Err(scylla::transport::errors::NewSessionError::DbError(
-            scylla::transport::errors::DbError::Invalid,
-            _b,
-        )) => {
+    let s1 = match (
+        SessionBuilder::new()
+            .known_node(uri)
+            .use_keyspace(&space, false)
+            .compression(Some(scylla::frame::Compression::Lz4))
+            .build()
+            .await,
+        create_if_missing,
+    ) {
+        (Ok(s), _) => s,
+        (
+            Err(scylla::transport::errors::NewSessionError::DbError(
+                scylla::transport::errors::DbError::Invalid,
+                _b,
+            )),
+            true,
+        ) => {
             info!("creating keyspace {}", &space);
             // keyspace does not exist -- connect without and create it
             let s2 = SessionBuilder::new().known_node(uri).build().await?;
@@ -159,8 +185,8 @@ async fn _open_new_session(space: DatabaseIdentifier) -> anyhow::Result<Arc<Scyl
             info!("USE {}", space);
             s2
         }
-        Err(_e) => {
-            anyhow::bail!("other connection error: {:?}", _e);
+        (Err(_e), _) => {
+            anyhow::bail!("connection error: {:?}", _e);
         }
     };
 

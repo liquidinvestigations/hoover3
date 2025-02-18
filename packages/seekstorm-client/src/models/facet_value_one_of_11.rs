@@ -22,9 +22,6 @@ pub struct FacetValueOneOf11 {
 impl FacetValueOneOf11 {
     /// 64-bit floating point number
     pub fn new(f64: f64) -> FacetValueOneOf11 {
-        FacetValueOneOf11 {
-            f64,
-        }
+        FacetValueOneOf11 { f64 }
     }
 }
-

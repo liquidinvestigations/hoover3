@@ -1,7 +1,7 @@
 //! This module contains the table definitions for the collections table.
 
 use charybdis::macros::charybdis_model;
-use charybdis::types::{Text, Timestamp, Int};
+use charybdis::types::{Text, Timestamp};
 
 /// Database representation of a collection in the system.
 /// This struct maps directly to a row in the collections table on the common `hoover3`` keyspace.

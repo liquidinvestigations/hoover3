@@ -21,9 +21,6 @@ pub struct FacetFilterOneOf4 {
 impl FacetFilterOneOf4 {
     /// I8 range filter
     pub fn new(i8: models::FacetFilterOneOf4I8) -> FacetFilterOneOf4 {
-        FacetFilterOneOf4 {
-            i8: Box::new(i8),
-        }
+        FacetFilterOneOf4 { i8: Box::new(i8) }
     }
 }
-

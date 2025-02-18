@@ -39,4 +39,3 @@ impl Default for QueryFacet {
         Self::QueryFacetOneOf(Default::default())
     }
 }
-

@@ -37,7 +37,7 @@ type TSession = PooledConnection<'static, TManager>;
 pub type NebulaDatabaseHandle = Mutex<NebulaSessionDropGuard>;
 // pub type NebulaDatabaseHandle = Mutex<NebulaDropGuard<TSession>>;
 
-pub  struct NebulaSessionDropGuard (TSession);
+pub struct NebulaSessionDropGuard(TSession);
 impl Drop for NebulaSessionDropGuard {
     fn drop(&mut self) {
         // useful for checking out the pool
@@ -204,6 +204,9 @@ impl DatabaseSpaceManager for NebulaDatabaseHandle {
 
         res?;
         Ok(())
+    }
+    async fn migrate_collection_space(_c: &CollectionId) -> Result<(), anyhow::Error> {
+        super::nebula_migrate::migrate_nebula_collection(_c).await
     }
 }
 

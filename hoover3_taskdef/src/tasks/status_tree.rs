@@ -1,6 +1,8 @@
 //! Workflow status tree - recursively fetch workflow status to get a final progress percentage.
 
 use anyhow::Context;
+use futures::stream::FuturesUnordered;
+use futures::StreamExt;
 use hoover3_types::tasks::TemporalioWorkflowStatusTree;
 use hoover3_types::tasks::UiWorkflowStatusCode;
 use std::collections::BTreeMap;
@@ -32,10 +34,6 @@ async fn _temporalio_get_workflow_status_tree(
     workflow_id: String,
 ) -> anyhow::Result<TemporalioWorkflowStatusTree> {
     let root_status = convert_status(query_workflow_execution_status(&workflow_id).await?);
-
-    let client = crate::get_client().await?;
-    let mut client = (*client).clone();
-
     let mut open = BTreeSet::new();
     open.insert(workflow_id.to_string());
     let mut popcount = 0;
@@ -54,9 +52,13 @@ async fn _temporalio_get_workflow_status_tree(
     tree.total_counts = count0.clone();
     tree.counts.insert(workflow_id.clone(), count0);
     while popcount < TREE_NODE_LIMIT && !open.is_empty() {
-        let parent_id = open.pop_first().context("empty open set")?;
-        popcount += 1;
-        if let Ok((count, list)) = temporalio_list_children(&mut client, &parent_id).await {
+        let mut fut = FuturesUnordered::new();
+        for parent_id in open.iter() {
+            popcount += 1;
+            fut.push(temporalio_list_children(parent_id.clone()));
+        }
+        open.clear();
+        while let Some(Ok((parent_id, count, list))) = fut.next().await {
             let mut current_children = vec![];
             for child_info in list.executions.iter() {
                 let child_id = child_info
@@ -97,14 +99,18 @@ async fn _temporalio_get_workflow_status_tree(
     Ok(tree)
 }
 
-/// Lists child workflows and their execution counts for a given workflow ID
+/// Lists child workflows and their execution counts for a given workflow ID.
+/// Returns the workflow ID argument, the count, and the list of executions.
 pub async fn temporalio_list_children(
-    client: &mut temporal_client::RetryClient<temporal_client::Client>,
-    workflow_id: &str,
+    workflow_id: String,
 ) -> anyhow::Result<(
+    String,
     CountWorkflowExecutionsResponse,
     ListWorkflowExecutionsResponse,
 )> {
+    let client = crate::get_client().await?;
+    let mut client = (*client).clone();
+
     let list_query = format!("ParentWorkflowId=\"{}\" ", workflow_id);
     let count_query = format!(
         "ParentWorkflowId=\"{}\" GROUP BY ExecutionStatus ",
@@ -126,5 +132,5 @@ pub async fn temporalio_list_children(
             query: list_query,
         })
         .await?;
-    Ok((count, list.get_ref().clone()))
+    Ok((workflow_id.to_string(), count, list.get_ref().clone()))
 }

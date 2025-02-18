@@ -25,10 +25,6 @@ pub struct FacetFilterOneOf12StringSet {
 impl FacetFilterOneOf12StringSet {
     /// StringSet filter
     pub fn new(field: String, filter: Vec<String>) -> FacetFilterOneOf12StringSet {
-        FacetFilterOneOf12StringSet {
-            field,
-            filter,
-        }
+        FacetFilterOneOf12StringSet { field, filter }
     }
 }
-

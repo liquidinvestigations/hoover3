@@ -1,22 +1,20 @@
 //! This module contains the database migration functions,
 //! including mirroring the Scylla schema into other databases.
 
-mod schema_meilisearch;
-mod schema_nebula;
-mod schema_scylla;
-
-use hoover3_types::db_schema::CollectionSchema;
-use schema_meilisearch::get_meilisearch_schema;
-pub use schema_nebula::{_migrate_nebula_collection, nebula_get_schema};
+use hoover3_types::db_schema::CollectionSchemaDynamic;
 
 use anyhow::Context;
 use anyhow::Result;
-use schema_scylla::get_scylla_schema;
 use std::path::PathBuf;
 use tracing::info;
 
 use crate::db_management::redis::drop_redis_cache;
+use crate::db_management::ClickhouseDatabaseHandle;
 use crate::db_management::CollectionId;
+use crate::db_management::MeilisearchDatabaseHandle;
+use crate::db_management::NebulaDatabaseHandle;
+use crate::db_management::S3DatabaseHandle;
+use crate::db_management::SeekstormDatabaseHandle;
 use crate::{db_management::DatabaseSpaceManager, db_management::ScyllaDatabaseHandle};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
@@ -139,15 +137,25 @@ async fn _migrate_common() -> Result<()> {
     Ok(())
 }
 
+macro_rules! run_on_all_db_handles {
+    ($id:tt) => {
+        $id!(ScyllaDatabaseHandle);
+        $id!(ClickhouseDatabaseHandle);
+        $id!(MeilisearchDatabaseHandle);
+        $id!(NebulaDatabaseHandle);
+        $id!(S3DatabaseHandle);
+        $id!(SeekstormDatabaseHandle);
+    };
+}
+
 async fn _migrate_collection(c: CollectionId) -> Result<()> {
     info!("migrate collection {}", c.to_string());
     let space = c.database_name()?;
     let c = c.clone();
-    scylla_migrate_collection(&c).await?;
 
     macro_rules! create_db {
         ($id:ident) => {
-            use crate::db_management::$id;
+            // use crate::db_management::$id;
             $id::global_session()
                 .await
                 .context(format!("get global session for {}", stringify!($id)))?
@@ -157,11 +165,7 @@ async fn _migrate_collection(c: CollectionId) -> Result<()> {
         };
     }
 
-    create_db!(ClickhouseDatabaseHandle);
-    create_db!(MeilisearchDatabaseHandle);
-    create_db!(NebulaDatabaseHandle);
-    create_db!(ScyllaDatabaseHandle);
-    create_db!(S3DatabaseHandle);
+    run_on_all_db_handles!(create_db);
 
     macro_rules! check_db {
         ($id:ident) => {
@@ -179,18 +183,20 @@ async fn _migrate_collection(c: CollectionId) -> Result<()> {
             }
         };
     }
+    run_on_all_db_handles!(check_db);
 
-    check_db!(ClickhouseDatabaseHandle);
-    check_db!(MeilisearchDatabaseHandle);
-    check_db!(NebulaDatabaseHandle);
-    check_db!(ScyllaDatabaseHandle);
-    check_db!(S3DatabaseHandle);
+    drop_redis_cache("query_nebula_schema", &c).await?;
+    drop_redis_cache("query_scylla_schema", &c).await?;
+    drop_redis_cache("query_meilisearch_schema", &c).await?;
 
-    drop_redis_cache("nebula_get_schema", &c).await?;
-    drop_redis_cache("get_scylla_schema", &c).await?;
-    drop_redis_cache("meilisearch_get_schema", &c).await?;
-
-    _migrate_nebula_collection(&c).await?;
+    macro_rules! migrate_collection_space {
+        ($id:ident) => {
+            $id::migrate_collection_space(&c)
+                .await
+                .context(format!("migrate collection space for {}", stringify!($id)))?;
+        };
+    }
+    run_on_all_db_handles!(migrate_collection_space);
 
     Ok(())
 }
@@ -219,11 +225,7 @@ async fn _drop_collection(c: CollectionId) -> Result<()> {
         };
     }
 
-    drop_db!(ClickhouseDatabaseHandle);
-    drop_db!(MeilisearchDatabaseHandle);
-    drop_db!(NebulaDatabaseHandle);
-    drop_db!(ScyllaDatabaseHandle);
-    drop_db!(S3DatabaseHandle);
+    run_on_all_db_handles!(drop_db);
 
     macro_rules! check_db {
         ($id:ident) => {
@@ -241,41 +243,9 @@ async fn _drop_collection(c: CollectionId) -> Result<()> {
         };
     }
 
-    check_db!(ClickhouseDatabaseHandle);
-    check_db!(MeilisearchDatabaseHandle);
-    check_db!(NebulaDatabaseHandle);
-    check_db!(ScyllaDatabaseHandle);
-    check_db!(S3DatabaseHandle);
+    run_on_all_db_handles!(check_db);
 
     info!("collection {} dropped OK", c.to_string());
-
-    Ok(())
-}
-
-async fn scylla_migrate_collection(c: &CollectionId) -> Result<()> {
-    info!("scylla_migrate_collection {}", c.to_string());
-    let session = ScyllaDatabaseHandle::open_session(c.database_name()?).await?;
-    let space_name = c.database_name()?.to_string();
-
-    info!("initiate collection {space_name} migration");
-    let collection_model_path = get_package_dir()
-        .join("src/models/collection")
-        .canonicalize()
-        .unwrap();
-    assert!(collection_model_path.is_dir());
-    let collection_model_path = collection_model_path.display().to_string();
-
-    use charybdis::migrate::MigrationBuilder;
-    let migration = MigrationBuilder::new()
-        .keyspace(space_name.clone())
-        .drop_and_replace(false)
-        .current_dir(collection_model_path)
-        .build(session.get_session())
-        .await;
-    info!("create collection {space_name} migration OK");
-
-    migration.run().await;
-    info!("execute collection {space_name} migration OK");
 
     Ok(())
 }
@@ -293,13 +263,13 @@ async fn test_create_drop_collection() {
     drop_collection(&c).await.unwrap();
 }
 
-/// API Client method to get all the database schemas for a collection.
-pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchema> {
+/// API Client method to read the schema information from the database for a specific collection..
+pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchemaDynamic> {
     tracing::info!("get_collection_schema {}", c.to_string());
-    Ok(CollectionSchema {
+    Ok(CollectionSchemaDynamic {
         collection_id: c.clone(),
-        scylla: get_scylla_schema(&c).await?,
-        nebula: nebula_get_schema(&c).await?,
-        meilisearch: get_meilisearch_schema(&c).await?,
+        scylla: crate::db_management::query_scylla_schema(&c).await?,
+        nebula: crate::db_management::query_nebula_schema(&c).await?,
+        meilisearch: crate::db_management::query_meilisearch_schema(&c).await?,
     })
 }

@@ -27,7 +27,11 @@ pub struct QueryFacetOneOf7I64 {
 
 impl QueryFacetOneOf7I64 {
     /// Range segment definition for numerical facet field values of type i64
-    pub fn new(field: String, range_type: models::RangeType, ranges: Vec<Vec<serde_json::Value>>) -> QueryFacetOneOf7I64 {
+    pub fn new(
+        field: String,
+        range_type: models::RangeType,
+        ranges: Vec<Vec<serde_json::Value>>,
+    ) -> QueryFacetOneOf7I64 {
         QueryFacetOneOf7I64 {
             field,
             range_type,
@@ -35,4 +39,3 @@ impl QueryFacetOneOf7I64 {
         }
     }
 }
-

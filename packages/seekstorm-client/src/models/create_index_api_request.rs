@@ -28,7 +28,11 @@ pub struct CreateIndexApiRequest {
 
 impl CreateIndexApiRequest {
     /// Create index request object
-    pub fn new(index_name: String, schema: Vec<models::SchemaField>, synonyms: Vec<models::Synonym>) -> CreateIndexApiRequest {
+    pub fn new(
+        index_name: String,
+        schema: Vec<models::SchemaField>,
+        synonyms: Vec<models::Synonym>,
+    ) -> CreateIndexApiRequest {
         CreateIndexApiRequest {
             index_name,
             schema,
@@ -38,4 +42,3 @@ impl CreateIndexApiRequest {
         }
     }
 }
-

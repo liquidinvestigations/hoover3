@@ -25,10 +25,6 @@ pub struct FacetFilterOneOf13Point {
 impl FacetFilterOneOf13Point {
     /// Point proximity range filter
     pub fn new(field: String, filter: Vec<serde_json::Value>) -> FacetFilterOneOf13Point {
-        FacetFilterOneOf13Point {
-            field,
-            filter,
-        }
+        FacetFilterOneOf13Point { field, filter }
     }
 }
-

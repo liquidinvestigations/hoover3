@@ -31,4 +31,3 @@ impl FacetFilterOneOf5I16 {
         }
     }
 }
-

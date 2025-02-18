@@ -35,4 +35,3 @@ impl QueryFacetOneOf11String {
         }
     }
 }
-

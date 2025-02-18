@@ -31,4 +31,3 @@ impl FacetFilterOneOf7I64 {
         }
     }
 }
-

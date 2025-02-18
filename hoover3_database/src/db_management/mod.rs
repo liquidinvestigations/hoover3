@@ -10,14 +10,19 @@ pub use clickhouse::ClickhouseDatabaseHandle;
 
 mod meilisearch;
 pub use meilisearch::meilisearch_wait_for_task;
+pub use meilisearch::query_meilisearch_schema;
 pub use meilisearch::MeilisearchDatabaseHandle;
 
 mod nebula;
+mod nebula_migrate;
 pub use nebula::nebula_execute_retry;
 pub use nebula::NebulaDatabaseHandle;
+pub use nebula_migrate::query_nebula_schema;
 
 mod scylla;
+mod scylla_migrate;
 pub use scylla::ScyllaDatabaseHandle;
+pub use scylla_migrate::query_scylla_schema;
 
 mod seaweed;
 pub use seaweed::S3DatabaseHandle;
@@ -26,6 +31,7 @@ mod seekstorm;
 pub use seekstorm::SeekstormDatabaseHandle;
 
 use std::sync::Arc;
+
 
 /// Trait defining the interface for managing database spaces and sessions.
 /// To be implemented for each database backend.
@@ -37,7 +43,7 @@ pub trait DatabaseSpaceManager {
     /// Creates a new global database session
     async fn global_session() -> Result<Arc<Self>, anyhow::Error>;
 
-    /// Creates a new database session for a specific collection
+    /// Creates a new database session for a specific collection. Must have all migrations applied.
     async fn collection_session(
         c: &CollectionId,
     ) -> Result<Arc<Self::CollectionSessionType>, anyhow::Error>;
@@ -53,11 +59,24 @@ pub trait DatabaseSpaceManager {
 
     /// Drops/deletes an existing database space
     async fn drop_space(&self, name: &DatabaseIdentifier) -> Result<(), anyhow::Error>;
+
+    /// Migrate database space to compiled schema
+    async fn migrate_collection_space(c: &CollectionId) -> Result<(), anyhow::Error>;
 }
 
+
 async fn _test_db_session<T: DatabaseSpaceManager>() -> Result<(), anyhow::Error> {
-    let test_db_name = "test_1_xxxyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"; // len = 48
-    let test_db_name = DatabaseIdentifier::new(test_db_name)?;
+    let name = format!(
+        "test_db_session_{}",
+        std::any::type_name::<T>()
+            .split("::")
+            .last()
+            .unwrap()
+            .to_lowercase()
+            .replace(">", "")
+            .as_str().split_at(6).0
+    );
+    let test_db_name = DatabaseIdentifier::new(&name)?;
     let s = T::global_session().await?;
 
     for _i in 0..3 {
@@ -80,40 +99,37 @@ async fn _test_db_session<T: DatabaseSpaceManager>() -> Result<(), anyhow::Error
         assert!(!s.space_exists(&test_db_name).await?);
         assert!(!s.list_spaces().await?.contains(&test_db_name));
     }
+
+    let c = CollectionId::new(&name)?;
+    s.create_space(&c.database_name()?).await?;
+    T::migrate_collection_space(&c).await?;
+    let c_s = T::collection_session(&c).await?;
+    drop(c_s);
+    s.drop_space(&c.database_name()?).await?;
+
     Ok(())
 }
 
 #[tokio::test]
-async fn test_db_sessions_seaweed() -> Result<(), anyhow::Error> {
+async fn test_db_sessions() -> Result<(), anyhow::Error> {
+    use crate::migrate::migrate_common;
+    migrate_common().await?;
+
+    _test_db_session::<scylla::ScyllaDatabaseHandle>().await?;
+
     use seaweed::S3DatabaseHandle;
-    _test_db_session::<S3DatabaseHandle>().await
-}
+    _test_db_session::<S3DatabaseHandle>().await?;
 
-#[tokio::test]
-async fn test_db_sessions_clickhouse() -> Result<(), anyhow::Error> {
     use clickhouse::ClickhouseDatabaseHandle;
-    _test_db_session::<ClickhouseDatabaseHandle>().await
-}
+    _test_db_session::<ClickhouseDatabaseHandle>().await?;
 
-#[tokio::test]
-async fn test_db_sessions_meilisearch() -> Result<(), anyhow::Error> {
     use meilisearch::MeilisearchDatabaseHandle;
-    _test_db_session::<MeilisearchDatabaseHandle>().await
-}
+    _test_db_session::<MeilisearchDatabaseHandle>().await?;
 
-#[tokio::test]
-async fn test_db_sessions_nebula() -> Result<(), anyhow::Error> {
     use nebula::NebulaDatabaseHandle;
-    _test_db_session::<NebulaDatabaseHandle>().await
-}
+    _test_db_session::<NebulaDatabaseHandle>().await?;
 
-#[tokio::test]
-async fn test_db_sessions_scylla() -> Result<(), anyhow::Error> {
-    _test_db_session::<scylla::ScyllaDatabaseHandle>().await
-}
+    _test_db_session::<SeekstormDatabaseHandle>().await?;
 
-#[tokio::test]
-async fn test_db_sessions_seekstorm() -> Result<(), anyhow::Error> {
-    _test_db_session::<SeekstormDatabaseHandle>().await
+    Ok(())
 }
-

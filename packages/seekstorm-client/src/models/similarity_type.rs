@@ -19,7 +19,6 @@ pub enum SimilarityType {
     Bm25f,
     #[serde(rename = "Bm25fProximity")]
     Bm25fProximity,
-
 }
 
 impl std::fmt::Display for SimilarityType {
@@ -36,4 +35,3 @@ impl Default for SimilarityType {
         Self::Bm25f
     }
 }
-

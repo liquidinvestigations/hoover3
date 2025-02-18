@@ -1,3 +1,9 @@
 [submodule "third-party/nebula-rust"]
 	path = third-party/nebula-rust
 	url = https://github.com/liquidinvestigations/nebula-rust
+[submodule "third-party/SeekStorm"]
+	path = third-party/SeekStorm
+	url = https://github.com/SeekStorm/SeekStorm
+[submodule "third-party/charybdis"]
+	path = third-party/charybdis
+	url = https://github.com/liquidinvestigations/charybdis

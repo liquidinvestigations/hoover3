@@ -21,9 +21,6 @@ pub struct QueryFacetOneOf10 {
 impl QueryFacetOneOf10 {
     /// Range segment definition for numerical facet field values of type f64
     pub fn new(f64: models::QueryFacetOneOf10F64) -> QueryFacetOneOf10 {
-        QueryFacetOneOf10 {
-            f64: Box::new(f64),
-        }
+        QueryFacetOneOf10 { f64: Box::new(f64) }
     }
 }
-

@@ -36,7 +36,12 @@ pub struct SchemaField {
 
 impl SchemaField {
     /// Defines a field in index schema: field, stored, indexed , field_type, facet, boost.
-    pub fn new(field: String, stored: bool, indexed: bool, field_type: models::FieldType) -> SchemaField {
+    pub fn new(
+        field: String,
+        stored: bool,
+        indexed: bool,
+        field_type: models::FieldType,
+    ) -> SchemaField {
         SchemaField {
             field,
             stored,
@@ -47,4 +52,3 @@ impl SchemaField {
         }
     }
 }
-

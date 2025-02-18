@@ -6,7 +6,6 @@ use crate::db_management::meilisearch_wait_for_task;
 use crate::db_management::nebula_execute_retry;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::MeilisearchDatabaseHandle;
-use crate::migrate::nebula_get_schema;
 use charybdis::model::BaseModel;
 use hoover3_types::db_schema::GraphEdgeType;
 use hoover3_types::db_schema::NebulaDatabaseSchema;
@@ -356,7 +355,7 @@ pub struct DatabaseExtraCallbacks {
 impl DatabaseExtraCallbacks {
     /// Create a new `DatabaseExtraCallbacks` instance by opening sessiosn and fetching schemas..
     pub async fn new(c: &CollectionId) -> anyhow::Result<Self> {
-        let nebula_schema = nebula_get_schema(c).await?;
+        let nebula_schema = crate::db_management::query_nebula_schema(c).await?;
         let search_client = MeilisearchDatabaseHandle::collection_session(c).await?;
         Ok(Self {
             collection_id: c.clone(),

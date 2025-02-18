@@ -22,9 +22,6 @@ pub struct FacetValueOneOf4 {
 impl FacetValueOneOf4 {
     /// Unsigned 64-bit integer
     pub fn new(u64: i64) -> FacetValueOneOf4 {
-        FacetValueOneOf4 {
-            u64,
-        }
+        FacetValueOneOf4 { u64 }
     }
 }
-
