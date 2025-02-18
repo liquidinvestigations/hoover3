@@ -31,6 +31,7 @@ pub struct DatasourceDbRow {
     /// Timestamp of the most recent modification to the datasource
     pub time_modified: Timestamp,
 }
+
 impl DatasourceDbRow {
     /// Convert a `DatasourceDbRow` to frontend representation.
     pub fn to_ui_row(self, collection_id: &CollectionId) -> DatasourceUiRow {

@@ -9,6 +9,8 @@ pub mod identifier;
 pub mod stable_hash;
 pub mod tasks;
 
+pub use inventory;
+
 // Globally limit memory to 2 GB
 #[global_allocator]
 static ALLOCATOR: cap::Cap<std::alloc::System> =

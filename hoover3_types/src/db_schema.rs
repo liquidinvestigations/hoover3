@@ -196,6 +196,9 @@ impl DatabaseColumnType {
     }
 }
 
+/// Represents a timestamp value
+pub type Timestamp = chrono::DateTime<chrono::Utc>;
+
 /// Represents actual values stored in the database
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub enum DatabaseValue {
@@ -216,7 +219,7 @@ pub enum DatabaseValue {
     /// Boolean value
     Boolean(bool),
     /// UTC timestamp value
-    Timestamp(chrono::DateTime<chrono::Utc>),
+    Timestamp(Timestamp),
     /// Custom or unknown value type
     Other(String),
     /// List/array of database values
@@ -326,4 +329,43 @@ pub enum DatabaseServiceType {
     Nebula,
     /// Meilisearch search engine
     Meilisearch,
+}
+
+
+/// Represents the definition of a model - the result of parsing a struct tagged with
+///  #[model]
+#[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
+pub struct ModelDefinition {
+    /// The name of the table in the database
+    pub table_name: String,
+    /// The name of the model in the source code
+    pub model_name: String,
+    /// The fields of the model in their struct order
+    pub fields: Vec<ModelFieldDefinition>,
+    /// Docstring of model
+    pub docstring: String,
+    /// Rust code of the Charybdis definition
+    pub charybdis_code: String,
+}
+inventory::collect!(ModelDefinition);
+
+/// Represents the definition of a field in a model (a struct tagged with #[model])
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct ModelFieldDefinition {
+    /// The name of the field in the struct
+    pub name: String,
+    /// The type of the field in the struct
+    pub field_type: DatabaseColumnType,
+    /// Whether the field is part of the CQL primary key
+    pub partition_key: bool,
+    /// Whether the field is part of the CQL clustering key
+    pub clustering_key: bool,
+    /// Whether the field is stored in the search index
+    pub search_store: bool,
+    /// Whether the field is indexed in the search index
+    pub search_index: bool,
+    /// Whether the field is used for search faceting
+    pub search_facet: bool,
+    /// Docstring of field
+    pub docstring: String,
 }
