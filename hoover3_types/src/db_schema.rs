@@ -72,6 +72,7 @@ pub struct GraphEdgeType {
 
 /// Represents the possible data types for database columns
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[non_exhaustive]
 pub enum DatabaseColumnType {
     /// Text/string data type
     String,
@@ -101,6 +102,9 @@ pub enum DatabaseColumnType {
     GraphVertex(BTreeMap<String, BTreeMap<String, Box<DatabaseColumnType>>>),
     /// Graph Edge
     GraphEdge,
+    /// Type is not one of the above, so macros do not expand it
+    ///  - to be converted to concrete type at runtime
+    UnspecifiedType,
 }
 
 impl std::fmt::Display for DatabaseColumnType {
@@ -127,6 +131,7 @@ impl std::fmt::Display for DatabaseColumnType {
             Self::Other(o) => write!(f, "Other: {}", o),
             Self::GraphVertex(g) => write!(f, "GraphVertex: {:#?}", g),
             Self::GraphEdge => write!(f, "GraphEdge"),
+            Self::UnspecifiedType => write!(f, "UnspecifiedType"),
         }
     }
 }

@@ -90,24 +90,23 @@ fn generate_new_item_struct(
     if let syn::Fields::Named(ref mut fields) = item_struct.fields {
         for field in fields.named.iter_mut() {
             let (column_type, nullable) = get_field_type(&field.ty);
-            let column_type_str = column_type.to_scylla_type().expect("unsupported type");
-            let column_type = syn::Ident::new(&column_type_str, proc_macro2::Span::call_site());
-
-            // let charybdis_field_attr = syn::parse_quote! {
-            //     #[charybdis(column_type = #column_type_str)]
-            // };
-            let charybdis_field_type = if nullable {
-                syn::parse_quote! {
-                    Option<::charybdis::types::#column_type>
-                }
+            let charybdis_field_type = if column_type == DatabaseColumnType::UnspecifiedType {
+                // For unrecognized types, keep the original type
+                field.ty.clone()
             } else {
-                syn::parse_quote! {
-                    ::charybdis::types::#column_type
+                let column_type_str = column_type.to_scylla_type().expect("unsupported type");
+                let column_type = syn::Ident::new(&column_type_str, proc_macro2::Span::call_site());
+                if nullable {
+                    syn::parse_quote! {
+                        Option<::charybdis::types::#column_type>
+                    }
+                } else {
+                    syn::parse_quote! {
+                        ::charybdis::types::#column_type
+                    }
                 }
             };
             field.ty = charybdis_field_type;
-            // field.attrs.push(charybdis_field_attr);
-            // field.ty = charybdis_field_type;
         }
     }
     // for each field, remove any #[model(...)] attributes
@@ -144,7 +143,7 @@ fn generate_inventory_submit(model_def: &ModelDefinition) -> TokenStream {
                 DatabaseColumnType::Boolean => "Boolean",
                 DatabaseColumnType::Timestamp => "Timestamp",
                 _ => {
-                    panic!("unsupported field type: {:?}", field_type);
+                    "UnspecifiedType"
                 }
             };
             let field_type_str = format!(
@@ -370,7 +369,7 @@ fn get_field_type(ty: &syn::Type) -> (DatabaseColumnType, bool) {
                 "f64" => DatabaseColumnType::Double,
                 "bool" => DatabaseColumnType::Boolean,
                 "Timestamp" => DatabaseColumnType::Timestamp,
-                _ => panic!("unsupported field type: {:?}", ty),
+                _ => DatabaseColumnType::UnspecifiedType,
             };
             (column_type, false)
         }
@@ -677,6 +676,79 @@ fn test_model_macro() {
     assert_eq!(result_str, expected_str);
 }
 
+#[test]
+fn test_model_with_custom_type() {
+    use pretty_assertions::assert_eq;
+    let item = quote::quote! {
+        /// Test model with custom type
+        struct CustomModel {
+            /// Primary key field
+            #[model(primary(partition))]
+            pub id: String,
+            /// Custom type field
+            pub custom_field: my_crate::CustomType,
+        }
+    };
+    let result = model(item);
+    let expected = quote::quote! {
+        /// Test model with custom type
+        #[::charybdis::macros::charybdis_model(
+            table_name = custom_model,
+            partition_keys = [id],
+            clustering_keys = [],
+            global_secondary_indexes = [],
+            local_secondary_indexes = [],
+            static_columns = []
+        )]
+        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        struct CustomModel {
+            /// Primary key field
+            pub id: ::charybdis::types::Text,
+            /// Custom type field
+            pub custom_field: my_crate::CustomType,
+        }
+
+        ::hoover3_types::inventory::submit! {
+            ::hoover3_types::db_schema::ModelDefinitionStatic {
+                table_name: "custom_model",
+                model_name: "CustomModel",
+                docstring: "Test model with custom type",
+                charybdis_code: "/// Test model with custom type\n#[::charybdis::macros::charybdis_model(\n    table_name = custom_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct CustomModel {\n    /// Primary key field\n    pub id: ::charybdis::types::Text,\n    /// Custom type field\n    pub custom_field: my_crate::CustomType,\n}\n",
+                fields: &[
+                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                        name: "id",
+                        field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
+                        docstring: "Primary key field",
+                        clustering_key: false,
+                        partition_key: true,
+                        search_store: false,
+                        search_index: false,
+                        search_facet: false,
+                        nullable: false,
+                    },
+                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                        name: "custom_field",
+                        field_type: ::hoover3_types::db_schema::DatabaseColumnType::UnspecifiedType,
+                        docstring: "Custom type field",
+                        clustering_key: false,
+                        partition_key: false,
+                        search_store: false,
+                        search_index: false,
+                        search_facet: false,
+                        nullable: false,
+                    }
+                ],
+            }
+        }
+    };
+
+    let result_str = prettyplease::unparse(&syn::parse_quote!(#result));
+    let expected_str = prettyplease::unparse(&syn::parse_quote!(#expected));
+    println!("EXPECTED: {}", expected_str);
+    println!("RESULT: {}", result_str);
+    assert_eq!(result_str, expected_str);
+}
+
 /// Parses UdtModelDefinition instance from struct code.
 fn parse_udt_model(item: TokenStream) -> UdtModelDefinition {
     let item_struct = syn::parse2::<syn::ItemStruct>(item).expect("parse model struct");
@@ -812,16 +884,20 @@ fn generate_new_udt_item_struct(
     if let syn::Fields::Named(ref mut fields) = item_struct.fields {
         for field in fields.named.iter_mut() {
             let (column_type, nullable) = get_field_type(&field.ty);
-            let column_type_str = column_type.to_scylla_type().expect("unsupported type");
-            let column_type = syn::Ident::new(&column_type_str, proc_macro2::Span::call_site());
-
-            let charybdis_field_type = if nullable {
-                syn::parse_quote! {
-                    Option<::charybdis::types::#column_type>
-                }
+            let charybdis_field_type = if column_type == DatabaseColumnType::UnspecifiedType {
+                // For unrecognized types, keep the original type
+                field.ty.clone()
             } else {
-                syn::parse_quote! {
-                    ::charybdis::types::#column_type
+                let column_type_str = column_type.to_scylla_type().expect("unsupported type");
+                let column_type = syn::Ident::new(&column_type_str, proc_macro2::Span::call_site());
+                if nullable {
+                    syn::parse_quote! {
+                        Option<::charybdis::types::#column_type>
+                    }
+                } else {
+                    syn::parse_quote! {
+                        ::charybdis::types::#column_type
+                    }
                 }
             };
             field.ty = charybdis_field_type;
@@ -855,7 +931,7 @@ fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream 
                 DatabaseColumnType::Boolean => "Boolean",
                 DatabaseColumnType::Timestamp => "Timestamp",
                 _ => {
-                    panic!("unsupported field type: {:?}", field_type);
+                    "UnspecifiedType"
                 }
             };
             let field_type_str = format!(
