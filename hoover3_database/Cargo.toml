@@ -13,6 +13,7 @@ workspace = true
 [dependencies]
 hoover3_types  = {path="../hoover3_types"}
 hoover3_tracing = {path="../hoover3_tracing"}
+hoover3_macro = {path="../hoover3_macro"}
 
 ########## COMMON ############
 ##############################
@@ -46,12 +47,15 @@ rustyline-derive = "0.6.0"
 ########## SCYLLA ############
 ##############################
 scylla = { version = "0.15.1", features = ["full-serialization"] }
-charybdis = {path="../third-party/charybdis/charybdis", features = ["migrate"]}
-charybdis_macros = {path="../third-party/charybdis/charybdis-macros"}
-charybdis-migrate = {path="../third-party/charybdis/charybdis-migrate"}
-charybdis_parser = {path="../third-party/charybdis/charybdis-parser"}
+# charybdis = {path="../third-party/charybdis/charybdis", features = ["migrate"]}
+# charybdis_macros = {path="../third-party/charybdis/charybdis-macros"}
+# charybdis-migrate = {path="../third-party/charybdis/charybdis-migrate"}
+# charybdis_parser = {path="../third-party/charybdis/charybdis-parser"}
 scylla-cql = { version = "0.4.1", features = ["chrono-04", "serde"] }
-
+charybdis_parser.workspace = true
+charybdis.workspace = true
+charybdis_macros.workspace = true
+charybdis-migrate.workspace = true
 
 ########## NEBULA ############
 ##############################
@@ -98,5 +102,5 @@ seekstorm_client = { path = "../packages/seekstorm-client" }
 
 
 [build-dependencies]
-serde_json = "1.0.100"
-charybdis_parser = {path="../third-party/charybdis/charybdis-parser"}
+serde_json.workspace = true
+charybdis_parser.workspace = true

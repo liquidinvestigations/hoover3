@@ -874,7 +874,8 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "charybdis"
-version = "0.7.11"
+version = "0.7.13"
+source = "git+https://github.com/nodecosmos/charybdis?rev=f32238371ebb531cc77c0b75d9339e0249786989#f32238371ebb531cc77c0b75d9339e0249786989"
 dependencies = [
  "bigdecimal",
  "charybdis-migrate",
@@ -890,7 +891,8 @@ dependencies = [
 
 [[package]]
 name = "charybdis-migrate"
-version = "0.7.12"
+version = "0.7.13"
+source = "git+https://github.com/nodecosmos/charybdis?rev=f32238371ebb531cc77c0b75d9339e0249786989#f32238371ebb531cc77c0b75d9339e0249786989"
 dependencies = [
  "charybdis_parser",
  "clap",
@@ -905,7 +907,8 @@ dependencies = [
 
 [[package]]
 name = "charybdis_macros"
-version = "0.7.11"
+version = "0.7.13"
+source = "git+https://github.com/nodecosmos/charybdis?rev=f32238371ebb531cc77c0b75d9339e0249786989#f32238371ebb531cc77c0b75d9339e0249786989"
 dependencies = [
  "charybdis_parser",
  "proc-macro2",
@@ -915,7 +918,8 @@ dependencies = [
 
 [[package]]
 name = "charybdis_parser"
-version = "0.7.11"
+version = "0.7.13"
+source = "git+https://github.com/nodecosmos/charybdis?rev=f32238371ebb531cc77c0b75d9339e0249786989#f32238371ebb531cc77c0b75d9339e0249786989"
 dependencies = [
  "colored",
  "darling",
@@ -980,9 +984,9 @@ checksum = "93a719913643003b84bd13022b4b7e703c09342cd03b679c4641c7d2e50dc34d"
 
 [[package]]
 name = "clap"
-version = "4.5.27"
+version = "4.5.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "769b0145982b4b48713e01ec42d61614425f27b7058bda7180a3a41f30104796"
+checksum = "92b7b18d71fad5313a1e320fa9897994228ce274b60faa4d694fe0ea89cd9e6d"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -990,9 +994,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.27"
+version = "4.5.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b26884eb4b57140e4d2d93652abfa49498b938b3c9179f9fc487b0acc3edad7"
+checksum = "a35db2071778a7344791a4fb4f95308b5673d219dee3ae348b86642574ecc90c"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1002,9 +1006,9 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "4.5.24"
+version = "4.5.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54b755194d6389280185988721fffba69495eed5ee9feeee9a599b53db80318c"
+checksum = "bf4ced95c6f4a675af3da73304b9ac4ed991640c36374e4b46795c49e17cf1ed"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -3415,6 +3419,7 @@ dependencies = [
  "fbthrift-transport",
  "futures 0.3.31",
  "futures-util",
+ "hoover3_macro",
  "hoover3_tracing",
  "hoover3_types",
  "log",
@@ -3456,9 +3461,12 @@ dependencies = [
 name = "hoover3_macro"
 version = "0.1.0"
 dependencies = [
+ "charybdis",
  "hoover3_macro2",
  "hoover3_taskdef",
+ "hoover3_types",
  "macrotest",
+ "serde",
 ]
 
 [[package]]

@@ -151,15 +151,15 @@ impl DatabaseColumnType {
     /// Converts this DatabaseColumnType into its corresponding Scylla type string representation
     pub fn to_scylla_type(&self) -> anyhow::Result<String> {
         Ok(match self {
-            Self::String => "TEXT".to_string(),
-            Self::Int8 => "TINYINT".to_string(),
-            Self::Int16 => "SMALLINT".to_string(),
-            Self::Int32 => "INT".to_string(),
-            Self::Int64 => "BIGINT".to_string(),
-            Self::Float => "FLOAT".to_string(),
-            Self::Double => "DOUBLE".to_string(),
-            Self::Boolean => "BOOLEAN".to_string(),
-            Self::Timestamp => "TIMESTAMP".to_string(),
+            Self::String => "Text".to_string(),
+            Self::Int8 => "TinyInt".to_string(),
+            Self::Int16 => "SmallInt".to_string(),
+            Self::Int32 => "Int".to_string(),
+            Self::Int64 => "BigInt".to_string(),
+            Self::Float => "Float".to_string(),
+            Self::Double => "Double".to_string(),
+            Self::Boolean => "Boolean".to_string(),
+            Self::Timestamp => "Timestamp".to_string(),
             _ => anyhow::bail!("incompatible with scylla type: {:?}", self),
         })
     }
@@ -347,7 +347,6 @@ pub struct ModelDefinition {
     /// Rust code of the Charybdis definition
     pub charybdis_code: String,
 }
-inventory::collect!(ModelDefinition);
 
 /// Represents the definition of a field in a model (a struct tagged with #[model])
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
@@ -368,4 +367,64 @@ pub struct ModelFieldDefinition {
     pub search_facet: bool,
     /// Docstring of field
     pub docstring: String,
+    /// Nullable - field is of type Option<T>
+    pub nullable: bool,
 }
+
+/// Static version of ModelDefinition - used for compile-time inventory.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(missing_docs)]
+pub struct ModelDefinitionStatic {
+    pub table_name: &'static str,
+    pub model_name: &'static str,
+    pub fields: &'static [ModelFieldDefinitionStatic],
+    pub docstring: &'static str,
+    pub charybdis_code: &'static str,
+}
+
+impl ModelDefinitionStatic {
+    /// Convert a static model definition to a dynamic model definition.
+    pub fn to_owned(&self) -> ModelDefinition {
+        ModelDefinition {
+            table_name: self.table_name.to_string(),
+            model_name: self.model_name.to_string(),
+            fields: self.fields.iter().map(|f| f.to_owned()).collect(),
+            docstring: self.docstring.to_string(),
+            charybdis_code: self.charybdis_code.to_string(),
+        }
+    }
+}
+
+/// Static version of ModelFieldDefinition - used for compile-time inventory.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(missing_docs)]
+pub struct ModelFieldDefinitionStatic {
+    pub name: &'static str,
+    pub field_type: DatabaseColumnType,
+    pub partition_key: bool,
+    pub clustering_key: bool,
+    pub search_store: bool,
+    pub search_index: bool,
+    pub search_facet: bool,
+    pub docstring: &'static str,
+    pub nullable: bool,
+}
+
+impl ModelFieldDefinitionStatic {
+    /// Convert a static model field definition to a dynamic model field definition.
+    pub fn to_owned(&self) -> ModelFieldDefinition {
+        ModelFieldDefinition {
+            name: self.name.to_string(),
+            field_type: self.field_type.clone(),
+            partition_key: self.partition_key,
+            clustering_key: self.clustering_key,
+            search_store: self.search_store,
+            search_index: self.search_index,
+            search_facet: self.search_facet,
+            docstring: self.docstring.to_string(),
+            nullable: self.nullable,
+        }
+    }
+}
+
+inventory::collect!(ModelDefinitionStatic);

@@ -21,7 +21,10 @@ hoover3_macro2 = { path = "../hoover3_macro2" }
 # Macrotest is a mess:
 # - Official version works if all compiles ok, but doesnt print errors, it just skips expansion:
 macrotest = "1.0.13"
-# - 2021 Fork version prints errors, but doesn't work
+# - 2021 Fork version prints errors, but doesn't work. Use it when your macro expansion is empty, fix all the errors, then switch back to the version above.
 # macrotest = {git = "https://github.com/eupn/macrotest", rev="385c4bdadb63fa44141aa96685de7206041116bb"}
 
 hoover3_taskdef = { path = "../hoover3_taskdef" }
+hoover3_types = { path = "../hoover3_types" }
+serde.workspace = true
+charybdis.workspace = true
