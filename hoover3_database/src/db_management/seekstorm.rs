@@ -6,7 +6,10 @@ use crate::{
 };
 use anyhow::Context;
 use charybdis::operations::{Find, Insert};
-use hoover3_types::{db_schema::DatabaseColumnType, identifier::{CollectionId, DatabaseIdentifier}};
+use hoover3_types::{
+    db_schema::DatabaseColumnType,
+    identifier::{CollectionId, DatabaseIdentifier},
+};
 use seekstorm_client::{
     apis::{
         api_key_api::{create_apikey_api, delete_apikey_api},
@@ -14,7 +17,8 @@ use seekstorm_client::{
         index_api::create_index_api,
     },
     models::{
-        CreateApikeyApiRequest, CreateIndexApiRequest, FieldType, SchemaField, SimilarityType, TokenizerType
+        CreateApikeyApiRequest, CreateIndexApiRequest, FieldType, SchemaField, SimilarityType,
+        TokenizerType,
     },
 };
 
@@ -129,37 +133,41 @@ impl DatabaseSpaceManager for SeekstormDatabaseHandle {
         for (table_name, table) in scylla_schema.tables {
             for column in table.columns {
                 let column_name = format!("{}.{}", table_name, column.name);
-                let field =  SchemaField {
-                        indexed: true,
-                        stored: true,
-                        field: column_name.to_string(),
-                        field_type: match column._type {
-                            DatabaseColumnType::String => FieldType::Text,
-                            DatabaseColumnType::Int8 => FieldType::I8,
-                            DatabaseColumnType::Int16 => FieldType::I16,
-                            DatabaseColumnType::Int32 => FieldType::I32,
-                            DatabaseColumnType::Int64 => FieldType::I64,
-                            DatabaseColumnType::Float => FieldType::F32,
-                            DatabaseColumnType::Double => FieldType::F64,
-                            DatabaseColumnType::Boolean => FieldType::Bool,
-                            DatabaseColumnType::Timestamp => FieldType::Timestamp,
-                            _ => FieldType::Text,
-                        },
-                        facet: Some(true),
-                        boost: None,
-                    };
+                let field = SchemaField {
+                    indexed: true,
+                    stored: true,
+                    field: column_name.to_string(),
+                    field_type: match column._type {
+                        DatabaseColumnType::String => FieldType::Text,
+                        DatabaseColumnType::Int8 => FieldType::I8,
+                        DatabaseColumnType::Int16 => FieldType::I16,
+                        DatabaseColumnType::Int32 => FieldType::I32,
+                        DatabaseColumnType::Int64 => FieldType::I64,
+                        DatabaseColumnType::Float => FieldType::F32,
+                        DatabaseColumnType::Double => FieldType::F64,
+                        DatabaseColumnType::Boolean => FieldType::Bool,
+                        DatabaseColumnType::Timestamp => FieldType::Timestamp,
+                        _ => FieldType::Text,
+                    },
+                    facet: Some(true),
+                    boost: None,
+                };
                 schema.push(field);
             }
         }
         config.base_path = SERVICE_URL.to_string();
-        let r = create_index_api(&config, &info.seekstorm_api_key,
-             CreateIndexApiRequest {
-             index_name: c.database_name()?.to_string(),
-             schema,
-             similarity: Some(SimilarityType::Bm25fProximity),
-             tokenizer: Some(TokenizerType::UnicodeAlphanumericFolded),
-             synonyms: vec![]
-            }).await?;
+        let r = create_index_api(
+            &config,
+            &info.seekstorm_api_key,
+            CreateIndexApiRequest {
+                index_name: c.database_name()?.to_string(),
+                schema,
+                similarity: Some(SimilarityType::Bm25fProximity),
+                tokenizer: Some(TokenizerType::UnicodeAlphanumericFolded),
+                synonyms: vec![],
+            },
+        )
+        .await?;
         info.seekstorm_index_id = r;
         use charybdis::operations::Update;
         SeekstormIndexInfo::update(&info).execute(&session).await?;

@@ -13,7 +13,6 @@ use hoover3_types::identifier::DatabaseIdentifier;
 use scylla::transport::topology::CqlType;
 use scylla::transport::topology::NativeType;
 
-
 pub fn get_scylla_code_schema_json() -> Result<String> {
     let schema_json =
         include_str!(concat!(env!("OUT_DIR"), "/collection_code_schema.json")).to_string();

@@ -32,7 +32,6 @@ pub use seekstorm::SeekstormDatabaseHandle;
 
 use std::sync::Arc;
 
-
 /// Trait defining the interface for managing database spaces and sessions.
 /// To be implemented for each database backend.
 #[allow(async_fn_in_trait)]
@@ -64,7 +63,6 @@ pub trait DatabaseSpaceManager {
     async fn migrate_collection_space(c: &CollectionId) -> Result<(), anyhow::Error>;
 }
 
-
 async fn _test_db_session<T: DatabaseSpaceManager>() -> Result<(), anyhow::Error> {
     let name = format!(
         "test_db_session_{}",
@@ -74,7 +72,9 @@ async fn _test_db_session<T: DatabaseSpaceManager>() -> Result<(), anyhow::Error
             .unwrap()
             .to_lowercase()
             .replace(">", "")
-            .as_str().split_at(6).0
+            .as_str()
+            .split_at(6)
+            .0
     );
     let test_db_name = DatabaseIdentifier::new(&name)?;
     let s = T::global_session().await?;

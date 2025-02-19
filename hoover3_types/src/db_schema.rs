@@ -336,7 +336,6 @@ pub enum DatabaseServiceType {
     Meilisearch,
 }
 
-
 /// Represents the definition of a model - the result of parsing a struct tagged with
 ///  #[model]
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -415,7 +414,6 @@ impl ModelDefinitionStatic {
         }
     }
 }
-
 
 /// Static version of UdtModelDefinition - used for compile-time inventory.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

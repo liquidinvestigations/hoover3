@@ -3,11 +3,11 @@
 use crate::impl_model_callbacks;
 use charybdis::macros::charybdis_model;
 use charybdis::types::{Text, Timestamp};
+use hoover3_macro::model;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use serde::Serialize;
-use hoover3_macro::model;
 // #[model(primary(partition))]
 
 /// Database representation of a datasource in the system.

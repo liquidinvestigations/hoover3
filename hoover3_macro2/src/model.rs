@@ -6,7 +6,7 @@ use proc_macro2::TokenStream;
 
 /// Macro extracts fields and their configuration, then adds derives and charybdis attributes.
 /// It also adds the ModelDefinition to the inventory.
-pub fn model( item: TokenStream) -> TokenStream {
+pub fn model(item: TokenStream) -> TokenStream {
     let mut model_def = parse_model(item.clone());
 
     // Parse the original struct
@@ -23,10 +23,9 @@ pub fn model( item: TokenStream) -> TokenStream {
     }
 }
 
-
 /// Macro extracts fields and their configuration, then adds derives and charybdis attributes.
 /// It also adds the ModelDefinition to the inventory.
-pub fn udt_model( item: TokenStream) -> TokenStream {
+pub fn udt_model(item: TokenStream) -> TokenStream {
     let mut model_def = parse_udt_model(item.clone());
 
     // Parse the original struct
@@ -142,9 +141,7 @@ fn generate_inventory_submit(model_def: &ModelDefinition) -> TokenStream {
                 DatabaseColumnType::Double => "Double",
                 DatabaseColumnType::Boolean => "Boolean",
                 DatabaseColumnType::Timestamp => "Timestamp",
-                _ => {
-                    "UnspecifiedType"
-                }
+                _ => "UnspecifiedType",
             };
             let field_type_str = format!(
                 "::hoover3_types::db_schema::DatabaseColumnType::{}",
@@ -930,9 +927,7 @@ fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream 
                 DatabaseColumnType::Double => "Double",
                 DatabaseColumnType::Boolean => "Boolean",
                 DatabaseColumnType::Timestamp => "Timestamp",
-                _ => {
-                    "UnspecifiedType"
-                }
+                _ => "UnspecifiedType",
             };
             let field_type_str = format!(
                 "::hoover3_types::db_schema::DatabaseColumnType::{}",
