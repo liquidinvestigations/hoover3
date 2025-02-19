@@ -86,6 +86,7 @@ pub async fn migrate_all() -> Result<()> {
 
 /// Migrate the common database schema (the one not related to any collection).
 pub async fn migrate_common() -> Result<()> {
+    tracing::info!("migrate_common");
     with_redis_lock(
         "migrate_lock_common",
         async move { _migrate_common().await },
@@ -95,6 +96,7 @@ pub async fn migrate_common() -> Result<()> {
 
 /// Migrate databases for a single collection.
 pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
+    tracing::info!("migrate_collection {}", c.to_string());
     let c = c.clone();
     with_redis_lock(&format!("migrate_lock_2_{}", c), async move {
         _migrate_collection(c).await
@@ -104,6 +106,7 @@ pub async fn migrate_collection(c: &CollectionId) -> Result<()> {
 
 /// Drop databases for a single collection.
 pub async fn drop_collection(c: &CollectionId) -> Result<()> {
+    tracing::info!("drop_collection {}", c.to_string());
     let c = c.clone();
     with_redis_lock(&format!("migrate_lock_2_{}", c), async move {
         _drop_collection(c).await
@@ -140,11 +143,11 @@ async fn _migrate_common() -> Result<()> {
 macro_rules! run_on_all_db_handles {
     ($id:tt) => {
         $id!(ScyllaDatabaseHandle);
-        $id!(ClickhouseDatabaseHandle);
+        // $id!(ClickhouseDatabaseHandle);
         $id!(MeilisearchDatabaseHandle);
-        $id!(NebulaDatabaseHandle);
+        // $id!(NebulaDatabaseHandle);
         $id!(S3DatabaseHandle);
-        $id!(SeekstormDatabaseHandle);
+        // $id!(SeekstormDatabaseHandle);
     };
 }
 

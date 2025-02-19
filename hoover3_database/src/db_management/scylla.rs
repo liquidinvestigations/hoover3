@@ -98,7 +98,9 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
             return Ok(());
         }
         info!("SCYLLA: CREATE SPACE {:?}", name);
-        let query = format!("CREATE KEYSPACE IF NOT EXISTS \"{}\" WITH REPLICATION =    {{'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1}}", name);
+        let query = format!("CREATE KEYSPACE IF NOT EXISTS \"{}\"
+        WITH REPLICATION =    {{'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1}}
+         AND TABLETS = {{'enabled': false}}", name);
         self.execute_unpaged(query, &[]).await?;
 
         Ok(())
@@ -175,7 +177,8 @@ async fn _open_new_session(
                     r#"CREATE KEYSPACE IF NOT EXISTS {space}
                     WITH REPLICATION = {{
                         'class' : 'NetworkTopologyStrategy','datacenter1' : 1
-                    }}"#
+                    }}
+                    AND TABLETS = {{'enabled': false}}"#
                 ),
                 &[],
             )

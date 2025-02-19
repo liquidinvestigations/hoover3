@@ -13,3 +13,4 @@ target/_rust_analyzer_/
 _rust_analyzer_
 
 /data
+/docker/data

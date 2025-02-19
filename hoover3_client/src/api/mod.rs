@@ -80,6 +80,8 @@ fn truncate(s: &str, max_chars: usize) -> &str {
     }
 }
 
+const TIMEOUT_SECS: u64 = 60;
+
 /// Result::flatten() is unstable/nightly, so we implement it here.
 pub fn flatten_result<T, E>(x: Result<Result<T, E>, E>) -> Result<T, E> {
     match x {
@@ -87,6 +89,7 @@ pub fn flatten_result<T, E>(x: Result<Result<T, E>, E>) -> Result<T, E> {
         Err(e) => Err(e),
     }
 }
+
 
 macro_rules! server_wrapper {
     ($ns:path,$id:ident,$arg:ty,$ret:ty) => {
@@ -134,7 +137,7 @@ macro_rules! server_wrapper {
                         let t0 = current_time();
                         _before_call(stringify!($id), arg_str, t0);
                         let rv = async_std::future::timeout(
-                            std::time::Duration::from_secs(30),
+                            std::time::Duration::from_secs(TIMEOUT_SECS),
                             [<__ $id __>](c.clone())).await.map_err(|e| ServerFnError::new(
                                 format!("{}: timeout: {e:#?}", stringify!($id))));
                         let rv = flatten_result(rv);
