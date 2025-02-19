@@ -348,6 +348,22 @@ pub struct ModelDefinition {
     pub charybdis_code: String,
 }
 
+/// Represents the definition of a UDT - the result of parsing a struct tagged with
+///  #[udt_model]
+#[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
+pub struct UdtModelDefinition {
+    /// The name of the table in the database
+    pub udt_name: String,
+    /// The name of the model in source code
+    pub model_name: String,
+    /// The fields of the model in their struct order
+    pub fields: Vec<ModelFieldDefinition>,
+    /// Docstring of model
+    pub docstring: String,
+    /// Rust code of the Charybdis definition
+    pub charybdis_code: String,
+}
+
 /// Represents the definition of a field in a model (a struct tagged with #[model])
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ModelFieldDefinition {
@@ -395,6 +411,31 @@ impl ModelDefinitionStatic {
     }
 }
 
+
+/// Static version of UdtModelDefinition - used for compile-time inventory.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[allow(missing_docs)]
+pub struct UdtModelDefinitionStatic {
+    pub udt_name: &'static str,
+    pub model_name: &'static str,
+    pub fields: &'static [ModelFieldDefinitionStatic],
+    pub docstring: &'static str,
+    pub charybdis_code: &'static str,
+}
+
+impl UdtModelDefinitionStatic {
+    /// Convert a static UDT model definition to a dynamic UDT model definition.
+    pub fn to_owned(&self) -> UdtModelDefinition {
+        UdtModelDefinition {
+            udt_name: self.udt_name.to_string(),
+            model_name: self.model_name.to_string(),
+            fields: self.fields.iter().map(|f| f.to_owned()).collect(),
+            docstring: self.docstring.to_string(),
+            charybdis_code: self.charybdis_code.to_string(),
+        }
+    }
+}
+
 /// Static version of ModelFieldDefinition - used for compile-time inventory.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(missing_docs)]
@@ -428,3 +469,4 @@ impl ModelFieldDefinitionStatic {
 }
 
 inventory::collect!(ModelDefinitionStatic);
+inventory::collect!(UdtModelDefinitionStatic);

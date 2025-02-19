@@ -7,5 +7,6 @@ pub use syn;
 mod taskdef;
 pub use taskdef::{activity, workflow};
 
-mod models;
-pub use models::model;
+mod model;
+pub use model::model;
+pub use model::udt_model;

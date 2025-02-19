@@ -58,8 +58,8 @@ pub fn model(_attrs: TokenStream, item: TokenStream) -> TokenStream {
     hoover3_macro2::model(item.into()).into()
 }
 
-/// Derive macro for defining a model. Not to be used directly; use `#[model]` instead.
-#[proc_macro_derive(Hoover3_Macro_Model_Helper, attributes(model))]
-pub fn model_derive(_item: TokenStream) -> TokenStream {
-    <_>::default()
+/// Attribute macro for defining UDT model.
+#[proc_macro_attribute]
+pub fn udt_model(_attrs: TokenStream, item: TokenStream) -> TokenStream {
+    hoover3_macro2::udt_model(item.into()).into()
 }

@@ -1,5 +1,5 @@
 use hoover3_types::{
-    db_schema::{DatabaseColumnType, ModelDefinition, ModelFieldDefinition},
+    db_schema::{DatabaseColumnType, ModelDefinition, ModelFieldDefinition, UdtModelDefinition},
     identifier::DatabaseIdentifier,
 };
 use proc_macro2::TokenStream;
@@ -16,6 +16,26 @@ pub fn model( item: TokenStream) -> TokenStream {
     let charybdis_code = prettyplease::unparse(&syn::parse_quote!(#item_struct));
     model_def.charybdis_code = charybdis_code;
     let inventory_submit = generate_inventory_submit(&model_def);
+
+    quote::quote! {
+        #item_struct
+        #inventory_submit
+    }
+}
+
+
+/// Macro extracts fields and their configuration, then adds derives and charybdis attributes.
+/// It also adds the ModelDefinition to the inventory.
+pub fn udt_model( item: TokenStream) -> TokenStream {
+    let mut model_def = parse_udt_model(item.clone());
+
+    // Parse the original struct
+    let item_struct = syn::parse2::<syn::ItemStruct>(item).expect("parse model struct");
+    let item_struct = generate_new_udt_item_struct(&model_def, &item_struct);
+
+    let charybdis_code = prettyplease::unparse(&syn::parse_quote!(#item_struct));
+    model_def.charybdis_code = charybdis_code;
+    let inventory_submit = generate_udt_inventory_submit(&model_def);
 
     quote::quote! {
         #item_struct
@@ -63,7 +83,7 @@ fn generate_new_item_struct(
 
     item_struct.attrs.push(charybdis_attr);
     item_struct.attrs.push(syn::parse_quote! {
-        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize, ::hoover3_macro::Hoover3_Macro_Model_Helper)]
+        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
     });
 
     // Add charybdis column type attributes to fields
@@ -505,8 +525,7 @@ fn test_generate_new_item_struct() {
             PartialEq,
             PartialOrd,
             ::serde::Serialize,
-            ::serde::Deserialize,
-            ::hoover3_macro::Hoover3_Macro_Model_Helper
+            ::serde::Deserialize
         )]
         pub struct SimpleModel {
             /// Primary key field
@@ -628,7 +647,7 @@ fn test_model_macro() {
             local_secondary_indexes = [],
             static_columns = []
         )]
-        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize, ::hoover3_macro::Hoover3_Macro_Model_Helper)]
+        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         struct MyModel {
             /// Doc One
             pub pk: ::charybdis::types::Text,
@@ -639,7 +658,7 @@ fn test_model_macro() {
         ::hoover3_types::inventory::submit! {
             ::hoover3_types::db_schema::ModelDefinitionStatic { table_name : "my_model",
             model_name : "MyModel", docstring : "This is a test model", charybdis_code :
-            "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize,\n    ::hoover3_macro::Hoover3_Macro_Model_Helper\n)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+            "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
             fields : & [::hoover3_types::db_schema::ModelFieldDefinitionStatic { name : "pk",
             field_type : ::hoover3_types::db_schema::DatabaseColumnType::String, docstring :
             "Doc One", clustering_key : false, partition_key : true, search_store : false,
@@ -651,6 +670,492 @@ fn test_model_macro() {
         }
 
     };
+    let result_str = prettyplease::unparse(&syn::parse_quote!(#result));
+    let expected_str = prettyplease::unparse(&syn::parse_quote!(#expected));
+    println!("EXPECTED: {}", expected_str);
+    println!("RESULT: {}", result_str);
+    assert_eq!(result_str, expected_str);
+}
+
+/// Parses UdtModelDefinition instance from struct code.
+fn parse_udt_model(item: TokenStream) -> UdtModelDefinition {
+    let item_struct = syn::parse2::<syn::ItemStruct>(item).expect("parse model struct");
+    let model_name = item_struct.ident.to_string();
+
+    // Extract struct docstring
+    let struct_docstring = item_struct
+        .attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("doc"))
+        .map(|attr| {
+            if let syn::Meta::NameValue(nv) = &attr.meta {
+                if let syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(lit_str),
+                    ..
+                }) = &nv.value
+                {
+                    lit_str.value()
+                } else {
+                    panic!("invalid doc attribute")
+                }
+            } else {
+                panic!("invalid doc attribute")
+            }
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if struct_docstring.is_empty() {
+        panic!("UDT {} is missing documentation", model_name);
+    }
+
+    let udt_name = {
+        use convert_case::{Case, Casing};
+        model_name.to_case(Case::Snake)
+    };
+
+    let syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) = item_struct.fields else {
+        panic!("UDT fields are not named");
+    };
+    let fields: Vec<_> = fields
+        .iter()
+        .map(|field| {
+            let syn::Field {
+                attrs,
+                vis: syn::Visibility::Public(_),
+                ident,
+                ty,
+                ..
+            } = field
+            else {
+                panic!("field is not public");
+            };
+
+            // Extract field docstring
+            let field_docstring = attrs
+                .iter()
+                .filter(|attr| attr.path().is_ident("doc"))
+                .map(|attr| {
+                    if let syn::Meta::NameValue(nv) = &attr.meta {
+                        if let syn::Expr::Lit(syn::ExprLit {
+                            lit: syn::Lit::Str(lit_str),
+                            ..
+                        }) = &nv.value
+                        {
+                            lit_str.value()
+                        } else {
+                            panic!("invalid doc attribute")
+                        }
+                    } else {
+                        panic!("invalid doc attribute")
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            let field_name = ident.as_ref().unwrap().to_string();
+            if field_docstring.is_empty() {
+                panic!("field {} is missing documentation", field_name);
+            }
+
+            // Get field type and nullable status
+            let (field_type, nullable) = get_field_type(ty);
+
+            ModelFieldDefinition {
+                name: field_name,
+                docstring: field_docstring.trim().to_string(),
+                field_type,
+                clustering_key: false,
+                partition_key: false,
+                search_store: false,
+                search_index: false,
+                search_facet: false,
+                nullable,
+            }
+        })
+        .collect();
+
+    UdtModelDefinition {
+        udt_name,
+        model_name,
+        docstring: struct_docstring.trim().to_string(),
+        fields,
+        charybdis_code: "".to_string(),
+    }
+}
+
+/// Generates a new struct item with charybdis attributes for UDT.
+fn generate_new_udt_item_struct(
+    model_def: &UdtModelDefinition,
+    item_struct: &syn::ItemStruct,
+) -> syn::ItemStruct {
+    let mut item_struct = item_struct.clone();
+    let udt_name = model_def.udt_name.clone();
+    if let Err(e) = DatabaseIdentifier::new(&udt_name) {
+        panic!("invalid UDT name: {}", e);
+    }
+    let udt_name_id = syn::Ident::new(&udt_name, proc_macro2::Span::call_site());
+
+    // Add charybdis_udt attribute
+    let charybdis_attr = syn::parse_quote! {
+        #[::charybdis::macros::charybdis_udt_model(
+            type_name = #udt_name_id
+        )]
+    };
+
+    item_struct.attrs.push(charybdis_attr);
+    item_struct.attrs.push(syn::parse_quote! {
+        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+    });
+
+    // Add charybdis column type attributes to fields
+    if let syn::Fields::Named(ref mut fields) = item_struct.fields {
+        for field in fields.named.iter_mut() {
+            let (column_type, nullable) = get_field_type(&field.ty);
+            let column_type_str = column_type.to_scylla_type().expect("unsupported type");
+            let column_type = syn::Ident::new(&column_type_str, proc_macro2::Span::call_site());
+
+            let charybdis_field_type = if nullable {
+                syn::parse_quote! {
+                    Option<::charybdis::types::#column_type>
+                }
+            } else {
+                syn::parse_quote! {
+                    ::charybdis::types::#column_type
+                }
+            };
+            field.ty = charybdis_field_type;
+        }
+    }
+
+    item_struct
+}
+
+/// Generates inventory::submit! call for UDT model definition.
+fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream {
+    let udt_name = model_def.udt_name.clone();
+    let model_name = model_def.model_name.clone();
+    let docstring = model_def.docstring.clone();
+    let charybdis_code = model_def.charybdis_code.clone();
+    let fields = model_def
+        .fields
+        .iter()
+        .map(|f| {
+            let name = f.name.clone();
+            let field_type = f.field_type.clone();
+            let docstring = f.docstring.clone();
+            let field_type_str = match field_type {
+                DatabaseColumnType::String => "String",
+                DatabaseColumnType::Int8 => "Int8",
+                DatabaseColumnType::Int16 => "Int16",
+                DatabaseColumnType::Int32 => "Int32",
+                DatabaseColumnType::Int64 => "Int64",
+                DatabaseColumnType::Float => "Float",
+                DatabaseColumnType::Double => "Double",
+                DatabaseColumnType::Boolean => "Boolean",
+                DatabaseColumnType::Timestamp => "Timestamp",
+                _ => {
+                    panic!("unsupported field type: {:?}", field_type);
+                }
+            };
+            let field_type_str = format!(
+                "::hoover3_types::db_schema::DatabaseColumnType::{}",
+                field_type_str
+            );
+            let field_type = syn::parse_str::<syn::Type>(&field_type_str).unwrap();
+            let nullable = f.nullable;
+            quote::quote! {
+                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    name: #name,
+                    field_type: #field_type,
+                    docstring: #docstring,
+                    clustering_key: false,
+                    partition_key: false,
+                    search_store: false,
+                    search_index: false,
+                    search_facet: false,
+                    nullable: #nullable,
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+
+    quote::quote! {
+        ::hoover3_types::inventory::submit!{::hoover3_types::db_schema::UdtModelDefinitionStatic {
+            udt_name: #udt_name,
+            model_name: #model_name,
+            docstring: #docstring,
+            charybdis_code: #charybdis_code,
+            fields: &[#(#fields),*],
+        }}
+    }
+}
+
+#[test]
+fn test_parse_udt_model() {
+    let item = quote::quote! {
+        /// This is a test UDT
+        struct MyUdt {
+            /// Doc One
+            pub field1: String,
+            /// Doc Two
+            pub field2: Option<i64>,
+            /// Doc Three
+            pub field3: i32,
+            /// Doc Four
+            pub field4: hoover3_types::db_schema::Timestamp,
+        }
+    };
+    let udt_def = parse_udt_model(item);
+
+    assert_eq!(
+        udt_def,
+        UdtModelDefinition {
+            udt_name: "my_udt".to_string(),
+            model_name: "MyUdt".to_string(),
+            docstring: "This is a test UDT".to_string(),
+            charybdis_code: "".to_string(),
+            fields: vec![
+                ModelFieldDefinition {
+                    name: "field1".to_string(),
+                    field_type: DatabaseColumnType::String,
+                    clustering_key: false,
+                    partition_key: false,
+                    search_store: false,
+                    search_index: false,
+                    search_facet: false,
+                    nullable: false,
+                    docstring: "Doc One".to_string(),
+                },
+                ModelFieldDefinition {
+                    name: "field2".to_string(),
+                    field_type: DatabaseColumnType::Int64,
+                    clustering_key: false,
+                    partition_key: false,
+                    search_store: false,
+                    search_index: false,
+                    search_facet: false,
+                    nullable: true,
+                    docstring: "Doc Two".to_string(),
+                },
+                ModelFieldDefinition {
+                    name: "field3".to_string(),
+                    field_type: DatabaseColumnType::Int32,
+                    clustering_key: false,
+                    partition_key: false,
+                    search_store: false,
+                    search_index: false,
+                    search_facet: false,
+                    nullable: false,
+                    docstring: "Doc Three".to_string(),
+                },
+                ModelFieldDefinition {
+                    name: "field4".to_string(),
+                    field_type: DatabaseColumnType::Timestamp,
+                    clustering_key: false,
+                    partition_key: false,
+                    search_store: false,
+                    search_index: false,
+                    search_facet: false,
+                    nullable: false,
+                    docstring: "Doc Four".to_string(),
+                },
+            ],
+        }
+    );
+}
+
+#[test]
+fn test_generate_new_udt_item_struct() {
+    use pretty_assertions::assert_eq;
+    let input_struct = quote::quote! {
+        /// Test UDT documentation
+        pub struct SimpleUdt {
+            /// First field
+            pub field1: String,
+            /// Second field
+            pub field2: i64,
+            /// Third field
+            pub field3: Option<i32>,
+            /// Fourth field
+            pub created_at: hoover3_types::db_schema::Timestamp,
+        }
+    };
+
+    let udt_def = parse_udt_model(input_struct.clone());
+    let input_struct = syn::parse2::<syn::ItemStruct>(input_struct).expect("parse UDT struct");
+    let result = generate_new_udt_item_struct(&udt_def, &input_struct);
+    let expected = quote::quote! {
+        /// Test UDT documentation
+        #[::charybdis::macros::charybdis_udt_model(
+            type_name = simple_udt
+        )]
+        #[derive(
+            Debug,
+            Clone,
+            Hash,
+            PartialEq,
+            PartialOrd,
+            ::serde::Serialize,
+            ::serde::Deserialize
+        )]
+        pub struct SimpleUdt {
+            /// First field
+            pub field1: ::charybdis::types::Text,
+            /// Second field
+            pub field2: ::charybdis::types::BigInt,
+            /// Third field
+            pub field3: Option<::charybdis::types::Int>,
+            /// Fourth field
+            pub created_at: ::charybdis::types::Timestamp,
+        }
+    };
+
+    let code_result = prettyplease::unparse(&syn::parse_quote!(#result));
+    let code_expected = prettyplease::unparse(&syn::parse_quote!(#expected));
+
+    println!("EXPECTED: {}", code_expected);
+    println!("RESULT: {}", code_result);
+    assert_eq!(code_expected, code_result);
+}
+
+#[test]
+fn test_generate_udt_inventory_submit() {
+    use pretty_assertions::assert_eq;
+
+    let udt_def = UdtModelDefinition {
+        udt_name: "my_udt".to_string(),
+        model_name: "MyUdt".to_string(),
+        docstring: "This is a test UDT".to_string(),
+        charybdis_code: "test code".to_string(),
+        fields: vec![
+            ModelFieldDefinition {
+                name: "field1".to_string(),
+                field_type: DatabaseColumnType::String,
+                clustering_key: false,
+                partition_key: false,
+                search_store: false,
+                search_index: false,
+                search_facet: false,
+                docstring: "first field".to_string(),
+                nullable: false,
+            },
+            ModelFieldDefinition {
+                name: "field2".to_string(),
+                field_type: DatabaseColumnType::Int64,
+                clustering_key: false,
+                partition_key: false,
+                search_store: false,
+                search_index: false,
+                search_facet: false,
+                docstring: "second field".to_string(),
+                nullable: true,
+            },
+        ],
+    };
+    let result = generate_udt_inventory_submit(&udt_def);
+
+    let expected = quote::quote! {
+        ::hoover3_types::inventory::submit!{::hoover3_types::db_schema::UdtModelDefinitionStatic {
+            udt_name: "my_udt",
+            model_name: "MyUdt",
+            docstring: "This is a test UDT",
+            charybdis_code: "test code",
+            fields: & [
+                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    name: "field1",
+                    field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
+                    docstring: "first field",
+                    clustering_key: false,
+                    partition_key: false,
+                    search_store: false,
+                    search_index: false,
+                    search_facet: false,
+                    nullable: false,
+                },
+                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    name: "field2",
+                    field_type: ::hoover3_types::db_schema::DatabaseColumnType::Int64,
+                    docstring: "second field",
+                    clustering_key: false,
+                    partition_key: false,
+                    search_store: false,
+                    search_index: false,
+                    search_facet: false,
+                    nullable: true,
+                }
+            ],
+        }}
+    };
+
+    let result_str = prettyplease::unparse(&syn::parse_quote!(#result));
+    let expected_str = prettyplease::unparse(&syn::parse_quote!(#expected));
+    println!("EXPECTED: {}", expected_str);
+    println!("RESULT: {}", result_str);
+    assert_eq!(result_str, expected_str);
+}
+
+#[test]
+fn test_udt_model_macro() {
+    use pretty_assertions::assert_eq;
+    let item = quote::quote! {
+        /// This is a test UDT
+        struct MyUdt {
+            /// Doc One
+            pub field1: String,
+            /// Doc Two
+            pub created_at: Option<hoover3_types::db_schema::Timestamp>,
+        }
+    };
+    let result = udt_model(item);
+    let expected = quote::quote! {
+        /// This is a test UDT
+        #[::charybdis::macros::charybdis_udt_model(
+            type_name = my_udt
+        )]
+        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        struct MyUdt {
+            /// Doc One
+            pub field1: ::charybdis::types::Text,
+            /// Doc Two
+            pub created_at: Option<::charybdis::types::Timestamp>,
+        }
+
+        ::hoover3_types::inventory::submit! {
+            ::hoover3_types::db_schema::UdtModelDefinitionStatic {
+                udt_name : "my_udt",
+                model_name : "MyUdt",
+                docstring : "This is a test UDT",
+                charybdis_code :
+                "/// This is a test UDT\n#[::charybdis::macros::charybdis_udt_model(type_name = my_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyUdt {\n    /// Doc One\n    pub field1: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                fields : & [
+                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                        name : "field1",
+                        field_type : ::hoover3_types::db_schema::DatabaseColumnType::String,
+                        docstring : "Doc One",
+                        clustering_key : false,
+                        partition_key : false,
+                        search_store : false,
+                        search_index : false,
+                        search_facet : false,
+                        nullable : false,
+                    },
+                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                        name : "created_at",
+                        field_type : ::hoover3_types::db_schema::DatabaseColumnType::Timestamp,
+                        docstring : "Doc Two",
+                        clustering_key : false,
+                        partition_key : false,
+                        search_store : false,
+                        search_index : false,
+                        search_facet : false,
+                        nullable : true,
+                    }
+                ],
+            }
+        }
+    };
+
     let result_str = prettyplease::unparse(&syn::parse_quote!(#result));
     let expected_str = prettyplease::unparse(&syn::parse_quote!(#expected));
     println!("EXPECTED: {}", expected_str);

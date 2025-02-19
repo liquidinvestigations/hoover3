@@ -764,7 +764,7 @@ const _: () = {
                 table_name: "simple_model",
                 model_name: "SimpleModel",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize,\n    ::hoover3_macro::Hoover3_Macro_Model_Helper\n)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::charybdis::types::Text,\n    /// Nullable Field\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::charybdis::types::Text,\n    /// Nullable Field\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
                 fields: &[
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "id",
