@@ -67,7 +67,29 @@ pub fn ConfigureDataAccessForm(on_close: Callback) -> Element {
                         onclick: move |_e| {
                             _e.prevent_default();
                             let mut settings = DataAccessSettings::new();
-                            settings.set_local_disk(PathBuf::from(root_path.peek().clone()));
+                            if !root_path.peek().is_empty() {
+                                settings.set_local_disk(PathBuf::from(root_path.peek().clone()));
+                            }
+                            if !s3_bucket.peek().is_empty() && !s3_access_key.peek().is_empty()
+                                && !s3_secret_key.peek().is_empty()
+                            {
+                                settings
+                                    .set_s3(
+                                        s3_bucket.peek().clone(),
+                                        s3_access_key.peek().clone(),
+                                        s3_secret_key.peek().clone(),
+                                    );
+                            }
+                            if !webdav_url.peek().is_empty() && !webdav_username.peek().is_empty()
+                                && !webdav_password.peek().is_empty()
+                            {
+                                settings
+                                    .set_webdav(
+                                        webdav_url.peek().clone(),
+                                        webdav_username.peek().clone(),
+                                        webdav_password.peek().clone(),
+                                    );
+                            }
                             dioxus_logger::tracing::info!("settings: {:?}", settings);
                             spawn(async move {
                                 match create_or_update_data_access_settings(settings).await {

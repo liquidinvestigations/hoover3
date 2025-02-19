@@ -23,7 +23,6 @@ pub struct LocalDiskSettings {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct S3Settings {
-    pub url: String,
     pub bucket: String,
     pub access_key: String,
     pub secret_key: String,
@@ -49,9 +48,8 @@ impl DataAccessSettings {
         self.local_disk = Some(LocalDiskSettings { root_path });
     }
 
-    pub fn set_s3(&mut self, url: String, bucket: String, access_key: String, secret_key: String) {
+    pub fn set_s3(&mut self, bucket: String, access_key: String, secret_key: String) {
         self.s3 = Some(S3Settings {
-            url,
             bucket,
             access_key,
             secret_key,

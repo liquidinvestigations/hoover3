@@ -90,7 +90,8 @@ fn _NewDatasourceFormPage(
 
     let children_res = use_resource(move || {
         let path = path.read().clone();
-        let data_backend = DataBackend::LocalDisk;
+        //let data_backend = DataBackend::LocalDisk;
+        let data_backend = DataBackend::WebDav;
         async move { list_directory_server((data_backend, path)).await }
     });
 
