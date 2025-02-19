@@ -7,7 +7,7 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
-opendal = { version = "0.51.1", features = ["services-fs"] }
+opendal = { version = "0.51.1", features = ["services-fs", "services-webdav"] }
 hoover3_types  = {path="../hoover3_types"}
 hoover3_database  = {path="../hoover3_database"}
 serde = {workspace=true, features = ["serde_derive"]}

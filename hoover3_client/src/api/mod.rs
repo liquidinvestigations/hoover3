@@ -5,7 +5,7 @@ use crate::time::current_time;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::warn;
 use hoover3_types::collection::*;
-use hoover3_types::data_access::DataAccessSettings;
+use hoover3_types::data_access::{DataAccessSettings, DataBackend};
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::docker_health::*;
@@ -170,7 +170,7 @@ server_wrapper!(
 server_wrapper!(
     hoover3_data_access::data_access,
     list_directory_server,
-    (DataAccessSettings, PathBuf),
+    (DataBackend, PathBuf),
     Vec<FsMetadata>
 );
 

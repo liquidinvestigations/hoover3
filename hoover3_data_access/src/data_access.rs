@@ -2,11 +2,12 @@ pub mod file_system_access;
 use anyhow::{Context, Result};
 
 use hoover3_types::filesystem::FsMetadata;
-use hoover3_types::data_access::DataAccessSettings;
+use hoover3_types::data_access::{LocalDiskSettings, DataBackend, WebDavSettings};
 use opendal::layers::LoggingLayer;
 use opendal::services;
 use opendal::Operator;
 use std::path::PathBuf;
+use hoover3_database::client_query::data_access_settings::get_data_access_settings;
 use serde::{Deserialize, Serialize};
 
 
@@ -19,39 +20,22 @@ pub enum DataAccessOperator {
     WebDavOperator(WebDavOperator),
 }
 
-impl DataAccessOperator {
-    pub async fn list_directory(&self, path: PathBuf) -> Result<Vec<FsMetadata>> {
+impl DataAccess for DataAccessOperator {
+    fn operator(&self) -> &Operator {
         match self {
-            DataAccessOperator::FileSystemOperator(operator) => operator.list_directory(path).await,
-            DataAccessOperator::S3Operator(..) => Err(anyhow::anyhow!("S3 not implemented")),
-            DataAccessOperator::WebDavOperator(..) => {
-                Err(anyhow::anyhow!("WebDav not implemented"))
-            }
+            DataAccessOperator::FileSystemOperator(operator) => &operator.operator,
+            DataAccessOperator::S3Operator(..) => unimplemented!(),
+            DataAccessOperator::WebDavOperator(operator) => &operator.operator,
         }
     }
 }
 
-#[derive(
-    Debug, Clone,
-)]
-pub struct FileSystemOperator {
-    operator: Operator,
-}
+pub trait DataAccess {
+    fn operator(&self) -> &Operator;
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
-)]
-pub struct S3Operator {}
-
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
-)]
-pub struct WebDavOperator {}
-
-impl FileSystemOperator {
-    pub async fn list_directory(&self, path: PathBuf) -> Result<Vec<FsMetadata>> {
+    async fn list_directory(&self, path: PathBuf) -> Result<Vec<FsMetadata>> {
         let path_string = path.to_str().context("non-utf8 filename")?.to_string();
-        let list = self.operator.list(&path_string).await?;
+        let list = self.operator().list(&path_string).await?;
         let mut entries = Vec::new();
         let mut entries_iter = list.iter();
         entries_iter.next();
@@ -81,9 +65,9 @@ impl FileSystemOperator {
         Ok(entries)
     }
 
-    pub async fn get_path_metadata(&self, relative_path: &str) -> Result<FsMetadata> {
+    async fn get_path_metadata(&self, relative_path: &str) -> Result<FsMetadata> {
         let relative_path_buf = PathBuf::from(relative_path);
-        let metadata = self.operator.stat(relative_path).await?;
+        let metadata = self.operator().stat(relative_path).await?;
         Ok(FsMetadata {
             is_dir: metadata.is_dir(),
             is_file: metadata.is_file(),
@@ -96,11 +80,51 @@ impl FileSystemOperator {
     }
 }
 
+#[derive(
+    Debug, Clone,
+)]
+pub struct FileSystemOperator {
+    operator: Operator,
+}
+
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+)]
+pub struct S3Operator {}
+
+#[derive(
+    Debug, Clone
+)]
+pub struct WebDavOperator {
+    operator: Operator
+}
+
 pub async fn create_operator(
-    data_access_settings: &DataAccessSettings,
+    data_backend: &DataBackend,
 ) -> Result<DataAccessOperator> {
-    match data_access_settings {
-        DataAccessSettings::LocalDisk { root_path } => {
+
+    let data_access_settings = get_data_access_settings(()).await?;
+
+    match data_backend {
+       DataBackend::LocalDisk  => {
+            let local_disk_settings = &data_access_settings.local_disk;
+            let operator = create_local_disk_operator(local_disk_settings)?;
+            Ok(DataAccessOperator::FileSystemOperator(operator))
+        }
+        DataBackend::S3 => {
+            Err(anyhow::anyhow!("S3 not implemented"))
+        },
+        DataBackend::WebDav => {
+            let webdav_settings = &data_access_settings.webdav;
+            let operator = create_webdav_operator(webdav_settings)?;
+            Ok(DataAccessOperator::WebDavOperator(operator))
+        }
+    }
+}
+
+fn create_local_disk_operator(settings: &Option<LocalDiskSettings>) -> Result<FileSystemOperator> {
+    match settings {
+        Some(LocalDiskSettings { root_path }) => {
             let root_path = root_path.clone()
                 .into_os_string()
                 .into_string()
@@ -109,28 +133,33 @@ pub async fn create_operator(
             let operator = Operator::new(builder)?
                 .layer(LoggingLayer::default())
                 .finish();
-            Ok(DataAccessOperator::FileSystemOperator(FileSystemOperator {
+            Ok(FileSystemOperator {
                 operator,
-            }))
+            })
         }
-        DataAccessSettings::S3 {
-            url: _,
-            bucket: _,
-            access_key: _,
-            secret_key: _,
-        } => Err(anyhow::anyhow!("S3 not implemented")),
-        DataAccessSettings::WebDav {
-            url: _,
-            username: _,
-            password: _,
-        } => Err(anyhow::anyhow!("WebDav not implemented")),
-        _ => Err(anyhow::anyhow!("Unknown data access settings")),
+        None => Err(anyhow::anyhow!("LocalDiskSettings not found")),
     }
 }
 
-// TODO use enum for data backend type instead of passing the settings
-// fetch the settings from the database here or in the create_operator function
-pub async fn list_directory_server((data_access_settings, path): (DataAccessSettings, PathBuf)) -> Result<Vec<FsMetadata>> {
-    let operator = create_operator(&data_access_settings).await?;
+fn create_webdav_operator(settings: &Option<WebDavSettings>) -> Result<WebDavOperator> {
+    match settings {
+        Some(WebDavSettings { url, username, password }) => {
+            let builder = services::Webdav::default()
+                .endpoint(url)
+                .username(username)
+                .password(password);
+            let operator = Operator::new(builder)?
+                .layer(LoggingLayer::default())
+                .finish();
+            Ok(WebDavOperator {
+                operator,
+            })
+        }
+        None => Err(anyhow::anyhow!("WebDavSettings not found")),
+    }
+}
+
+pub async fn list_directory_server((data_backend, path): (DataBackend, PathBuf)) -> Result<Vec<FsMetadata>> {
+    let operator = create_operator(&data_backend).await?;
     operator.list_directory(path).await
 }

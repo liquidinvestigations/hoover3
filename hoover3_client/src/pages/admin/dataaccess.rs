@@ -66,9 +66,8 @@ pub fn ConfigureDataAccessForm(on_close: Callback) -> Element {
                     button {
                         onclick: move |_e| {
                             _e.prevent_default();
-                            let settings = DataAccessSettings::LocalDisk {
-                                root_path: PathBuf::from(root_path.read().clone()),
-                            };
+                            let mut settings = DataAccessSettings::new();
+                            settings.set_local_disk(PathBuf::from(root_path.peek().clone()));
                             dioxus_logger::tracing::info!("settings: {:?}", settings);
                             spawn(async move {
                                 match create_or_update_data_access_settings(settings).await {
