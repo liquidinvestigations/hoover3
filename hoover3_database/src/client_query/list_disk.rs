@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tokio::fs;
 use tracing::info;
 
-async fn data_root_path() -> Result<PathBuf> {
+pub async fn data_root_path() -> Result<PathBuf> {
     Ok(get_package_dir()
         .parent()
         .context("no parent?")?

@@ -2,10 +2,7 @@
 cargo run -p nebula-demo-tokio --bin nebula_demo_tokio_v3_bb8_graph_pool 127.0.0.1 9669 root 'password'
 */
 
-use std::{
-    env,
-    sync::Arc,
-};
+use std::{env, sync::Arc};
 use tracing::info;
 
 use async_compat::Compat;

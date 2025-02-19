@@ -95,9 +95,7 @@ fn Navbar(display_loading_icon: ReadOnlySignal<bool>) -> Element {
                 li {
                     NavbarDropdown {
                         title: "Admin",
-                        links: vec![
-                            ("Collections".to_string(), Route::CollectionsAdminListPage {}.to_string()),
-                        ],
+                        links: vec![("Collections".to_string(), Route::CollectionsAdminListPage {}.to_string())],
                     }
                 }
             }
@@ -108,8 +106,7 @@ fn Navbar(display_loading_icon: ReadOnlySignal<bool>) -> Element {
 #[component]
 fn DisplayError(title: String, err: String) -> Element {
     rsx! {
-        div {
-            class: "container",
+        div { class: "container",
             article {
                 h1 { {title} }
                 pre { color: "red", "{err}" }
@@ -207,7 +204,7 @@ fn NavbarLayout() -> Element {
                 style: "height:99%;overflow:scroll;",
                 ErrorBoundary {
                     handle_error: |err_ctx: ErrorContext| rsx! {
-                        DisplayError{title: "Error", err: format!("{:#?}", err_ctx)}
+                        DisplayError { title: "Error", err: format!("{:#?}", err_ctx) }
                     },
                     SuspenseBoundary {
                         fallback: |_ctx: SuspenseContext| rsx! {
@@ -224,9 +221,6 @@ fn NavbarLayout() -> Element {
 #[component]
 fn PageNotFound(route: Vec<String>) -> Element {
     rsx! {
-        DisplayError {
-            title: "Page not found".to_string(),
-            err: format!("{route:?}"),
-        }
+        DisplayError { title: "Page not found".to_string(), err: format!("{route:?}") }
     }
 }

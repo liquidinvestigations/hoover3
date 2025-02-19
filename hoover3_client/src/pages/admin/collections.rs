@@ -8,6 +8,7 @@ use hoover3_types::{collection::CollectionUiRow, identifier::CollectionId};
 use crate::api::*;
 use crate::components::{DataRowDisplay, HtmlTable, InfoCard};
 use crate::errors::AnyhowErrorDioxusExt;
+use crate::pages::admin::ConfigureDataAccessForm;
 use crate::routes::Route;
 use crate::routes::UrlParam;
 
@@ -251,6 +252,9 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
             vec![]
         }
     });
+
+    let mut show_form = use_signal(|| false);
+
     rsx! {
         HtmlTable {
             title: "Data Sources",
@@ -262,10 +266,14 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
                     onclick: move |_| {
                         let _ = navigator().push(Route::NewDatasourceFormPage {
                             collection_id: c3.name().clone(),
-                            current_path: UrlParam::new(std::path::PathBuf::from("."))
+                            current_path: UrlParam::new(std::path::PathBuf::from("./")),
                         });
                     },
                     "Add Datasource"
+                },
+                button {
+                    onclick: move |_| show_form.set(true),
+                    "Configure Data Access"
                 }
             }})),
             extra: Some(("Actions", Callback::new(move |row:DatasourceUiRow| {
@@ -283,5 +291,14 @@ fn CollectionDatasourceListCard(c: CollectionId) -> Element {
                 }
             })))
         }
-    }
+        if *show_form.read() {
+            ConfigureDataAccessForm {
+                on_close: Callback::new(move |_| 
+                    {
+                    dioxus_logger::tracing::info!("Trying to create settings");
+                    show_form.set(false);
+            })
+                },
+            }
+        }
 }

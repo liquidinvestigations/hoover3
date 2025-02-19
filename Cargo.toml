@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
-    "hoover3_client", "hoover3_database", "hoover3_tasks", "hoover3_types",
+    "hoover3_client", "hoover3_data_access", "hoover3_database", "hoover3_tasks", "hoover3_types",
 ]
 
 [workspace.package]

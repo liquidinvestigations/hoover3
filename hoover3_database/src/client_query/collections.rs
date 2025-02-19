@@ -23,6 +23,7 @@ pub async fn get_single_collection(c: CollectionId) -> Result<CollectionUiRow> {
 /// databases, tables, search indexes and other setup that must happen.
 /// If a collection with said name exists, return that instead.
 pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
+    info!("creating new collection... {:?}", c);
     let session = ScyllaDatabaseHandle::global_session().await?;
 
     if let Ok(x) = CollectionDbRow::find_by_collection_id(c.name())

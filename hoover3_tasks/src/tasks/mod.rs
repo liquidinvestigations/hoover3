@@ -7,9 +7,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use temporal_client::WorkflowClientTrait;
 use temporal_client::WorkflowOptions;
+use temporal_sdk::ActContext;
 use temporal_sdk::ActivityError;
 use temporal_sdk::Worker;
-use temporal_sdk::ActContext;
 use temporal_sdk::{ActivityOptions, WfContext, WfExitValue, WorkflowResult};
 use temporal_sdk_core::protos::coresdk::activity_result::{
     activity_resolution::Status::Completed, ActivityResolution,
@@ -28,7 +28,6 @@ pub trait TemporalioDescriptorName {
 pub trait TemporalioDescriptorRegister {
     fn register(worker: &mut Worker) -> anyhow::Result<()>;
 }
-
 
 /// If T1 and T2 can be registered, then so can (T1,T2) and (T1, (T2, T3))
 macro_rules! impl_tuple_register {

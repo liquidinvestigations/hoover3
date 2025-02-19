@@ -10,6 +10,7 @@ publish  = {workspace = true}
 
 [dependencies]
 hoover3_database = {path="../hoover3_database",optional=true}
+hoover3_data_access = {path="../hoover3_data_access", optional=true}
 hoover3_tasks = {path="../hoover3_tasks",optional=true}
 hoover3_types  = {path="../hoover3_types"}
 
@@ -34,4 +35,4 @@ default = []
 web = ["dioxus/web"]
 desktop = ["dioxus/desktop"]
 mobile = ["dioxus/mobile"]
-server = ["dioxus/server", "dep:tokio","dep:hoover3_database", "dep:hoover3_tasks"]
+server = ["dioxus/server", "dep:tokio","dep:hoover3_database", "dep:hoover3_tasks", "dep:hoover3_data_access"]

@@ -1,12 +1,16 @@
 use crate::api::create_datasource;
 use crate::api::list_directory;
+use crate::api::get_data_access_settings;
+use crate::api::list_directory_server;
 use crate::components::DataRowDisplay;
 use crate::components::HtmlTable;
 use crate::routes::Route;
 use crate::routes::UrlParam;
 use chrono::{DateTime, Utc};
 use dioxus::prelude::*;
+use dioxus_logger::tracing::info;
 use hoover3_types::datasource::DatasourceSettings;
+use hoover3_types::data_access::DataAccessSettings;
 use hoover3_types::tasks::DatasourceScanRequest;
 use hoover3_types::{filesystem::FsMetadata, identifier::DatabaseIdentifier};
 use std::path::PathBuf;
@@ -75,20 +79,56 @@ fn _NewDatasourceFormPage(
     let _collection = CollectionId::new(&collection_id.read().as_str()).throw()?;
     let mut name = use_signal(|| String::new());
     let mut children = use_signal(|| Vec::new());
+    let mut settings_loaded = use_signal(|| false);
 
     let can_create_datasource = use_memo(move || {
         let name = name.read().clone();
         let has_children = !children.read().is_empty();
         let is_valid_path =
-            path.read().clone() != PathBuf::from(".") && path.read().clone() != PathBuf::default();
+            path.read().clone() != PathBuf::from("./") && path.read().clone() != PathBuf::default();
         DatabaseIdentifier::new(&name).is_ok() && has_children && is_valid_path
     });
 
-    let children_res = use_resource(move || {
-        let path = path.read().clone();
-        async move { list_directory(path).await }
+    let settings = use_resource(move || async move {
+            get_data_access_settings(()).await 
+        }
+    );
+    info!("settings: {:?}", settings.read());
+    info!("settings_as_ref: {:?}", settings.read().as_ref());
+
+    let settings_checked = match settings.read().as_ref() {
+        Some(Ok(res)) => {
+            settings_loaded.set(true);
+            Some(res.clone())
+        },
+        None => None,
+        _ => Some(DataAccessSettings::LocalDisk { root_path: PathBuf::from("/home/kjell/code/hoover3/data") }),
+    };
+    info!("settings_checked: {:?}", settings_checked);
+
+
+    let children_res = use_resource({
+        let path = path;
+        //let settings = DataAccessSettings::LocalDisk { root_path: PathBuf::from("/home/kjell/code/hoover3/data") };
+        move || { 
+            let path = path.read().clone();
+            let settings_checked = settings.read().as_ref().cloned();
+                async move {
+            if let Some(Ok(settings_checked)) = settings_checked {
+                if  *settings_loaded.read() {
+                    list_directory_server((settings_checked, path)).await
+                } else {
+                    Err(dioxus::prelude::ServerFnError::new("Settings not loaded".to_string()))
+                }
+            } else {
+                Err(dioxus::prelude::ServerFnError::new("Settings not loaded".to_string()))
+        }
+        }
+        }
     });
+
     use_effect(move || {
+        if *settings_loaded.read() {
         children.set(
             children_res
                 .read()
@@ -97,7 +137,10 @@ fn _NewDatasourceFormPage(
                 .cloned()
                 .unwrap_or_default(),
         );
+        }
     });
+
+    info!("settings_loaded: {:?}", settings_loaded.read());
 
     rsx! {
         article { class: "container",
@@ -146,11 +189,17 @@ fn _NewDatasourceFormPage(
         }
         div {
             class: "container",
+            if *settings_loaded.read() {
             DatasourcePathPicker{
                 path: path.clone(),
                 child_list: children.clone(),
                 collection_id: collection_id.read().clone()
-            }
+        }
+            } else {
+        div {
+            "Loading..."
+        }
+    }
         }
     }
 }
@@ -162,20 +211,22 @@ fn DatasourcePathPicker(
     child_list: ReadOnlySignal<Vec<FsMetadata>>,
 ) -> Element {
     let parent_path = use_memo(move || {
-        let parent = path
+        let mut parent = path
             .read()
             .clone()
             .parent()
-            .unwrap_or(&PathBuf::from("."))
+            .unwrap_or(&PathBuf::from("./"))
             .to_path_buf();
 
         if format!("{:?}", parent) == "\"\"" {
-            PathBuf::from(".")
+            PathBuf::from("./")
         } else {
+            parent.push("");
             parent
         }
     });
-    let is_root = use_memo(move || path.read().as_os_str() == ".");
+    info!("parent_path: {:?}", parent_path);
+    let is_root = use_memo(move || path.read().as_os_str() == "./");
 
     rsx! {
         article {

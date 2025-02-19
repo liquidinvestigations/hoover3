@@ -5,6 +5,7 @@ use crate::time::current_time;
 use dioxus::prelude::*;
 use dioxus_logger::tracing::warn;
 use hoover3_types::collection::*;
+use hoover3_types::data_access::DataAccessSettings;
 use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::docker_health::*;
@@ -158,18 +159,33 @@ server_wrapper!(
     Vec<DatasourceUiRow>
 );
 
+//hoover3_database::client_query::list_disk,
 server_wrapper!(
-    hoover3_database::client_query::list_disk,
-    get_path_metadata,
-    PathBuf,
-    FsMetadata
-);
-
-server_wrapper!(
-    hoover3_database::client_query::list_disk,
+    hoover3_data_access::data_access::file_system_access,
     list_directory,
     PathBuf,
     Vec<FsMetadata>
+);
+
+server_wrapper!(
+    hoover3_data_access::data_access,
+    list_directory_server,
+    (DataAccessSettings, PathBuf),
+    Vec<FsMetadata>
+);
+
+server_wrapper!(
+    hoover3_database::client_query::data_access_settings,
+    create_or_update_data_access_settings,
+    DataAccessSettings,
+    String
+);
+
+server_wrapper!(
+    hoover3_database::client_query::data_access_settings,
+    get_data_access_settings,
+    (),
+    DataAccessSettings
 );
 
 server_wrapper!(
