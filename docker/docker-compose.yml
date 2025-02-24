@@ -488,8 +488,8 @@ services:
         # condition: service_healthy
       meilisearch:
         condition: service_healthy
-      minio-s3:
-        condition: service_healthy
+      # minio-s3:
+        # condition: service_healthy
       seaweed-s3:
         condition: service_healthy
     healthcheck:
