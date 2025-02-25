@@ -8,8 +8,6 @@ use std::{collections::hash_map::RandomState, sync::Arc};
 use tokio::sync::{OnceCell, RwLock};
 use tracing::info;
 
-use crate::db_management::scylla_migrate::get_scylla_code_schema_json;
-
 use super::{CollectionId, DatabaseIdentifier, DatabaseSpaceManager};
 
 pub struct ScyllaConnection(CachingSession<RandomState>);
@@ -98,9 +96,12 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
             return Ok(());
         }
         info!("SCYLLA: CREATE SPACE {:?}", name);
-        let query = format!("CREATE KEYSPACE IF NOT EXISTS \"{}\"
+        let query = format!(
+            "CREATE KEYSPACE IF NOT EXISTS \"{}\"
         WITH REPLICATION =    {{'class' : 'NetworkTopologyStrategy', 'datacenter1' : 1}}
-         AND TABLETS = {{'enabled': false}}", name);
+         AND TABLETS = {{'enabled': false}}",
+            name
+        );
         self.execute_unpaged(query, &[]).await?;
 
         Ok(())
@@ -120,12 +121,22 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         let session = ScyllaDatabaseHandle::collection_session(_c).await?;
         let space_name = _c.database_name()?.to_string();
 
-        let schema_json = get_scylla_code_schema_json()?;
+        let schema_code = hoover3_types::db_schema::get_all_charybdis_codes();
+        // we put the codes in a temp file in some temp dir
+        let temp_dir = std::env::temp_dir().join("hoover3_charybdis_codes");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        info!("temp_dir: {}", temp_dir.to_string_lossy());
+        info!("schema_code: {:#?}", schema_code);
+        let temp_file = temp_dir.join("charybdis_codes.rs");
+        std::fs::write(temp_file, schema_code.join("\n")).unwrap();
+        // we run the migration on that temp dir
+
+        // let schema_json = get_scylla_code_schema_json()?;
 
         let migration = charybdis::migrate::MigrationBuilder::new()
             .keyspace(space_name.clone())
-            .drop_and_replace(false)
-            .code_schema_override_json(schema_json)
+            .drop_and_replace(true)
+            .current_dir(temp_dir.to_string_lossy().into_owned())
             .build(session.get_session())
             .await;
 

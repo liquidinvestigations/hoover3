@@ -1,4 +1,3 @@
-use crate::db_management::scylla_migrate::get_scylla_code_schema;
 use crate::db_management::{nebula_execute_retry, with_redis_cache};
 use crate::models::collection::_nebula_edges::get_all_nebula_edge_types;
 use anyhow::Result;
@@ -23,7 +22,7 @@ pub async fn migrate_nebula_collection(c: &CollectionId) -> Result<()> {
         )
         .await?;
     }
-    let scylla_schema = get_scylla_code_schema()?;
+    let scylla_schema = hoover3_types::db_schema::get_scylla_schema_from_inventory();
     // if we already have all the tags, skip the create
     if let Ok(nebula_schema) = _query_nebula_get_schema(c.clone()).await {
         if check_nebula_schema(c, &scylla_schema, &nebula_schema)

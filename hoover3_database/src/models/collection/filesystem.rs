@@ -1,29 +1,38 @@
 //! This module contains the table definitions for all the filesystem related models.
 
 use crate::impl_model_callbacks;
-use charybdis::macros::charybdis_model;
-use charybdis::macros::charybdis_udt_model;
-use charybdis::types::{BigInt, Int, Text, Timestamp};
+use hoover3_macro::model;
+use hoover3_macro::udt_model;
 use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::filesystem::{FsDirectoryUiRow, FsFileUiRow, FsMetadataBasic};
 use hoover3_types::identifier::DatabaseIdentifier;
-use serde::Serialize;
 
 /// Scylla User Defined Type for the result of a directory scan.
-#[charybdis_udt_model(type_name = FsDirectoryScanResultDb)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Default)]
-pub struct FsDirectoryScanResultDb {
+#[udt_model]
+#[allow(non_camel_case_types)]
+pub struct fs_directory_scan_result {
     /// Number of files in the directory
-    pub file_count: Int,
+    pub file_count: i32,
     /// Number of subdirectories in the directory
-    pub dir_count: Int,
+    pub dir_count: i32,
     /// Total size of all files in the directory
-    pub file_size_bytes: BigInt,
+    pub file_size_bytes: i64,
     /// Number of errors encountered during the scan
-    pub errors: Int,
+    pub errors: i32,
 }
 
-impl From<FsScanDatasourceResult> for FsDirectoryScanResultDb {
+impl Default for fs_directory_scan_result {
+    fn default() -> Self {
+        Self {
+            file_count: 0,
+            dir_count: 0,
+            file_size_bytes: 0,
+            errors: 0,
+        }
+    }
+}
+
+impl From<FsScanDatasourceResult> for fs_directory_scan_result {
     fn from(value: FsScanDatasourceResult) -> Self {
         Self {
             file_count: value.file_count as i32,
@@ -34,8 +43,8 @@ impl From<FsScanDatasourceResult> for FsDirectoryScanResultDb {
     }
 }
 
-impl From<FsDirectoryScanResultDb> for FsScanDatasourceResult {
-    fn from(value: FsDirectoryScanResultDb) -> Self {
+impl From<fs_directory_scan_result> for FsScanDatasourceResult {
+    fn from(value: fs_directory_scan_result) -> Self {
         Self {
             file_count: value.file_count as u64,
             dir_count: value.dir_count as u64,
@@ -46,30 +55,24 @@ impl From<FsDirectoryScanResultDb> for FsScanDatasourceResult {
 }
 
 /// Database representation of a filesystem directory, as it is found on disk or S3.
-#[charybdis_model(
-    table_name = filesystem_directory,
-    partition_keys = [datasource_id, path],
-    clustering_keys = [],
-    global_secondary_indexes = [],
-    local_secondary_indexes = [],
-    static_columns = []
-)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Default)]
+#[model]
 pub struct FsDirectoryDbRow {
     /// Unique identifier for the datasource
-    pub datasource_id: Text,
+    #[model(primary(partition))]
+    pub datasource_id: String,
     /// Path to the directory
-    pub path: Text,
+    #[model(primary(clustering))]
+    pub path: String,
     /// Size of the directory in bytes
-    pub size_bytes: BigInt,
+    pub size_bytes: i64,
     /// Timestamp of the most recent modification to the directory
     pub modified: Option<Timestamp>,
     /// Timestamp of the directory's creation
     pub created: Option<Timestamp>,
     /// Scan results for the directory's direct children
-    pub scan_children: FsDirectoryScanResultDb,
+    pub scan_children: fs_directory_scan_result,
     /// Scan results for the directory's total contents, including all descendants
-    pub scan_total: FsDirectoryScanResultDb,
+    pub scan_total: fs_directory_scan_result,
 }
 
 impl FsDirectoryDbRow {
@@ -104,27 +107,22 @@ impl FsDirectoryDbRow {
 impl_model_callbacks!(FsDirectoryDbRow);
 
 /// Database representation of a filesystem file, as it is found on disk or S3.
-#[charybdis_model(
-    table_name = filesystem_file,
-    partition_keys = [datasource_id, path],
-    clustering_keys = [],
-    global_secondary_indexes = [],
-    local_secondary_indexes = [],
-    static_columns = []
-)]
-#[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[model]
 pub struct FsFileDbRow {
     /// Unique identifier for the datasource
-    pub datasource_id: Text,
+    #[model(primary(partition))]
+    pub datasource_id: String,
     /// Path to the file
-    pub path: Text,
+    #[model(primary(partition))]
+    pub path: String,
     /// Size of the file in bytes
-    pub size_bytes: BigInt,
+    pub size_bytes: i64,
     /// Timestamp of the file's last modification
     pub modified: Option<Timestamp>,
     /// Timestamp of the file's creation
     pub created: Option<Timestamp>,
 }
+
 impl FsFileDbRow {
     /// Convert a `FsFileDbRow` to frontend representation.
     pub fn to_ui_row(self) -> anyhow::Result<FsFileUiRow> {

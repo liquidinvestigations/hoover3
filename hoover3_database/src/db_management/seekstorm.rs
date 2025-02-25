@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::{scylla_migrate::get_scylla_code_schema, ScyllaDatabaseHandle};
+use super::ScyllaDatabaseHandle;
 use crate::{
     db_management::DatabaseSpaceManager, models::common::seekstorm_index::SeekstormIndexInfo,
 };
@@ -127,7 +127,7 @@ impl DatabaseSpaceManager for SeekstormDatabaseHandle {
             prefix: None,
             key: MASTER_API_KEY.to_string(),
         });
-        let scylla_schema = get_scylla_code_schema()?;
+        let scylla_schema = hoover3_types::db_schema::get_scylla_schema_from_inventory();
         let mut schema = vec![];
 
         for (table_name, table) in scylla_schema.tables {

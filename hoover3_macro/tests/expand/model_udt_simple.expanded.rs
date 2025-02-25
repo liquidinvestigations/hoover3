@@ -1,8 +1,9 @@
 use hoover3_macro::udt_model;
 use hoover3_types::db_schema::Timestamp;
 use serde::Serialize;
+#[allow(non_camel_case_types)]
 /// Documentation
-pub struct SimpleModelUdt {
+pub struct simple_model_udt {
     /// Some Field
     pub id: ::charybdis::types::Text,
     /// Other Field
@@ -11,12 +12,13 @@ pub struct SimpleModelUdt {
     pub created_at: ::charybdis::types::Timestamp,
 }
 #[automatically_derived]
-impl ::core::fmt::Debug for SimpleModelUdt {
+#[allow(non_camel_case_types)]
+impl ::core::fmt::Debug for simple_model_udt {
     #[inline]
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         ::core::fmt::Formatter::debug_struct_field3_finish(
             f,
-            "SimpleModelUdt",
+            "simple_model_udt",
             "id",
             &self.id,
             "another_field",
@@ -27,10 +29,11 @@ impl ::core::fmt::Debug for SimpleModelUdt {
     }
 }
 #[automatically_derived]
-impl ::core::clone::Clone for SimpleModelUdt {
+#[allow(non_camel_case_types)]
+impl ::core::clone::Clone for simple_model_udt {
     #[inline]
-    fn clone(&self) -> SimpleModelUdt {
-        SimpleModelUdt {
+    fn clone(&self) -> simple_model_udt {
+        simple_model_udt {
             id: ::core::clone::Clone::clone(&self.id),
             another_field: ::core::clone::Clone::clone(&self.another_field),
             created_at: ::core::clone::Clone::clone(&self.created_at),
@@ -38,7 +41,8 @@ impl ::core::clone::Clone for SimpleModelUdt {
     }
 }
 #[automatically_derived]
-impl ::core::hash::Hash for SimpleModelUdt {
+#[allow(non_camel_case_types)]
+impl ::core::hash::Hash for simple_model_udt {
     #[inline]
     fn hash<__H: ::core::hash::Hasher>(&self, state: &mut __H) -> () {
         ::core::hash::Hash::hash(&self.id, state);
@@ -47,21 +51,24 @@ impl ::core::hash::Hash for SimpleModelUdt {
     }
 }
 #[automatically_derived]
-impl ::core::marker::StructuralPartialEq for SimpleModelUdt {}
+#[allow(non_camel_case_types)]
+impl ::core::marker::StructuralPartialEq for simple_model_udt {}
 #[automatically_derived]
-impl ::core::cmp::PartialEq for SimpleModelUdt {
+#[allow(non_camel_case_types)]
+impl ::core::cmp::PartialEq for simple_model_udt {
     #[inline]
-    fn eq(&self, other: &SimpleModelUdt) -> bool {
+    fn eq(&self, other: &simple_model_udt) -> bool {
         self.id == other.id && self.another_field == other.another_field
             && self.created_at == other.created_at
     }
 }
 #[automatically_derived]
-impl ::core::cmp::PartialOrd for SimpleModelUdt {
+#[allow(non_camel_case_types)]
+impl ::core::cmp::PartialOrd for simple_model_udt {
     #[inline]
     fn partial_cmp(
         &self,
-        other: &SimpleModelUdt,
+        other: &simple_model_udt,
     ) -> ::core::option::Option<::core::cmp::Ordering> {
         match ::core::cmp::PartialOrd::partial_cmp(&self.id, &other.id) {
             ::core::option::Option::Some(::core::cmp::Ordering::Equal) => {
@@ -88,7 +95,7 @@ const _: () = {
     #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
-    impl _serde::Serialize for SimpleModelUdt {
+    impl _serde::Serialize for simple_model_udt {
         fn serialize<__S>(
             &self,
             __serializer: __S,
@@ -98,7 +105,7 @@ const _: () = {
         {
             let mut __serde_state = _serde::Serializer::serialize_struct(
                 __serializer,
-                "SimpleModelUdt",
+                "simple_model_udt",
                 false as usize + 1 + 1 + 1,
             )?;
             _serde::ser::SerializeStruct::serialize_field(
@@ -126,7 +133,7 @@ const _: () = {
     #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
     #[automatically_derived]
-    impl<'de> _serde::Deserialize<'de> for SimpleModelUdt {
+    impl<'de> _serde::Deserialize<'de> for simple_model_udt {
         fn deserialize<__D>(
             __deserializer: __D,
         ) -> _serde::__private::Result<Self, __D::Error>
@@ -215,19 +222,19 @@ const _: () = {
             }
             #[doc(hidden)]
             struct __Visitor<'de> {
-                marker: _serde::__private::PhantomData<SimpleModelUdt>,
+                marker: _serde::__private::PhantomData<simple_model_udt>,
                 lifetime: _serde::__private::PhantomData<&'de ()>,
             }
             #[automatically_derived]
             impl<'de> _serde::de::Visitor<'de> for __Visitor<'de> {
-                type Value = SimpleModelUdt;
+                type Value = simple_model_udt;
                 fn expecting(
                     &self,
                     __formatter: &mut _serde::__private::Formatter,
                 ) -> _serde::__private::fmt::Result {
                     _serde::__private::Formatter::write_str(
                         __formatter,
-                        "struct SimpleModelUdt",
+                        "struct simple_model_udt",
                     )
                 }
                 #[inline]
@@ -246,7 +253,7 @@ const _: () = {
                             return _serde::__private::Err(
                                 _serde::de::Error::invalid_length(
                                     0usize,
-                                    &"struct SimpleModelUdt with 3 elements",
+                                    &"struct simple_model_udt with 3 elements",
                                 ),
                             );
                         }
@@ -259,7 +266,7 @@ const _: () = {
                             return _serde::__private::Err(
                                 _serde::de::Error::invalid_length(
                                     1usize,
-                                    &"struct SimpleModelUdt with 3 elements",
+                                    &"struct simple_model_udt with 3 elements",
                                 ),
                             );
                         }
@@ -272,12 +279,12 @@ const _: () = {
                             return _serde::__private::Err(
                                 _serde::de::Error::invalid_length(
                                     2usize,
-                                    &"struct SimpleModelUdt with 3 elements",
+                                    &"struct simple_model_udt with 3 elements",
                                 ),
                             );
                         }
                     };
-                    _serde::__private::Ok(SimpleModelUdt {
+                    _serde::__private::Ok(simple_model_udt {
                         id: __field0,
                         another_field: __field1,
                         created_at: __field2,
@@ -369,7 +376,7 @@ const _: () = {
                             _serde::__private::de::missing_field("created_at")?
                         }
                     };
-                    _serde::__private::Ok(SimpleModelUdt {
+                    _serde::__private::Ok(simple_model_udt {
                         id: __field0,
                         another_field: __field1,
                         created_at: __field2,
@@ -384,10 +391,10 @@ const _: () = {
             ];
             _serde::Deserializer::deserialize_struct(
                 __deserializer,
-                "SimpleModelUdt",
+                "simple_model_udt",
                 FIELDS,
                 __Visitor {
-                    marker: _serde::__private::PhantomData::<SimpleModelUdt>,
+                    marker: _serde::__private::PhantomData::<simple_model_udt>,
                     lifetime: _serde::__private::PhantomData,
                 },
             )
@@ -398,7 +405,7 @@ const _: () = {
 impl<
     'lifetime,
     'lifetime_,
-> scylla::_macro_internal::DeserializeValue<'lifetime, 'lifetime_> for SimpleModelUdt {
+> scylla::_macro_internal::DeserializeValue<'lifetime, 'lifetime_> for simple_model_udt {
     fn type_check(
         typ: &scylla::_macro_internal::ColumnType,
     ) -> ::std::result::Result<(), scylla::_macro_internal::TypeCheckError> {
@@ -715,7 +722,7 @@ impl<
     }
 }
 #[automatically_derived]
-impl ::scylla::_macro_internal::SerializeValue for SimpleModelUdt {
+impl ::scylla::_macro_internal::SerializeValue for simple_model_udt {
     fn serialize<'b>(
         &self,
         typ: &::scylla::_macro_internal::ColumnType,
@@ -916,9 +923,9 @@ const _: () = {
         value: &{
             ::hoover3_types::db_schema::UdtModelDefinitionStatic {
                 udt_name: "simple_model_udt",
-                model_name: "SimpleModelUdt",
+                model_name: "simple_model_udt",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_udt_model(type_name = simple_model_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModelUdt {\n    /// Some Field\n    pub id: ::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<::charybdis::types::Int>,\n    /// Timestamp field\n    pub created_at: ::charybdis::types::Timestamp,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_udt_model(type_name = simple_model_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct simple_model_udt {\n    /// Some Field\n    pub id: ::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<::charybdis::types::Int>,\n    /// Timestamp field\n    pub created_at: ::charybdis::types::Timestamp,\n}\n",
                 fields: &[
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "id",
@@ -930,6 +937,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "String",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "another_field",
@@ -941,6 +949,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: true,
+                        field_type_original: "i32",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "created_at",
@@ -952,6 +961,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "Timestamp",
                     },
                 ],
             }

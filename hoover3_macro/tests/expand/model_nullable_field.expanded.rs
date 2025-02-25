@@ -776,6 +776,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "String",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "created_at",
@@ -787,6 +788,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: true,
+                        field_type_original: "Timestamp",
                     },
                 ],
             }

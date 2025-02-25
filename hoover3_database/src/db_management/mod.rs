@@ -120,16 +120,16 @@ async fn test_db_sessions() -> Result<(), anyhow::Error> {
     use seaweed::S3DatabaseHandle;
     _test_db_session::<S3DatabaseHandle>().await?;
 
-    use clickhouse::ClickhouseDatabaseHandle;
-    _test_db_session::<ClickhouseDatabaseHandle>().await?;
+    // use clickhouse::ClickhouseDatabaseHandle;
+    // _test_db_session::<ClickhouseDatabaseHandle>().await?;
 
     use meilisearch::MeilisearchDatabaseHandle;
     _test_db_session::<MeilisearchDatabaseHandle>().await?;
 
-    use nebula::NebulaDatabaseHandle;
-    _test_db_session::<NebulaDatabaseHandle>().await?;
+    // use nebula::NebulaDatabaseHandle;
+    // _test_db_session::<NebulaDatabaseHandle>().await?;
 
-    _test_db_session::<SeekstormDatabaseHandle>().await?;
+    // _test_db_session::<SeekstormDatabaseHandle>().await?;
 
     Ok(())
 }

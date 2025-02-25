@@ -393,9 +393,9 @@ impl DatabaseExtraCallbacks {
         )
         .await??;
 
-        let nebula_insert_query =
-            nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), nebula_data)?;
-        nebula_execute_retry::<()>(&self.collection_id, &nebula_insert_query).await?;
+        // let nebula_insert_query =
+        //     nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), nebula_data)?;
+        // nebula_execute_retry::<()>(&self.collection_id, &nebula_insert_query).await?;
 
         // takes too much time
         // meilisearch_wait_for_task(_search_result).await?;

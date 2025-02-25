@@ -37,6 +37,7 @@ pub fn udt_model(item: TokenStream) -> TokenStream {
     let inventory_submit = generate_udt_inventory_submit(&model_def);
 
     quote::quote! {
+        #[allow(non_camel_case_types)]
         #item_struct
         #inventory_submit
     }
@@ -88,7 +89,7 @@ fn generate_new_item_struct(
     // Add charybdis column type attributes to fields
     if let syn::Fields::Named(ref mut fields) = item_struct.fields {
         for field in fields.named.iter_mut() {
-            let (column_type, nullable) = get_field_type(&field.ty);
+            let (column_type, nullable, _column_original_type) = get_field_type(&field.ty);
             let charybdis_field_type = if column_type == DatabaseColumnType::UnspecifiedType {
                 // For unrecognized types, keep the original type
                 field.ty.clone()
@@ -154,6 +155,7 @@ fn generate_inventory_submit(model_def: &ModelDefinition) -> TokenStream {
             let search_index = f.search_index;
             let search_facet = f.search_facet;
             let nullable = f.nullable;
+            let field_type_original = f.field_type_original.clone();
             quote::quote! {
                 ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                     name: #name,
@@ -165,6 +167,7 @@ fn generate_inventory_submit(model_def: &ModelDefinition) -> TokenStream {
                     search_index: #search_index,
                     search_facet: #search_facet,
                     nullable: #nullable,
+                    field_type_original: #field_type_original,
                 }
             }
         })
@@ -295,7 +298,7 @@ fn parse_model(item: TokenStream) -> ModelDefinition {
             let mut search_facet = false;
 
             // Get field type and nullable status
-            let (field_type, nullable) = get_field_type(ty);
+            let (field_type, nullable, field_type_original) = get_field_type(ty);
 
             // Parse field attributes
             for attr in attrs {
@@ -324,6 +327,7 @@ fn parse_model(item: TokenStream) -> ModelDefinition {
                 search_index,
                 search_facet,
                 nullable,
+                field_type_original,
             }
         })
         .collect();
@@ -337,7 +341,7 @@ fn parse_model(item: TokenStream) -> ModelDefinition {
     }
 }
 
-fn get_field_type(ty: &syn::Type) -> (DatabaseColumnType, bool) {
+fn get_field_type(ty: &syn::Type) -> (DatabaseColumnType, bool, String) {
     match ty {
         syn::Type::Path(syn::TypePath { path, .. }) => {
             let segments = &path.segments;
@@ -347,8 +351,8 @@ fn get_field_type(ty: &syn::Type) -> (DatabaseColumnType, bool) {
             if last_segment.ident == "Option" {
                 if let syn::PathArguments::AngleBracketed(args) = &last_segment.arguments {
                     if let Some(syn::GenericArgument::Type(inner_type)) = args.args.first() {
-                        let (inner_type, _) = get_field_type(inner_type);
-                        return (inner_type, true);
+                        let (inner_type, _null, orig) = get_field_type(inner_type);
+                        return (inner_type, true, orig);
                     }
                 }
                 panic!("invalid Option type");
@@ -368,7 +372,7 @@ fn get_field_type(ty: &syn::Type) -> (DatabaseColumnType, bool) {
                 "Timestamp" => DatabaseColumnType::Timestamp,
                 _ => DatabaseColumnType::UnspecifiedType,
             };
-            (column_type, false)
+            (column_type, false, type_name)
         }
         _ => panic!("unsupported field type: {:?}", ty),
     }
@@ -419,6 +423,7 @@ fn test_parse_model() {
                     search_facet: false,
                     nullable: false,
                     docstring: "Doc One".to_string(),
+                    field_type_original: "String".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "ck".to_string(),
@@ -430,6 +435,7 @@ fn test_parse_model() {
                     search_facet: false,
                     nullable: false,
                     docstring: "Doc Two".to_string(),
+                    field_type_original: "i64".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "field1".to_string(),
@@ -441,6 +447,7 @@ fn test_parse_model() {
                     search_facet: false,
                     nullable: false,
                     docstring: "Doc Three".to_string(),
+                    field_type_original: "i32".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "field2".to_string(),
@@ -452,6 +459,7 @@ fn test_parse_model() {
                     search_facet: false,
                     nullable: true,
                     docstring: "Doc Four".to_string(),
+                    field_type_original: "i8".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "field3".to_string(),
@@ -463,6 +471,7 @@ fn test_parse_model() {
                     search_facet: true,
                     nullable: false,
                     docstring: "Doc Five".to_string(),
+                    field_type_original: "Timestamp".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "field4".to_string(),
@@ -474,6 +483,7 @@ fn test_parse_model() {
                     search_facet: false,
                     nullable: false,
                     docstring: "Doc Six".to_string(),
+                    field_type_original: "i16".to_string(),
                 },
             ],
         }
@@ -563,6 +573,7 @@ fn test_generate_inventory_submit() {
                 search_facet: false,
                 docstring: "a".to_string(),
                 nullable: false,
+                field_type_original: "String".to_string(),
             },
             ModelFieldDefinition {
                 name: "ck".to_string(),
@@ -574,6 +585,7 @@ fn test_generate_inventory_submit() {
                 search_facet: false,
                 docstring: "b".to_string(),
                 nullable: false,
+                field_type_original: "i64".to_string(),
             },
         ],
     };
@@ -596,6 +608,7 @@ fn test_generate_inventory_submit() {
                     search_index: false,
                     search_facet: false,
                     nullable: false,
+                    field_type_original: "String",
                 },
                 ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                     name: "ck",
@@ -607,6 +620,7 @@ fn test_generate_inventory_submit() {
                     search_index: false,
                     search_facet: false,
                     nullable: false,
+                    field_type_original: "i64",
                 }
             ],
         }}
@@ -652,17 +666,38 @@ fn test_model_macro() {
         }
 
         ::hoover3_types::inventory::submit! {
-            ::hoover3_types::db_schema::ModelDefinitionStatic { table_name : "my_model",
-            model_name : "MyModel", docstring : "This is a test model", charybdis_code :
-            "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
-            fields : & [::hoover3_types::db_schema::ModelFieldDefinitionStatic { name : "pk",
-            field_type : ::hoover3_types::db_schema::DatabaseColumnType::String, docstring :
-            "Doc One", clustering_key : false, partition_key : true, search_store : false,
-            search_index : false, search_facet : false, nullable : false, },
-            ::hoover3_types::db_schema::ModelFieldDefinitionStatic { name : "created_at",
-            field_type : ::hoover3_types::db_schema::DatabaseColumnType::Timestamp, docstring :
-            "Doc Two", clustering_key : false, partition_key : false, search_store : false,
-            search_index : false, search_facet : false, nullable : true, }], }
+            ::hoover3_types::db_schema::ModelDefinitionStatic {
+                table_name : "my_model",
+                model_name : "MyModel",
+                docstring : "This is a test model",
+                charybdis_code :  "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                fields : & [
+                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                        name : "pk",
+                        field_type : ::hoover3_types::db_schema::DatabaseColumnType::String,
+                        docstring :    "Doc One",
+                        clustering_key : false,
+                        partition_key : true,
+                        search_store : false,
+                        search_index : false,
+                        search_facet : false,
+                        nullable : false,
+                        field_type_original : "String",
+                    },
+                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                        name : "created_at",
+                        field_type : ::hoover3_types::db_schema::DatabaseColumnType::Timestamp,
+                        docstring : "Doc Two",
+                        clustering_key : false,
+                        partition_key : false,
+                        search_store : false,
+                        search_index : false,
+                        search_facet : false,
+                        nullable : true,
+                        field_type_original : "Timestamp",
+                    }
+                ],
+            }
         }
 
     };
@@ -722,6 +757,7 @@ fn test_model_with_custom_type() {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "String",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "custom_field",
@@ -733,6 +769,7 @@ fn test_model_with_custom_type() {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "CustomType",
                     }
                 ],
             }
@@ -779,8 +816,9 @@ fn parse_udt_model(item: TokenStream) -> UdtModelDefinition {
     }
 
     let udt_name = {
-        use convert_case::{Case, Casing};
-        model_name.to_case(Case::Snake)
+        // use convert_case::{Case, Casing};
+        // model_name.to_case(Case::Snake)
+        model_name.clone()
     };
 
     let syn::Fields::Named(syn::FieldsNamed { named: fields, .. }) = item_struct.fields else {
@@ -828,7 +866,7 @@ fn parse_udt_model(item: TokenStream) -> UdtModelDefinition {
             }
 
             // Get field type and nullable status
-            let (field_type, nullable) = get_field_type(ty);
+            let (field_type, nullable, field_type_original) = get_field_type(ty);
 
             ModelFieldDefinition {
                 name: field_name,
@@ -840,6 +878,7 @@ fn parse_udt_model(item: TokenStream) -> UdtModelDefinition {
                 search_index: false,
                 search_facet: false,
                 nullable,
+                field_type_original,
             }
         })
         .collect();
@@ -880,7 +919,7 @@ fn generate_new_udt_item_struct(
     // Add charybdis column type attributes to fields
     if let syn::Fields::Named(ref mut fields) = item_struct.fields {
         for field in fields.named.iter_mut() {
-            let (column_type, nullable) = get_field_type(&field.ty);
+            let (column_type, nullable, _column_original_type) = get_field_type(&field.ty);
             let charybdis_field_type = if column_type == DatabaseColumnType::UnspecifiedType {
                 // For unrecognized types, keep the original type
                 field.ty.clone()
@@ -935,6 +974,7 @@ fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream 
             );
             let field_type = syn::parse_str::<syn::Type>(&field_type_str).unwrap();
             let nullable = f.nullable;
+            let field_type_original = f.field_type_original.clone();
             quote::quote! {
                 ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                     name: #name,
@@ -946,6 +986,7 @@ fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream 
                     search_index: false,
                     search_facet: false,
                     nullable: #nullable,
+                    field_type_original: #field_type_original,
                 }
             }
         })
@@ -966,7 +1007,7 @@ fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream 
 fn test_parse_udt_model() {
     let item = quote::quote! {
         /// This is a test UDT
-        struct MyUdt {
+        struct my_udt {
             /// Doc One
             pub field1: String,
             /// Doc Two
@@ -983,7 +1024,7 @@ fn test_parse_udt_model() {
         udt_def,
         UdtModelDefinition {
             udt_name: "my_udt".to_string(),
-            model_name: "MyUdt".to_string(),
+            model_name: "my_udt".to_string(),
             docstring: "This is a test UDT".to_string(),
             charybdis_code: "".to_string(),
             fields: vec![
@@ -997,6 +1038,7 @@ fn test_parse_udt_model() {
                     search_facet: false,
                     nullable: false,
                     docstring: "Doc One".to_string(),
+                    field_type_original: "String".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "field2".to_string(),
@@ -1008,6 +1050,7 @@ fn test_parse_udt_model() {
                     search_facet: false,
                     nullable: true,
                     docstring: "Doc Two".to_string(),
+                    field_type_original: "i64".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "field3".to_string(),
@@ -1019,6 +1062,7 @@ fn test_parse_udt_model() {
                     search_facet: false,
                     nullable: false,
                     docstring: "Doc Three".to_string(),
+                    field_type_original: "i32".to_string(),
                 },
                 ModelFieldDefinition {
                     name: "field4".to_string(),
@@ -1030,6 +1074,7 @@ fn test_parse_udt_model() {
                     search_facet: false,
                     nullable: false,
                     docstring: "Doc Four".to_string(),
+                    field_type_original: "Timestamp".to_string(),
                 },
             ],
         }
@@ -1041,7 +1086,7 @@ fn test_generate_new_udt_item_struct() {
     use pretty_assertions::assert_eq;
     let input_struct = quote::quote! {
         /// Test UDT documentation
-        pub struct SimpleUdt {
+        pub struct simple_udt {
             /// First field
             pub field1: String,
             /// Second field
@@ -1070,7 +1115,7 @@ fn test_generate_new_udt_item_struct() {
             ::serde::Serialize,
             ::serde::Deserialize
         )]
-        pub struct SimpleUdt {
+        pub struct simple_udt {
             /// First field
             pub field1: ::charybdis::types::Text,
             /// Second field
@@ -1096,7 +1141,7 @@ fn test_generate_udt_inventory_submit() {
 
     let udt_def = UdtModelDefinition {
         udt_name: "my_udt".to_string(),
-        model_name: "MyUdt".to_string(),
+        model_name: "my_udt".to_string(),
         docstring: "This is a test UDT".to_string(),
         charybdis_code: "test code".to_string(),
         fields: vec![
@@ -1110,6 +1155,7 @@ fn test_generate_udt_inventory_submit() {
                 search_facet: false,
                 docstring: "first field".to_string(),
                 nullable: false,
+                field_type_original: "String".to_string(),
             },
             ModelFieldDefinition {
                 name: "field2".to_string(),
@@ -1121,6 +1167,7 @@ fn test_generate_udt_inventory_submit() {
                 search_facet: false,
                 docstring: "second field".to_string(),
                 nullable: true,
+                field_type_original: "i64".to_string(),
             },
         ],
     };
@@ -1129,7 +1176,7 @@ fn test_generate_udt_inventory_submit() {
     let expected = quote::quote! {
         ::hoover3_types::inventory::submit!{::hoover3_types::db_schema::UdtModelDefinitionStatic {
             udt_name: "my_udt",
-            model_name: "MyUdt",
+            model_name: "my_udt",
             docstring: "This is a test UDT",
             charybdis_code: "test code",
             fields: & [
@@ -1143,6 +1190,7 @@ fn test_generate_udt_inventory_submit() {
                     search_index: false,
                     search_facet: false,
                     nullable: false,
+                    field_type_original: "String",
                 },
                 ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                     name: "field2",
@@ -1154,6 +1202,7 @@ fn test_generate_udt_inventory_submit() {
                     search_index: false,
                     search_facet: false,
                     nullable: true,
+                    field_type_original: "i64",
                 }
             ],
         }}
@@ -1171,7 +1220,7 @@ fn test_udt_model_macro() {
     use pretty_assertions::assert_eq;
     let item = quote::quote! {
         /// This is a test UDT
-        struct MyUdt {
+        struct my_udt {
             /// Doc One
             pub field1: String,
             /// Doc Two
@@ -1180,12 +1229,13 @@ fn test_udt_model_macro() {
     };
     let result = udt_model(item);
     let expected = quote::quote! {
+        #[allow(non_camel_case_types)]
         /// This is a test UDT
         #[::charybdis::macros::charybdis_udt_model(
             type_name = my_udt
         )]
         #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
-        struct MyUdt {
+        struct my_udt {
             /// Doc One
             pub field1: ::charybdis::types::Text,
             /// Doc Two
@@ -1195,10 +1245,10 @@ fn test_udt_model_macro() {
         ::hoover3_types::inventory::submit! {
             ::hoover3_types::db_schema::UdtModelDefinitionStatic {
                 udt_name : "my_udt",
-                model_name : "MyUdt",
+                model_name : "my_udt",
                 docstring : "This is a test UDT",
                 charybdis_code :
-                "/// This is a test UDT\n#[::charybdis::macros::charybdis_udt_model(type_name = my_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyUdt {\n    /// Doc One\n    pub field1: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                "/// This is a test UDT\n#[::charybdis::macros::charybdis_udt_model(type_name = my_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct my_udt {\n    /// Doc One\n    pub field1: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
                 fields : & [
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name : "field1",
@@ -1210,6 +1260,7 @@ fn test_udt_model_macro() {
                         search_index : false,
                         search_facet : false,
                         nullable : false,
+                        field_type_original : "String",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name : "created_at",
@@ -1221,6 +1272,7 @@ fn test_udt_model_macro() {
                         search_index : false,
                         search_facet : false,
                         nullable : true,
+                        field_type_original : "Timestamp",
                     }
                 ],
             }

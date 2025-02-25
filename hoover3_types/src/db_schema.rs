@@ -389,6 +389,8 @@ pub struct ModelFieldDefinition {
     pub docstring: String,
     /// Nullable - field is of type Option<T>
     pub nullable: bool,
+    /// Field type as a string - the original in rust code. Useful when field_type is unspecified in the first pass.
+    pub field_type_original: String,
 }
 
 /// Static version of ModelDefinition - used for compile-time inventory.
@@ -452,6 +454,7 @@ pub struct ModelFieldDefinitionStatic {
     pub search_facet: bool,
     pub docstring: &'static str,
     pub nullable: bool,
+    pub field_type_original: &'static str,
 }
 
 impl ModelFieldDefinitionStatic {
@@ -467,9 +470,79 @@ impl ModelFieldDefinitionStatic {
             search_facet: self.search_facet,
             docstring: self.docstring.to_string(),
             nullable: self.nullable,
+            field_type_original: self.field_type_original.to_string(),
         }
     }
 }
 
 inventory::collect!(ModelDefinitionStatic);
 inventory::collect!(UdtModelDefinitionStatic);
+
+/// Get all Charybdis codes for all models and UDTs.
+pub fn get_all_charybdis_codes() -> Vec<String> {
+    let mut codes = Vec::new();
+    for model in inventory::iter::<ModelDefinitionStatic> {
+        codes.push(model.charybdis_code.to_string());
+    }
+    for udt in inventory::iter::<UdtModelDefinitionStatic> {
+        codes.push(udt.charybdis_code.to_string());
+    }
+    codes
+        .iter()
+        .map(|c| {
+            c.replace("::charybdis::macros::", "")
+                .replace(" ::charybdis::types::", "")
+        })
+        .collect()
+}
+
+/// Get the Scylla database schema from the inventory of models and UDTs.
+pub fn get_scylla_schema_from_inventory() -> ScyllaDatabaseSchema {
+    let mut udts = BTreeMap::new();
+    for udt_static in inventory::iter::<UdtModelDefinitionStatic> {
+        udts.insert(udt_static.udt_name, udt_static);
+    }
+    let mut tables = BTreeMap::new();
+    for model_static in inventory::iter::<ModelDefinitionStatic> {
+        let table_name = DatabaseIdentifier::new(model_static.table_name).unwrap();
+        if tables.contains_key(&table_name) {
+            panic!("table {} defined multiple times in inventory", table_name);
+        }
+        let mut table = DatabaseTable {
+            name: table_name.clone(),
+            columns: Vec::new(),
+        };
+        for field in model_static.fields {
+            table.columns.push(DatabaseColumn {
+                name: DatabaseIdentifier::new(field.name).unwrap(),
+                _type: resolve_field_type(&field, &udts),
+                primary: field.partition_key || field.clustering_key,
+            });
+        }
+        tables.insert(table_name, table);
+    }
+    ScyllaDatabaseSchema { tables }
+}
+
+fn resolve_field_type(
+    static_field: &ModelFieldDefinitionStatic,
+    udts: &BTreeMap<&str, &UdtModelDefinitionStatic>,
+) -> DatabaseColumnType {
+    match static_field.field_type.clone() {
+        DatabaseColumnType::UnspecifiedType => {
+            // Try to match against UDT types
+            if let Some(udt) = udts.get(&static_field.field_type_original) {
+                DatabaseColumnType::Object(
+                    udt.fields
+                        .iter()
+                        .map(|f| (f.name.to_string(), Box::new(resolve_field_type(f, udts))))
+                        .collect(),
+                )
+            } else {
+                static_field.field_type.clone()
+            }
+        }
+
+        other => other,
+    }
+}

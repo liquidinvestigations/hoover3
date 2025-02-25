@@ -4,7 +4,7 @@ use serde::Serialize;
 
 /// Documentation
 #[udt_model]
-pub struct SimpleModelUdt {
+pub struct simple_model_udt {
     /// Some Field
     pub id: String,
     /// Other Field

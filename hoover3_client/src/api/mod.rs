@@ -90,7 +90,6 @@ pub fn flatten_result<T, E>(x: Result<Result<T, E>, E>) -> Result<T, E> {
     }
 }
 
-
 macro_rules! server_wrapper {
     ($ns:path,$id:ident,$arg:ty,$ret:ty) => {
         ::paste::paste! {

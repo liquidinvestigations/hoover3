@@ -4,7 +4,7 @@ use serde::Serialize;
 
 /// Documentation
 #[udt_model]
-pub struct SimpleModelUdt {
+pub struct simple_model_udt {
     /// Some Field
     pub id: String,
     /// Other Field
@@ -21,7 +21,7 @@ pub struct SimpleModelUdtWithTable {
     #[model(primary(partition))]
     pub id: String,
     /// Other Field
-    pub another_field: Option<SimpleModelUdt>,
+    pub another_field: Option<simple_model_udt>,
     /// The Field
-    pub the_field: SimpleModelUdt,
+    pub the_field: simple_model_udt,
 }

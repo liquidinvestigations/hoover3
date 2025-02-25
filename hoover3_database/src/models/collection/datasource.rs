@@ -1,18 +1,13 @@
 //! This module contains the table definitions for all the datasource related models.
 
 use crate::impl_model_callbacks;
-use charybdis::macros::charybdis_model;
-use charybdis::types::{Text, Timestamp};
 use hoover3_macro::model;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
-use serde::Serialize;
-// #[model(primary(partition))]
 
 /// Database representation of a datasource in the system.
 /// This struct maps directly to a row in the datasources table on the collection keyspace.
-
 #[model]
 pub struct DatasourceDbRow {
     /// Unique identifier for the datasource
@@ -27,27 +22,6 @@ pub struct DatasourceDbRow {
     /// Timestamp of the most recent modification to the datasource
     pub time_modified: Timestamp,
 }
-// #[charybdis_model(
-//     table_name = datasource,
-//     partition_keys = [datasource_id],
-//     clustering_keys = [],
-//     global_secondary_indexes = [],
-//     local_secondary_indexes = [],
-//     static_columns = []
-// )]
-// #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
-// pub struct DatasourceDbRow {
-//     /// Unique identifier for the datasource
-//     pub datasource_id: Text,
-//     /// Type of the datasource
-//     pub datasource_type: Text,
-//     /// Settings for the datasource
-//     pub datasource_settings: Text,
-//     /// Timestamp when the datasource was initially created
-//     pub time_created: Timestamp,
-//     /// Timestamp of the most recent modification to the datasource
-//     pub time_modified: Timestamp,
-// }
 
 impl DatasourceDbRow {
     /// Convert a `DatasourceDbRow` to frontend representation.

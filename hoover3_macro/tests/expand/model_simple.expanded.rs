@@ -1198,6 +1198,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "String",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "other_field",
@@ -1209,6 +1210,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "i64",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "another_field",
@@ -1220,6 +1222,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "i32",
                     },
                     ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
                         name: "created_at",
@@ -1231,6 +1234,7 @@ const _: () = {
                         search_index: false,
                         search_facet: false,
                         nullable: false,
+                        field_type_original: "Timestamp",
                     },
                 ],
             }
