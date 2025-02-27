@@ -121,7 +121,11 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         let session = ScyllaDatabaseHandle::collection_session(_c).await?;
         let space_name = _c.database_name()?.to_string();
 
+        // collect codes from inventory and extra files that will be listed by hand
         let schema_code = hoover3_types::db_schema::get_all_charybdis_codes();
+        let extra_codes = crate::migrate::get_extra_charybdis_codes();
+
+        // we put the codes in a temp file in some temp dir
         // we put the codes in a temp file in some temp dir
         let temp_dir = std::env::temp_dir().join("hoover3_charybdis_codes");
         std::fs::create_dir_all(&temp_dir).unwrap();
@@ -129,6 +133,10 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         info!("schema_code: {:#?}", schema_code);
         let temp_file = temp_dir.join("charybdis_codes.rs");
         std::fs::write(temp_file, schema_code.join("\n")).unwrap();
+        for (i, item) in extra_codes.iter().enumerate() {
+            let temp_file = temp_dir.join(format!("charybdis_extra_codes_{}.rs", i));
+            std::fs::write(temp_file, item).unwrap();
+        }
         // we run the migration on that temp dir
 
         // let schema_json = get_scylla_code_schema_json()?;

@@ -25,6 +25,7 @@ pub async fn get_single_collection(c: CollectionId) -> Result<CollectionUiRow> {
 /// databases, tables, search indexes and other setup that must happen.
 /// If a collection with said name exists, return that instead.
 pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
+    tracing::info!("create_new_collection: {}", c.to_string());
     tokio::spawn(async move {
         let session = ScyllaDatabaseHandle::global_session().await?;
 
@@ -32,6 +33,7 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
             .execute(&session)
             .await
         {
+            tracing::info!("create_new_collection found existing collection: {:?}", x);
             return x.to_ui();
         }
         let now = chrono::offset::Utc::now();
@@ -42,6 +44,7 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
             time_created: now,
             time_modified: now,
         };
+        tracing::info!("create_new_collection inserting new row: {:?}", new_row.collection_id);
         migrate_collection(&c).await?;
         CollectionDbRow::insert(&new_row).execute(&session).await?;
         drop_redis_cache("get_all_collections", &()).await?;

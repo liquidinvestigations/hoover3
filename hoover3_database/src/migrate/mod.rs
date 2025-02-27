@@ -9,12 +9,9 @@ use std::path::PathBuf;
 use tracing::info;
 
 use crate::db_management::redis::drop_redis_cache;
-use crate::db_management::ClickhouseDatabaseHandle;
 use crate::db_management::CollectionId;
 use crate::db_management::MeilisearchDatabaseHandle;
-use crate::db_management::NebulaDatabaseHandle;
 use crate::db_management::S3DatabaseHandle;
-use crate::db_management::SeekstormDatabaseHandle;
 use crate::{db_management::DatabaseSpaceManager, db_management::ScyllaDatabaseHandle};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
@@ -275,4 +272,12 @@ pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchemaDy
         nebula: crate::db_management::query_nebula_schema(&c).await?,
         meilisearch: crate::db_management::query_meilisearch_schema(&c).await?,
     })
+}
+
+
+/// Get extra charybdis codes that are not part of the collection migration.
+/// Useful for adding tables that we don't implemented with the `#[model]` macro,
+/// since they are part of that macro's implementation -- things like the graph tables.
+pub fn get_extra_charybdis_codes() -> Vec<String> {
+    vec![include_str!("../../src/models/collection/_scylla_graph_models.rs").to_string()]
 }
