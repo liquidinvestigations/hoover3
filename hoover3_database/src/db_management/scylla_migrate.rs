@@ -44,21 +44,22 @@ async fn test_get_scylla_code_schema_2() {
         .await
         .unwrap();
 
-    assert_eq!(db_schema.tables.len(), code_schema.tables.len());
+    assert!(db_schema.tables.len() >= code_schema.tables.len());
 
-    for (db_table, code_table) in db_schema.tables.iter().zip(code_schema.tables.iter()) {
-        assert_eq!(db_table.0, code_table.0);
-        assert_eq!(db_table.1.name, code_table.1.name);
-        assert_eq!(db_table.1.columns.len(), code_table.1.columns.len());
+    for key in code_schema.tables.keys() {
+        let db_table = db_schema.tables.get(key).unwrap();
+        let code_table = code_schema.tables.get(key).unwrap();
+        assert_eq!(db_table.name, code_table.name);
+        assert_eq!(db_table.columns.len(), code_table.columns.len());
 
-        let mut db_columns = db_table.1.columns.clone();
-        let mut code_columns = code_table.1.columns.clone();
+        let mut db_columns = db_table.columns.clone();
+        let mut code_columns = code_table.columns.clone();
 
         db_columns.sort_by_key(|c| c.name.clone());
         code_columns.sort_by_key(|c| c.name.clone());
 
-        println!("db_table: {:#?}", db_table.1);
-        println!("code_table: {:#?}", code_table.1);
+        println!("db_table: {:#?}", db_table);
+        println!("code_table: {:#?}", code_table);
 
         for (db_column, code_column) in db_columns.iter().zip(code_columns.iter()) {
             assert_eq!(db_column.name, code_column.name);

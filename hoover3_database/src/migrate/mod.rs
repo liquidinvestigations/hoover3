@@ -274,7 +274,6 @@ pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchemaDy
     })
 }
 
-
 /// Get extra charybdis codes that are not part of the collection migration.
 /// Useful for adding tables that we don't implemented with the `#[model]` macro,
 /// since they are part of that macro's implementation -- things like the graph tables.

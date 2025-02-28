@@ -44,7 +44,10 @@ pub async fn create_new_collection(c: CollectionId) -> Result<CollectionUiRow> {
             time_created: now,
             time_modified: now,
         };
-        tracing::info!("create_new_collection inserting new row: {:?}", new_row.collection_id);
+        tracing::info!(
+            "create_new_collection inserting new row: {:?}",
+            new_row.collection_id
+        );
         migrate_collection(&c).await?;
         CollectionDbRow::insert(&new_row).execute(&session).await?;
         drop_redis_cache("get_all_collections", &()).await?;

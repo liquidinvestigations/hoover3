@@ -23,7 +23,8 @@ impl ::hoover3_taskdef::TemporalioDescriptorValueTypes for test_macro_activity_a
 }
 impl ::hoover3_taskdef::TemporalioActivityDescriptor for test_macro_activity_activity {
     async fn func(arg: Self::Arg) -> Result<Self::Ret, anyhow::Error> {
-        test_macro_activity(arg).await
+        use futures::FutureExt;
+        test_macro_activity(arg).boxed().await
     }
 }
 async fn test_macro_activity(x: u32) -> anyhow::Result<u32> {

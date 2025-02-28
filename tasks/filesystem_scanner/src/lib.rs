@@ -7,7 +7,7 @@ use hoover3_database::db_management::ScyllaDatabaseHandle;
 use hoover3_database::models::collection::_nebula_edges::FilesystemParentEdge;
 use hoover3_database::models::collection::filesystem::FsDirectoryDbRow;
 use hoover3_database::models::collection::filesystem::FsFileDbRow;
-use hoover3_database::models::collection::InsertEdgeBatch;
+use hoover3_database::models::collection::graph_add_edges;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
     activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
@@ -208,8 +208,8 @@ async fn fs_do_scan_datasource(
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];
-    let mut edges_to_files = InsertEdgeBatch::new(FilesystemParentEdge);
-    let mut edges_to_dirs = InsertEdgeBatch::new(FilesystemParentEdge);
+    let mut edges_to_files = vec![];
+    let mut edges_to_dirs = vec![];
 
     let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
     let mut parent_pk = if arg.path.is_some() {
@@ -236,7 +236,7 @@ async fn fs_do_scan_datasource(
         if c.is_file {
             let new_file = FsFileDbRow::from_basic_meta(&arg.datasource_id, &c);
             if let Some(parent_pk) = &parent_pk {
-                edges_to_files.push(parent_pk, &new_file);
+                edges_to_files.push((parent_pk.row_pk_hash(), new_file.row_pk_hash()));
             }
             files.push(new_file);
             file_count += 1;
@@ -244,7 +244,7 @@ async fn fs_do_scan_datasource(
         } else if c.is_dir {
             let new_dir = FsDirectoryDbRow::from_basic_meta(&arg.datasource_id, &c);
             if let Some(parent_pk) = &parent_pk {
-                edges_to_dirs.push(parent_pk, &new_dir);
+                edges_to_dirs.push((parent_pk.row_pk_hash(), new_dir.row_pk_hash()));
             }
             dirs.push(new_dir);
             dir_count += 1;
@@ -265,8 +265,8 @@ async fn fs_do_scan_datasource(
     .await?;
     db_extra.insert(&files).await?;
     db_extra.insert(&dirs).await?;
-    edges_to_files.execute(&db_extra).await?;
-    edges_to_dirs.execute(&db_extra).await?;
+    graph_add_edges(arg.collection_id.clone(), FilesystemParentEdge, edges_to_files).await?;
+    graph_add_edges(arg.collection_id.clone(), FilesystemParentEdge, edges_to_dirs).await?;
 
     next_paths.sort();
     next_paths.dedup();

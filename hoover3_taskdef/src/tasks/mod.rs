@@ -175,7 +175,9 @@ macro_rules! make_activity {
             }
             impl $crate::TemporalioActivityDescriptor for [<$id _activity>] {
                 async fn func(arg: Self::Arg) -> Result<Self::Ret, anyhow::Error> {
-                    $id(arg).await
+                    use futures::FutureExt;
+                    // Ok(tokio::task::spawn($id(arg).boxed()).await??)
+                    $id(arg).boxed().await
                 }
             }
         }

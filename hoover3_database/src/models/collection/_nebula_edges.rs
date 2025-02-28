@@ -7,15 +7,15 @@ use hoover3_types::{db_schema::GraphEdgeType, identifier::DatabaseIdentifier};
 /// These structs are to be used in code as a type safe identifier for an edge.
 pub trait GraphEdgeIdentifier: Sized {
     /// Get the name of the edge.
-    fn name(&self) -> DatabaseIdentifier;
+    fn edge_name(&self) -> DatabaseIdentifier;
     /// Convert the edge to a `GraphEdgeType`.
     fn to_owned(&self) -> GraphEdgeType {
-        GraphEdgeType { name: self.name() }
+        GraphEdgeType { name: self.edge_name() }
     }
 }
 
 impl GraphEdgeIdentifier for GraphEdgeType {
-    fn name(&self) -> DatabaseIdentifier {
+    fn edge_name(&self) -> DatabaseIdentifier {
         self.name.clone()
     }
 }
@@ -25,7 +25,7 @@ macro_rules! declare_edge {
         /// Unit struct to identify a Nebula edge `$id``.
         pub struct $id;
         impl GraphEdgeIdentifier for $id {
-            fn name(&self) -> DatabaseIdentifier {
+            fn edge_name(&self) -> DatabaseIdentifier {
                 DatabaseIdentifier::new($ex).expect("invalid edge name: is not DatabaseIdentifier")
             }
         }

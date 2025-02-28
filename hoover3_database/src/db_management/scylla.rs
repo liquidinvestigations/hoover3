@@ -104,6 +104,17 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         );
         self.execute_unpaged(query, &[]).await?;
 
+        // wait until space now exists
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let mut i = 0;
+        while !self.space_exists(name).await? {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            i += 1;
+            if i > 300 {
+                anyhow::bail!("space {} does not exist after 30 seconds", name);
+            }
+        }
+
         Ok(())
     }
     async fn drop_space(&self, name: &DatabaseIdentifier) -> Result<(), anyhow::Error> {
@@ -113,6 +124,20 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         info!("SCYLLA: DROP SPACE {:?}", name);
         let query = format!("DROP KEYSPACE IF EXISTS \"{}\";", name);
         self.execute_unpaged(query, &[]).await?;
+
+        // wait until space does not exist
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let mut i = 0;
+        while self.space_exists(name).await? {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            i += 1;
+            if i > 300 {
+                anyhow::bail!(
+                    "drop_space error: space {} does still exist after 30 seconds",
+                    name
+                );
+            }
+        }
 
         Ok(())
     }
@@ -130,7 +155,6 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         let temp_dir = std::env::temp_dir().join("hoover3_charybdis_codes");
         std::fs::create_dir_all(&temp_dir).unwrap();
         info!("temp_dir: {}", temp_dir.to_string_lossy());
-        info!("schema_code: {:#?}", schema_code);
         let temp_file = temp_dir.join("charybdis_codes.rs");
         std::fs::write(temp_file, schema_code.join("\n")).unwrap();
         for (i, item) in extra_codes.iter().enumerate() {
@@ -149,6 +173,8 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
             .await;
 
         migration.run().await;
+        // TODO: check / wait until migration was successful
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         info!("execute collection {space_name} migration OK");
 
         Ok(())
