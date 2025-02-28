@@ -104,8 +104,6 @@ impl FsDirectoryDbRow {
     }
 }
 
-impl_model_callbacks!(FsDirectoryDbRow);
-
 /// Database representation of a filesystem file, as it is found on disk or S3.
 #[model]
 pub struct FsFileDbRow {
@@ -147,5 +145,3 @@ impl FsFileDbRow {
         }
     }
 }
-
-impl_model_callbacks!(FsFileDbRow);

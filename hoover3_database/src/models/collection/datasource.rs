@@ -36,5 +36,3 @@ impl DatasourceDbRow {
         }
     }
 }
-
-impl_model_callbacks!(DatasourceDbRow);

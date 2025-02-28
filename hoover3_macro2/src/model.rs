@@ -17,9 +17,14 @@ pub fn model(item: TokenStream) -> TokenStream {
     model_def.charybdis_code = charybdis_code;
     let inventory_submit = generate_inventory_submit(&model_def);
 
+    let model_name = model_def.model_name.clone();
+    let model_name_id = syn::Ident::new(&model_name, proc_macro2::Span::call_site());
+
     quote::quote! {
         #item_struct
         #inventory_submit
+        // ::hoover3_database::models::collection::impl_model_callbacks!(#model_name_id);
+        impl_model_callbacks!(#model_name_id);
     }
 }
 
@@ -699,6 +704,7 @@ fn test_model_macro() {
                 ],
             }
         }
+        impl_model_callbacks!(MyModel);
 
     };
     let result_str = prettyplease::unparse(&syn::parse_quote!(#result));
@@ -774,6 +780,7 @@ fn test_model_with_custom_type() {
                 ],
             }
         }
+        impl_model_callbacks!(CustomModel);
     };
 
     let result_str = prettyplease::unparse(&syn::parse_quote!(#result));
