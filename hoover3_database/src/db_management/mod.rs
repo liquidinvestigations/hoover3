@@ -2,8 +2,7 @@
 //! database backends. Provides the DatabaseSpaceManager trait and re-exports specific
 //! database implementations.
 pub use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
-pub(crate) mod redis;
-pub use redis::{with_redis_cache, with_redis_lock};
+pub mod redis;
 
 mod clickhouse;
 pub use clickhouse::ClickhouseDatabaseHandle;

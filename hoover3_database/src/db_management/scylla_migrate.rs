@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::ScyllaDatabaseHandle;
-use crate::db_management::with_redis_cache;
+use crate::db_management::redis::with_redis_cache;
 use crate::db_management::DatabaseSpaceManager;
 use anyhow::Result;
 use hoover3_types::db_schema::DatabaseColumn;

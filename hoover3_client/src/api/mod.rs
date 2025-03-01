@@ -204,7 +204,7 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_database::client_query::datasources,
+    hoover3_data_access::api,
     get_all_datasources,
     CollectionId,
     Vec<DatasourceUiRow>
@@ -218,28 +218,28 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_database::client_query::datasources,
+    hoover3_data_access::api,
     create_datasource,
     (CollectionId, DatabaseIdentifier, DatasourceSettings),
     DatasourceUiRow
 );
 
 server_wrapper!(
-    hoover3_database::client_query::datasources,
+    hoover3_data_access::api,
     get_datasource,
     (CollectionId, DatabaseIdentifier),
     DatasourceUiRow
 );
 
 server_wrapper!(
-    hoover3_filesystem_scanner,
+    hoover3_filesystem_scanner::tasks,
     start_scan,
     (CollectionId, DatabaseIdentifier),
     ()
 );
 
 server_wrapper!(
-    hoover3_filesystem_scanner,
+    hoover3_filesystem_scanner::tasks,
     get_scan_status,
     (CollectionId, DatabaseIdentifier),
     UiWorkflowStatus
@@ -253,7 +253,7 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_filesystem_scanner,
+    hoover3_filesystem_scanner::tasks,
     wait_for_scan_results,
     (CollectionId, DatabaseIdentifier),
     FsScanDatasourceResult

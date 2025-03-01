@@ -3386,6 +3386,7 @@ dependencies = [
  "dioxus-logger",
  "dioxus-sdk",
  "futures-util",
+ "hoover3_data_access",
  "hoover3_database",
  "hoover3_filesystem_scanner",
  "hoover3_taskdef",
@@ -3399,6 +3400,24 @@ dependencies = [
  "tokio",
  "web-sys",
  "web-time",
+]
+
+[[package]]
+name = "hoover3_data_access"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "charybdis",
+ "chrono",
+ "futures 0.3.31",
+ "hoover3_database",
+ "hoover3_macro",
+ "hoover3_types",
+ "scylla",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3445,15 +3464,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "hoover3_database_operations"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "charybdis",
+ "hoover3_database",
+ "hoover3_macro",
+ "hoover3_types",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "hoover3_filesystem_scanner"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "charybdis",
  "futures 0.3.31",
+ "hoover3_data_access",
  "hoover3_database",
+ "hoover3_macro",
  "hoover3_taskdef",
  "hoover3_tracing",
  "hoover3_types",
+ "scylla",
  "serde",
+ "serde_json",
  "tokio",
 ]
 

@@ -21,7 +21,7 @@ const TREE_NODE_LIMIT: usize = 24;
 pub async fn get_workflow_status_tree(
     workflow_id: String,
 ) -> anyhow::Result<TemporalioWorkflowStatusTree> {
-    hoover3_database::db_management::with_redis_cache(
+    hoover3_database::db_management::redis::with_redis_cache(
         "temporalio_get_workflow_status_tree",
         5,
         _temporalio_get_workflow_status_tree,

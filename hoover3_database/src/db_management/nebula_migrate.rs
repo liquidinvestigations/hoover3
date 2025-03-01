@@ -1,4 +1,4 @@
-use crate::db_management::{nebula_execute_retry, with_redis_cache};
+use crate::db_management::{nebula_execute_retry, redis::with_redis_cache};
 use crate::models::collection::_nebula_edges::get_all_nebula_edge_types;
 use anyhow::Result;
 use hoover3_types::db_schema::{

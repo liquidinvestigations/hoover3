@@ -1,13 +1,11 @@
 //! Datasource management module that provides functionality to create, update, and delete datasources.
 
-use crate::db_management::redis::drop_redis_cache;
-use crate::db_management::redis::with_redis_cache;
-use crate::db_management::redis::with_redis_lock;
-use crate::db_management::DatabaseSpaceManager;
-use crate::db_management::ScyllaDatabaseHandle;
-use crate::models::collection::DatabaseExtraCallbacks;
-
-use crate::models::collection::datasource::DatasourceDbRow;
+use hoover3_database::db_management::redis::drop_redis_cache;
+use hoover3_database::db_management::redis::with_redis_cache;
+use hoover3_database::db_management::redis::with_redis_lock;
+use hoover3_database::db_management::DatabaseSpaceManager;
+use hoover3_database::db_management::ScyllaDatabaseHandle;
+use hoover3_database::models::collection::DatabaseExtraCallbacks;
 use charybdis::operations::InsertWithCallbacks;
 
 use anyhow::Result;
@@ -20,6 +18,8 @@ use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 
 use tracing::info;
+
+use crate::models::DatasourceDbRow;
 
 /// Client API method, returns details for a single collection in the system.
 pub async fn get_all_datasources(c: CollectionId) -> Result<Vec<DatasourceUiRow>> {
@@ -105,16 +105,13 @@ pub async fn get_datasource(
 #[tokio::test]
 async fn test_datasource_query() -> Result<()> {
     // make sure we have common migrations on
-    crate::migrate::migrate_common().await?;
+    hoover3_database::migrate::migrate_common().await?;
 
-    use crate::client_query::collections::create_new_collection;
-    use crate::client_query::collections::drop_collection;
-    use crate::client_query::collections::get_all_collections;
+    use hoover3_database::client_query::collections::create_new_collection;
+    use hoover3_database::client_query::collections::drop_collection;
+    use hoover3_database::client_query::collections::get_all_collections;
     use std::path::PathBuf;
 
-    use crate::client_query::datasources::create_datasource;
-    use crate::client_query::datasources::drop_datasource;
-    use crate::client_query::datasources::get_all_datasources;
 
     // check we can read collections at all
     get_all_collections(()).await.unwrap();

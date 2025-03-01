@@ -46,12 +46,12 @@ rustyline-derive = "0.6.0"
 
 ########## SCYLLA ############
 ##############################
-scylla = { version = "0.15.1", features = ["full-serialization"] }
+scylla.workspace = true
+scylla-cql.workspace = true
 # charybdis = {path="../third-party/charybdis/charybdis", features = ["migrate"]}
 # charybdis_macros = {path="../third-party/charybdis/charybdis-macros"}
 # charybdis-migrate = {path="../third-party/charybdis/charybdis-migrate"}
 # charybdis_parser = {path="../third-party/charybdis/charybdis-parser"}
-scylla-cql = { version = "0.4.1", features = ["chrono-04", "serde"] }
 charybdis_parser.workspace = true
 charybdis.workspace = true
 charybdis_macros.workspace = true

@@ -19,8 +19,7 @@ use scylla::{
 };
 
 use crate::db_management::{
-    with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle, NebulaDatabaseHandle,
-    ScyllaDatabaseHandle,
+    redis::with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle, NebulaDatabaseHandle, ScyllaDatabaseHandle
 };
 
 /// Get Scylla table row count by running SQL request `SELECT COUNT * FROM ...`.

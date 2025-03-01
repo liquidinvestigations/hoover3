@@ -1,6 +1,5 @@
 //! This module contains the table definitions for all the datasource related models.
 
-use crate::impl_model_callbacks;
 use hoover3_macro::model;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::CollectionId;
@@ -36,3 +35,4 @@ impl DatasourceDbRow {
         }
     }
 }
+ 

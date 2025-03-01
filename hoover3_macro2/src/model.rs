@@ -24,7 +24,7 @@ pub fn model(item: TokenStream) -> TokenStream {
         #item_struct
         #inventory_submit
         // ::hoover3_database::models::collection::impl_model_callbacks!(#model_name_id);
-        impl_model_callbacks!(#model_name_id);
+        ::hoover3_database::impl_model_callbacks!(#model_name_id);
     }
 }
 
@@ -704,7 +704,7 @@ fn test_model_macro() {
                 ],
             }
         }
-        impl_model_callbacks!(MyModel);
+        ::hoover3_database::impl_model_callbacks!(MyModel);
 
     };
     let result_str = prettyplease::unparse(&syn::parse_quote!(#result));
@@ -780,7 +780,7 @@ fn test_model_with_custom_type() {
                 ],
             }
         }
-        impl_model_callbacks!(CustomModel);
+        ::hoover3_database::impl_model_callbacks!(CustomModel);
     };
 
     let result_str = prettyplease::unparse(&syn::parse_quote!(#result));

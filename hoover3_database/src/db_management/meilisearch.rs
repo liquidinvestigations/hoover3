@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 
 use hoover3_types::db_schema::MeilisearchDatabaseSchema;
 
-use crate::db_management::with_redis_cache;
+use crate::db_management::redis::with_redis_cache;
 
 /// Meilisearch database handle type alias.
 pub type MeilisearchDatabaseHandle = Client;

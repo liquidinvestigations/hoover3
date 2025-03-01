@@ -16,8 +16,15 @@ hoover3_database = {path="../../hoover3_database"}
 hoover3_taskdef = {path="../../hoover3_taskdef"}
 hoover3_types = {path="../../hoover3_types"}
 hoover3_tracing = {path="../../hoover3_tracing"}
+hoover3_macro = {path="../../hoover3_macro"}
+hoover3_data_access = {path="../data_access"}
 serde.workspace = true
 tokio.workspace = true
+anyhow.workspace = true
+charybdis.workspace = true
+serde_json.workspace = true
+scylla.workspace = true
+
 
 [[bin]]
 name = "worker_filesystem_scanner"

@@ -276,23 +276,27 @@ impl DatabaseExtraCallbacks {
 #[macro_export]
 macro_rules! impl_model_callbacks {
     ($name:ident) => {
-        impl charybdis::callbacks::Callbacks for $name {
-            type Error = anyhow::Error;
+        impl ::charybdis::callbacks::Callbacks for $name {
+            /// Error type for the callbacks - we always use anyhow.
+            type Error = ::anyhow::Error;
+            /// Extension type for the callbacks - see [DatabaseExtraCallbacks].
             type Extension = $crate::models::collection::DatabaseExtraCallbacks;
 
+            /// Callback calls the `insert` method on the `DatabaseExtraCallbacks` instance.
             async fn after_insert(
                 &mut self,
-                _session: &charybdis::scylla::CachingSession,
+                _session: &::charybdis::scylla::CachingSession,
                 extension: &$crate::models::collection::DatabaseExtraCallbacks,
-            ) -> anyhow::Result<()> {
+            ) -> ::anyhow::Result<()> {
                 extension.insert(&[self.clone()]).await
             }
 
+            /// Callback calls the `delete` method on the `DatabaseExtraCallbacks` instance.
             async fn after_delete(
                 &mut self,
-                _session: &charybdis::scylla::CachingSession,
+                _session: &::charybdis::scylla::CachingSession,
                 extension: &$crate::models::collection::DatabaseExtraCallbacks,
-            ) -> anyhow::Result<()> {
+            ) -> ::anyhow::Result<()> {
                 extension.delete(&[self.clone()]).await
             }
         }
@@ -300,16 +304,17 @@ macro_rules! impl_model_callbacks {
         impl $name {
             /// Compute a stable hash of a row's primary key, and concatenate it with table name.
             pub fn row_pk_hash(&self) -> String {
-                use charybdis::model::BaseModel;
+                use ::charybdis::model::BaseModel;
                 $crate::models::collection::row_pk_hash::<$name>(&self.primary_key_values())
             }
 
             /// Get a JSON representation of a row's primary key.
-            pub fn row_pk_json(&self) -> anyhow::Result<serde_json::Value> {
-                use charybdis::model::BaseModel;
-                Ok(serde_json::to_value(&self.primary_key_values())?)
+            pub fn row_pk_json(&self) -> ::anyhow::Result<::serde_json::Value> {
+                use ::charybdis::model::BaseModel;
+                Ok(::serde_json::to_value(&self.primary_key_values())?)
             }
         }
     };
 }
+/// Re-export:
 pub use impl_model_callbacks;

@@ -1,8 +1,10 @@
 //! This module contains the table definitions for all the filesystem related models.
 
-use crate::impl_model_callbacks;
+#![allow(missing_docs)]
+
 use hoover3_macro::model;
 use hoover3_macro::udt_model;
+use hoover3_taskdef::anyhow;
 use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::filesystem::{FsDirectoryUiRow, FsFileUiRow, FsMetadataBasic};
 use hoover3_types::identifier::DatabaseIdentifier;

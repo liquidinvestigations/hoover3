@@ -7,14 +7,16 @@ use tokio::sync::OnceCell;
 use tracing::info;
 use tracing::warn;
 
-pub async fn redis_client() -> &'static redis::Client {
+/// Get global redis client..
+async fn redis_client() -> &'static redis::Client {
     static CLIENT: OnceCell<redis::Client> = OnceCell::const_new();
     CLIENT
         .get_or_init(move || async move { redis::Client::open("redis://127.0.0.1:6379/").unwrap() })
         .await
 }
 
-pub async fn redis_lockmanager() -> &'static rslock::LockManager {
+/// Get global redis lock manager.
+async fn redis_lockmanager() -> &'static rslock::LockManager {
     static CLIENT: OnceCell<rslock::LockManager> = OnceCell::const_new();
     CLIENT
         .get_or_init(move || async move {
@@ -23,6 +25,7 @@ pub async fn redis_lockmanager() -> &'static rslock::LockManager {
         .await
 }
 
+/// Get global redis connection from pool.
 pub async fn redis_connection() -> anyhow::Result<redis::aio::MultiplexedConnection> {
     static CLIENT: OnceCell<redis::aio::MultiplexedConnection> = OnceCell::const_new();
     Ok(CLIENT
@@ -116,6 +119,7 @@ where
     Ok(v?)
 }
 
+/// Drop a Redis cache entry.
 pub async fn drop_redis_cache<K>(redis_cache_id: &str, key: &K) -> anyhow::Result<()>
 where
     K: serde::Serialize + 'static + Send + for<'a> serde::Deserialize<'a> + Clone,

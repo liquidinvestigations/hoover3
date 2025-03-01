@@ -105,16 +105,6 @@ pub async fn update_collection(updated: CollectionUiRow) -> Result<CollectionUiR
 /// Client API method used to drop a collection, all databases and entries.
 pub async fn drop_collection(c: CollectionId) -> Result<()> {
     tokio::spawn(async move {
-        use crate::client_query::collections::get_single_collection;
-        use crate::client_query::datasources::drop_datasource;
-        use crate::client_query::datasources::get_all_datasources;
-
-        if let Ok(_x) = get_single_collection(c.clone()).await {
-            for ds in get_all_datasources(c.clone()).await? {
-                drop_datasource((c.clone(), ds.datasource_id)).await?;
-            }
-        }
-
         crate::migrate::drop_collection(&c).await?;
 
         let session = ScyllaDatabaseHandle::global_session().await?;

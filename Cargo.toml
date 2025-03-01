@@ -9,7 +9,7 @@ members = [
     "tasks/filesystem_scanner",
     "hoover3_macro2",
     "hoover3_tracing",
-    "packages/seekstorm-client",
+    "packages/seekstorm-client", "tasks/database_operations", "tasks/data_access",
 ]
 exclude = ["third-party"]
 
@@ -42,6 +42,9 @@ async-std = "1.13.0"
 log = { version = "0.4.25", features = ["release_max_level_warn", "max_level_info"] }
 tracing-log = "0.2.0"
 tracing-subscriber = "0.3.19"
+
+scylla = { version = "0.15.1", features = ["full-serialization"] }
+scylla-cql = { version = "0.4.1", features = ["chrono-04", "serde"] }
 
 charybdis = {git = "https://github.com/nodecosmos/charybdis", rev="f32238371ebb531cc77c0b75d9339e0249786989", features = ["migrate"]}
 charybdis_macros = {git = "https://github.com/nodecosmos/charybdis", rev="f32238371ebb531cc77c0b75d9339e0249786989"}
