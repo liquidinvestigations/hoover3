@@ -17,7 +17,6 @@ use hoover3_types::datasource::DatasourceSettings;
 use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
-use hoover3_types::tasks::UiWorkflowStatus;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -43,43 +42,6 @@ pub type AllTasks = (
     fs_scan_datasource_group_workflow,
     fs_save_dir_scan_total_result_activity,
 );
-
-/// Initiates a filesystem scan operation
-pub async fn start_scan(
-    (c_id, ds_id): (CollectionId, DatabaseIdentifier),
-) -> Result<(), anyhow::Error> {
-    let args = ScanDatasourceArgs {
-        collection_id: c_id.clone(),
-        datasource_id: ds_id.clone(),
-        path: None,
-    };
-    fs_scan_datasource_workflow::client_start(&args).await?;
-    Ok(())
-}
-
-/// Waits for and returns filesystem scan results
-pub async fn wait_for_scan_results(
-    (c_id, ds_id): (CollectionId, DatabaseIdentifier),
-) -> Result<FsScanDatasourceResult, anyhow::Error> {
-    let args = ScanDatasourceArgs {
-        collection_id: c_id.clone(),
-        datasource_id: ds_id.clone(),
-        path: None,
-    };
-    fs_scan_datasource_workflow::client_wait_for_completion(&args).await
-}
-
-/// Retrieves current filesystem scan status
-pub async fn get_scan_status(
-    (c_id, ds_id): (CollectionId, DatabaseIdentifier),
-) -> Result<UiWorkflowStatus, anyhow::Error> {
-    let args = ScanDatasourceArgs {
-        collection_id: c_id.clone(),
-        datasource_id: ds_id.clone(),
-        path: None,
-    };
-    fs_scan_datasource_workflow::client_get_status(&args).await
-}
 
 /// Workflow for scanning a filesystem datasource
 #[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
@@ -291,42 +253,4 @@ async fn fs_do_scan_datasource(
         },
         next_paths,
     ))
-}
-
-#[tokio::test]
-async fn test_fs_do_scan_datasource_small() -> anyhow::Result<()> {
-    hoover3_database::migrate::migrate_common().await?;
-    use hoover3_types::tasks::UiWorkflowStatusCode;
-    let collection_id = CollectionId::new("test_fs_do_scan_datasource")?;
-    use hoover3_database::client_query;
-    client_query::collections::drop_collection(collection_id.clone()).await?;
-    client_query::collections::create_new_collection(collection_id.clone()).await?;
-    assert!(
-        hoover3_data_access::api::get_all_datasources(collection_id.clone())
-            .await?
-            .is_empty()
-    );
-    let datasource_id = DatabaseIdentifier::new("test_fs_do_scan_datasource_collection")?;
-    let settings = DatasourceSettings::LocalDisk {
-        path: PathBuf::from("hoover-testdata/data/disk-files/long-filenames"),
-    };
-    hoover3_data_access::api::create_datasource((
-        collection_id.clone(),
-        datasource_id.clone(),
-        settings,
-    ))
-    .await?;
-
-    hoover3_taskdef::spawn_worker_on_thread::<AllTasks>();
-
-    start_scan((collection_id.clone(), datasource_id.clone())).await?;
-    let status = wait_for_scan_results((collection_id.clone(), datasource_id.clone())).await?;
-    assert_eq!(status.file_count, 3);
-    assert_eq!(status.dir_count, 0);
-    assert_eq!(status.file_size_bytes, 308482);
-    assert_eq!(status.errors, 0);
-    let status = get_scan_status((collection_id.clone(), datasource_id.clone())).await?;
-    assert_eq!(status.task_status, UiWorkflowStatusCode::Completed);
-    client_query::collections::drop_collection(collection_id.clone()).await?;
-    Ok(())
 }

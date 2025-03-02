@@ -321,13 +321,14 @@ async fn skip_existing_edges(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client_query::collections::{create_new_collection, drop_collection};
+    use crate::{client_query::collections::{create_new_collection, drop_collection}, migrate::migrate_common};
     use futures::{FutureExt, TryStreamExt};
     use hoover3_tracing::init_tracing;
     use hoover3_types::identifier::CollectionId;
 
     async fn create_test_collection(name: &str) -> Result<CollectionId, anyhow::Error> {
         init_tracing();
+        migrate_common().await?;
         let collection_id = CollectionId::new(name)?;
         drop_collection(collection_id.clone()).await?;
         create_new_collection(collection_id.clone()).await?;

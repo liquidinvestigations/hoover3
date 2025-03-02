@@ -232,14 +232,14 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_filesystem_scanner::tasks,
+    hoover3_filesystem_scanner::api,
     start_scan,
     (CollectionId, DatabaseIdentifier),
-    ()
+    String
 );
 
 server_wrapper!(
-    hoover3_filesystem_scanner::tasks,
+    hoover3_filesystem_scanner::api,
     get_scan_status,
     (CollectionId, DatabaseIdentifier),
     UiWorkflowStatus
@@ -253,7 +253,7 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_filesystem_scanner::tasks,
+    hoover3_filesystem_scanner::api,
     wait_for_scan_results,
     (CollectionId, DatabaseIdentifier),
     FsScanDatasourceResult

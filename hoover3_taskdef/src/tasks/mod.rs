@@ -291,8 +291,8 @@ pub trait TemporalioWorkflowDescriptor:
         )
     }
 
-    /// Start a workflow using a HTTP client. If the workflow already exists, the function returns Ok without restarting it.
-    fn client_start(arg: &Self::Arg) -> impl Future<Output = Result<(), anyhow::Error>> {
+    /// Start a workflow using a HTTP client. If the workflow already exists, the function returns Ok without restarting it. Returns the workflow id.
+    fn client_start(arg: &Self::Arg) -> impl Future<Output = Result<String, anyhow::Error>> {
         async move {
             let workflow_id = Self::workflow_id(arg);
             let input = vec![arg.as_json_payload()?];
@@ -315,10 +315,10 @@ pub trait TemporalioWorkflowDescriptor:
                 )
                 .await;
             match _handle1 {
-                Ok(_resp) => Ok(()),
+                Ok(_resp) => Ok(workflow_id),
                 Err(e) => {
                     if e.code() == tonic::Code::AlreadyExists {
-                        return Ok(());
+                        return Ok(workflow_id);
                     }
                     warn!("error starting workflow {:?}", e);
                     anyhow::bail!("error starting workflow {:?}", e);

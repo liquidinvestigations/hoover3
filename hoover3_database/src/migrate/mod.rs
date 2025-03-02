@@ -252,12 +252,13 @@ async fn _drop_collection(c: CollectionId) -> Result<()> {
 
 #[tokio::test]
 async fn test_create_drop_collection() {
+    // do not use [migrate_all] here, it will drop tables in unrelated collections
     info!("test init");
-    migrate_all().await.unwrap();
+    migrate_common().await.unwrap();
     let c = CollectionId::new("some_test_collection").unwrap();
     migrate_collection(&c).await.unwrap();
     migrate_collection(&c).await.unwrap();
-    migrate_all().await.unwrap();
+    migrate_common().await.unwrap();
     migrate_collection(&c).await.unwrap();
     drop_collection(&c).await.unwrap();
     drop_collection(&c).await.unwrap();
