@@ -14,7 +14,7 @@ workspace = true
 proc-macro = true
 
 [dependencies]
-hoover3_macro2 = { path = "../hoover3_macro2" }
+hoover3_macro2.workspace = true
 
 [dev-dependencies]
 
@@ -24,7 +24,7 @@ macrotest = "1.0.13"
 # - 2021 Fork version prints errors, but doesn't work. Use it when your macro expansion is empty, fix all the errors, then switch back to the version above.
 # macrotest = {git = "https://github.com/eupn/macrotest", rev="385c4bdadb63fa44141aa96685de7206041116bb"}
 
-hoover3_taskdef = { path = "../hoover3_taskdef" }
-hoover3_types = { path = "../hoover3_types" }
+hoover3_taskdef.workspace = true
+hoover3_types.workspace = true
 serde.workspace = true
 charybdis.workspace = true

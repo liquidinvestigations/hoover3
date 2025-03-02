@@ -1,9 +1,8 @@
 //! Docker health module that provides functionality to get the status of docker containers.
 
 use hoover3_types::docker_health::ContainerHealthUi;
-use std::path::PathBuf;
 
-use crate::{db_management::redis::with_redis_cache, migrate::get_package_dir};
+use crate::{db_management::redis::with_redis_cache, system_paths::get_docker_dir};
 
 /// Client API method for generating health check dashboard. Connects to docker using CLI.
 pub async fn get_container_status(c: ()) -> anyhow::Result<Vec<ContainerHealthUi>> {
@@ -25,13 +24,6 @@ async fn _get_container_status(_c: ()) -> anyhow::Result<Vec<ContainerHealthUi>>
     Ok(v)
 }
 
-fn get_docker_dir() -> PathBuf {
-    get_package_dir()
-        .parent()
-        .unwrap()
-        .join("docker")
-        .to_path_buf()
-}
 
 async fn docker_inspect_pattern(container_id: &str, pattern: &str) -> String {
     let format_string = format!("{{{{ {} }}}}", pattern);

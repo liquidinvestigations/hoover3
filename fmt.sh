@@ -14,7 +14,6 @@ if [ -z "$(git status --porcelain)" ]; then
     git add .
     git status
     git commit -m "fmt.sh: cargo fix $(date)" || true
-    git push
 
 else
     git status

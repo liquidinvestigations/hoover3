@@ -30,7 +30,7 @@ bincode.workspace = true
 tracing-subscriber.workspace = true
 log.workspace = true
 tracing-log.workspace = true
-
+lazy_static.workspace = true
 
 ### CLI
 rustyline = "9"
@@ -98,7 +98,7 @@ rslock = { version = "0.6.0", features = ["tokio-comp"], default-features = fals
 
 ########### SEEKSTORM ############
 ##############################
-seekstorm_client = { path = "../packages/seekstorm-client" }
+seekstorm_client.workspace = true
 
 
 [build-dependencies]

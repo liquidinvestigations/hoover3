@@ -18,12 +18,11 @@ name = "hoover3_client_main"
 path = "src/main.rs"
 
 [dependencies]
-hoover3_database = {path="../hoover3_database",optional=true}
-hoover3_taskdef = {path="../hoover3_taskdef",optional=true}
-hoover3_types  = {path="../hoover3_types"}
-hoover3_tracing = {path="../hoover3_tracing"}
-hoover3_filesystem_scanner = {path="../tasks/filesystem_scanner",optional=true}
-hoover3_data_access = {path="../tasks/data_access",optional=true}
+hoover3_types  = {workspace = true}
+hoover3_tracing = {workspace = true}
+hoover3_database = {workspace = true, optional=true}
+hoover3_taskdef = {workspace = true, optional=true}
+hoover3_server = {workspace = true, optional=true}
 
 axum = {workspace = true, optional=true}
 dioxus = { workspace = true, features = ["router", "fullstack"] }
@@ -57,6 +56,5 @@ server = [
     "dep:hoover3_database",
     "dep:axum",
     "dep:hoover3_taskdef",
-    "dep:hoover3_filesystem_scanner",
-    "dep:hoover3_data_access"
+    "dep:hoover3_server",
     ]

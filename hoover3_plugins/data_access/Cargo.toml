@@ -11,9 +11,9 @@ rust-version.workspace = true
 anyhow.workspace = true
 charybdis.workspace = true
 futures.workspace = true
-hoover3_database = {path="../../hoover3_database"}
-hoover3_macro = {path="../../hoover3_macro"}
-hoover3_types = {path="../../hoover3_types"}
+hoover3_database.workspace = true
+hoover3_macro.workspace = true
+hoover3_types.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

@@ -25,7 +25,7 @@ pub fn main() {
                 use dioxus::prelude::DioxusRouterExt;
                 use dioxus::prelude::ServeConfig;
                 // migrate
-                hoover3_database::migrate::migrate_all().await.unwrap();
+                hoover3_server::migrate_all().await.unwrap();
 
                 // start workers
                 // hoover3_taskdef::spawn_worker_on_thread::<hoover3_filesystem_scanner::AllTasks>();

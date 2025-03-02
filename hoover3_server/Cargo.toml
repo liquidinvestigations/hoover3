@@ -1,0 +1,37 @@
+[package]
+name = "hoover3_server"
+repository.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+
+# ===================
+# ===== BASE ========
+# ===================
+
+hoover3_types.workspace = true
+hoover3_tracing.workspace = true
+hoover3_macro.workspace = true
+hoover3_macro2.workspace = true
+hoover3_taskdef.workspace = true
+hoover3_database.workspace = true
+
+# ===================
+# ===== PLUGINS =====
+# ===================
+
+hoover3_data_access.workspace = true
+hoover3_filesystem_scanner.workspace = true
+hoover3_database_operations.workspace = true
+
+# ===================
+# ===== EXTRA =======
+# ===================
+tokio.workspace = true
+
+[lints]
+workspace = true

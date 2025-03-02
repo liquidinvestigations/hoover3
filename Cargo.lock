@@ -3386,9 +3386,8 @@ dependencies = [
  "dioxus-logger",
  "dioxus-sdk",
  "futures-util",
- "hoover3_data_access",
  "hoover3_database",
- "hoover3_filesystem_scanner",
+ "hoover3_server",
  "hoover3_taskdef",
  "hoover3_tracing",
  "hoover3_types",
@@ -3441,6 +3440,7 @@ dependencies = [
  "hoover3_macro",
  "hoover3_tracing",
  "hoover3_types",
+ "lazy_static",
  "log",
  "meilisearch-sdk",
  "nebula-client",
@@ -3520,6 +3520,22 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.97",
+]
+
+[[package]]
+name = "hoover3_server"
+version = "0.1.0"
+dependencies = [
+ "hoover3_data_access",
+ "hoover3_database",
+ "hoover3_database_operations",
+ "hoover3_filesystem_scanner",
+ "hoover3_macro",
+ "hoover3_macro2",
+ "hoover3_taskdef",
+ "hoover3_tracing",
+ "hoover3_types",
+ "tokio",
 ]
 
 [[package]]

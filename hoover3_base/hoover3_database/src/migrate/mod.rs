@@ -5,52 +5,18 @@ use hoover3_types::db_schema::CollectionSchemaDynamic;
 
 use anyhow::Context;
 use anyhow::Result;
-use std::path::PathBuf;
 use tracing::info;
 
 use crate::db_management::redis::drop_redis_cache;
 use crate::db_management::CollectionId;
 use crate::db_management::MeilisearchDatabaseHandle;
 use crate::db_management::S3DatabaseHandle;
+use crate::system_paths::get_db_package_dir;
 use crate::{db_management::DatabaseSpaceManager, db_management::ScyllaDatabaseHandle};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
 use super::db_management::redis::with_redis_lock;
 
-/// Sometimes we run from workspace root. Sometimes we run from package root.
-/// We need to point to correct migration dirs; so we need to identify this package's dir.
-/// This function tries a few variations and finds the `hoover3_database` package root.
-pub fn get_package_dir() -> PathBuf {
-    let package_name = "hoover3_database";
-    let p = std::env::current_dir().unwrap();
-    let name = p.file_name().unwrap().to_str().unwrap();
-    if name == package_name {
-        return p;
-    }
-    if p.join(package_name).is_dir() {
-        return p.join(package_name);
-    }
-    if p.parent().unwrap().file_name().unwrap().to_str().unwrap() == package_name {
-        return p.parent().unwrap().to_path_buf();
-    }
-    if let Some(parent) = p.parent() {
-        if parent.join(package_name).is_dir() {
-            return parent.join(package_name);
-        }
-        if let Some(parent) = parent.parent() {
-            if parent.join(package_name).is_dir() {
-                return parent.join(package_name);
-            }
-            if let Some(parent) = p.parent() {
-                if parent.join(package_name).is_dir() {
-                    return parent.join(package_name);
-                }
-            }
-        }
-    }
-    info!("get_package_dir: {:?}", p);
-    panic!("could not find package dir");
-}
 
 /// Migrate all databases for all collections.
 pub async fn migrate_all() -> Result<()> {
@@ -115,7 +81,7 @@ async fn _migrate_common() -> Result<()> {
     let session = ScyllaDatabaseHandle::global_session().await?;
     info!("initiate common migration");
 
-    let common_path = get_package_dir()
+    let common_path = get_db_package_dir()
         .join("src/models/common")
         .canonicalize()
         .unwrap();
