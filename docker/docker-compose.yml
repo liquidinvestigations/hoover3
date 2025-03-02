@@ -701,9 +701,10 @@ services:
 # ========================
   seekstorm:
     container_name: seekstorm
-    image: wolfgarbe/seekstorm_server:v0.12.11
+    image: wolfgarbe/seekstorm_server:v0.12.15
     volumes:
       - /seekstorm_index
+      - /seekstorm_ingest
     environment:
       - MASTER_KEY_SECRET=1234
     ports:
@@ -719,7 +720,10 @@ services:
           cpus: '1'
           memory: 2000M
     restart: unless-stopped
-    # command: echo "create" | ./seekstorm_server local_ip="127.0.0.1" local_port=80 index_path="/seekstorm_index"
+    command: /seekstorm_server local_ip="127.0.0.1" local_port=80 index_path="/seekstorm_index" ingest_path="/seekstorm_ingest"
+    # https://github.com/SeekStorm/SeekStorm/issues/39#issuecomment-2692693438
+    stdin_open: true
+    tty: true
 
 
 
