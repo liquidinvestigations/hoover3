@@ -3,7 +3,6 @@
 /// Re-export the function to migrate all databases;
 pub use hoover3_database::migrate::migrate_all;
 
-
 // ===================
 // ===== PLUGINS =====
 // ===================

@@ -1,8 +1,7 @@
 //! Filesystem scanner API - control tasks defined in this crate
 
-
-use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::anyhow;
+use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_types::filesystem::FsScanDatasourceResult;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
@@ -10,7 +9,6 @@ use hoover3_types::tasks::UiWorkflowStatus;
 
 use crate::tasks::fs_scan_datasource_workflow;
 use crate::tasks::ScanDatasourceArgs;
-
 
 /// Initiates a filesystem scan operation
 pub async fn start_scan(
@@ -48,5 +46,3 @@ pub async fn get_scan_status(
     };
     fs_scan_datasource_workflow::client_get_status(&args).await
 }
-
-

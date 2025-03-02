@@ -17,7 +17,6 @@ use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
 use super::db_management::redis::with_redis_lock;
 
-
 /// Migrate all databases for all collections.
 pub async fn migrate_all() -> Result<()> {
     info!("migrate()");

@@ -10,7 +10,9 @@ pub trait GraphEdgeIdentifier: Sized {
     fn edge_name(&self) -> DatabaseIdentifier;
     /// Convert the edge to a `GraphEdgeType`.
     fn to_owned(&self) -> GraphEdgeType {
-        GraphEdgeType { name: self.edge_name() }
+        GraphEdgeType {
+            name: self.edge_name(),
+        }
     }
 }
 

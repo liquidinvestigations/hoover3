@@ -23,7 +23,6 @@ const CQL_SELECT_BATCH_SIZE: usize = 100;
 /// The number of batches to run in parallel for a single operation.
 const CQL_PARALLEL_BATCHES: usize = 8;
 
-
 /// Add nodes to graph. These are just mappings from a "row_pk" to the primary keys of the table
 pub async fn graph_add_nodes<T>(
     collection_id: &CollectionId,
@@ -34,25 +33,24 @@ where
     <T as BaseModel>::PrimaryKey: serde::Serialize + 'static,
     <T as BaseModel>::PrimaryKey: for<'a> serde::Deserialize<'a>,
 {
-        let nodes = nodes
-            .into_iter()
-            .map(|t| {
-                let row_pk = row_pk_hash::<T>(&t.primary_key_values());
-                let row_val = serde_json::to_value(t.primary_key_values())?;
+    let nodes = nodes
+        .into_iter()
+        .map(|t| {
+            let row_pk = row_pk_hash::<T>(&t.primary_key_values());
+            let row_val = serde_json::to_value(t.primary_key_values())?;
 
-                anyhow::Ok(GraphNodePkMap {
-                    pk: row_pk,
-                    value: row_val.to_string(),
-                })
+            anyhow::Ok(GraphNodePkMap {
+                pk: row_pk,
+                value: row_val.to_string(),
             })
-            .collect::<Result<Vec<_>, _>>()?;
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-        let session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
-        GraphNodePkMap::batch()
-            .chunked_insert(&session, &nodes, 1024)
-            .await?;
-        Ok(nodes.len())
-
+    let session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
+    GraphNodePkMap::batch()
+        .chunked_insert(&session, &nodes, 1024)
+        .await?;
+    Ok(nodes.len())
 }
 
 /// Add many edges to graph for a specific edge type.
@@ -104,7 +102,6 @@ async fn add_edges_single_batch(
     edges: Vec<(String, String)>,
     direction_out: bool,
 ) -> Result<usize, anyhow::Error> {
-
     if edges.is_empty() {
         return Ok(0);
     }
@@ -115,7 +112,8 @@ async fn add_edges_single_batch(
         return Ok(0);
     }
 
-    let page_assignments = add_edges_get_page_assignments(&collection_id, &edge_type, &edges, direction_out).await?;
+    let page_assignments =
+        add_edges_get_page_assignments(&collection_id, &edge_type, &edges, direction_out).await?;
 
     if page_assignments.is_empty() {
         return Ok(0);
@@ -152,13 +150,11 @@ async fn add_edges_single_batch(
         .await?;
 
     GraphEdgePageAssignment::batch()
-            .chunked_insert(&session, &edge_page_assign_rows, 1024)
-            .await?;
-
-    let edge_count = edges.len();
-    add_edges_batch_increment_counters(&collection_id, &edge_type, &edges, direction_out)
+        .chunked_insert(&session, &edge_page_assign_rows, 1024)
         .await?;
 
+    let edge_count = edges.len();
+    add_edges_batch_increment_counters(&collection_id, &edge_type, &edges, direction_out).await?;
 
     Ok(edge_count)
 }
@@ -193,7 +189,8 @@ async fn add_edges_get_page_assignments(
             "pk_source IN ? AND edge_type = ? AND direction_out = ?",
             (source_chunk, edge_type.to_string(), direction_out)
         )
-        .execute(&session).boxed()
+        .execute(&session)
+        .boxed()
         .await?;
         pin_mut!(counters);
 
@@ -317,11 +314,13 @@ async fn skip_existing_edges(
         .collect())
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{client_query::collections::{create_new_collection, drop_collection}, migrate::migrate_common};
+    use crate::{
+        client_query::collections::{create_new_collection, drop_collection},
+        migrate::migrate_common,
+    };
     use futures::{FutureExt, TryStreamExt};
     use hoover3_tracing::init_tracing;
     use hoover3_types::identifier::CollectionId;
@@ -338,9 +337,9 @@ mod tests {
     #[tokio::test]
     async fn test_add_edges_basic() -> Result<(), anyhow::Error> {
         // Create a test collection
-        let collection_id = tokio::spawn(async move {
-         create_test_collection("test_add_edges_basic").await
-        }).await??;
+        let collection_id =
+            tokio::spawn(async move { create_test_collection("test_add_edges_basic").await })
+                .await??;
 
         // Define simple test data - just one edge
         let edge_type = "LINKS_TO".to_string();
@@ -352,15 +351,13 @@ mod tests {
         let edge_type_ = edge_type.clone();
         let edges_ = edges.clone();
         let direction_out_ = direction_out;
-        let result = tokio::spawn(async move {
-            add_edges_single_batch(
-                collection_id_,
-                edge_type_,
-                edges_,
-                direction_out_,
-            )
-            .await
-        }.boxed()).await??;
+        let result = tokio::spawn(
+            async move {
+                add_edges_single_batch(collection_id_, edge_type_, edges_, direction_out_).await
+            }
+            .boxed(),
+        )
+        .await??;
         // let result = add_edges_single_batch(
         //     collection_id.clone(),
         //     edge_type.clone(),

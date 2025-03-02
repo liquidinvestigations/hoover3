@@ -229,8 +229,18 @@ async fn fs_do_scan_datasource(
     .await?;
     db_extra.insert(&files).await?;
     db_extra.insert(&dirs).await?;
-    graph_add_edges(arg.collection_id.clone(), FilesystemParentEdge, edges_to_files).await?;
-    graph_add_edges(arg.collection_id.clone(), FilesystemParentEdge, edges_to_dirs).await?;
+    graph_add_edges(
+        arg.collection_id.clone(),
+        FilesystemParentEdge,
+        edges_to_files,
+    )
+    .await?;
+    graph_add_edges(
+        arg.collection_id.clone(),
+        FilesystemParentEdge,
+        edges_to_dirs,
+    )
+    .await?;
 
     next_paths.sort();
     next_paths.dedup();

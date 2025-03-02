@@ -8,7 +8,6 @@ use tracing::info;
 
 use crate::system_paths::get_data_root;
 
-
 /// Get metadata for a single file or directory on disk.
 pub async fn get_path_metadata(relative_path: PathBuf) -> Result<FsMetadataBasic> {
     let path = get_data_root().join(relative_path).canonicalize()?;

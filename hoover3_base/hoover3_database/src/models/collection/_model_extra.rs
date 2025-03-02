@@ -1,7 +1,6 @@
 //! This module implements the `impl_model_callbacks` macro, which is used to add Charybdis callbacks to model structs.
 //! These callbacks are used to insert/update/delete rows in the secondary databases, Nebula and Meilisearch.
 
-
 use crate::db_management::meilisearch_wait_for_task;
 use crate::db_management::nebula_execute_retry;
 use crate::db_management::DatabaseSpaceManager;
@@ -12,7 +11,6 @@ use charybdis::model::BaseModel;
 use hoover3_types::db_schema::NebulaDatabaseSchema;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
-
 
 /// Compute a stable hash of a row's primary key, and concatenate it with table name.
 pub fn row_pk_hash<T>(data: &T::PrimaryKey) -> String

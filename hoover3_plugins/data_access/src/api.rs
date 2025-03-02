@@ -1,12 +1,12 @@
 //! Datasource management module that provides functionality to create, update, and delete datasources.
 
+use charybdis::operations::InsertWithCallbacks;
 use hoover3_database::db_management::redis::drop_redis_cache;
 use hoover3_database::db_management::redis::with_redis_cache;
 use hoover3_database::db_management::redis::with_redis_lock;
 use hoover3_database::db_management::DatabaseSpaceManager;
 use hoover3_database::db_management::ScyllaDatabaseHandle;
 use hoover3_database::models::collection::DatabaseExtraCallbacks;
-use charybdis::operations::InsertWithCallbacks;
 
 use anyhow::Result;
 use charybdis::operations::Find;
@@ -111,7 +111,6 @@ async fn test_datasource_query() -> Result<()> {
     use hoover3_database::client_query::collections::drop_collection;
     use hoover3_database::client_query::collections::get_all_collections;
     use std::path::PathBuf;
-
 
     // check we can read collections at all
     get_all_collections(()).await.unwrap();

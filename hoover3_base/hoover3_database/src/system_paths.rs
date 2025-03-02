@@ -14,7 +14,9 @@ lazy_static::lazy_static! {
 
 fn get_workspace_root_inner() -> PathBuf {
     fn is_workspace_root(path: &PathBuf) -> bool {
-        path.join("Cargo.toml").exists() && path.join("hoover3_base").exists() && path.join("hoover3_plugins").exists()
+        path.join("Cargo.toml").exists()
+            && path.join("hoover3_base").exists()
+            && path.join("hoover3_plugins").exists()
     }
     let mut path = std::env::current_dir().unwrap();
     let path0 = path.clone();
@@ -40,5 +42,7 @@ pub fn get_docker_dir() -> PathBuf {
 
 /// Get the database package directory.
 pub fn get_db_package_dir() -> PathBuf {
-    get_workspace_root().join("hoover3_base").join("hoover3_database")
+    get_workspace_root()
+        .join("hoover3_base")
+        .join("hoover3_database")
 }

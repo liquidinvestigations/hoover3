@@ -24,7 +24,6 @@ async fn _get_container_status(_c: ()) -> anyhow::Result<Vec<ContainerHealthUi>>
     Ok(v)
 }
 
-
 async fn docker_inspect_pattern(container_id: &str, pattern: &str) -> String {
     let format_string = format!("{{{{ {} }}}}", pattern);
 
