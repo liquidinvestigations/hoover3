@@ -68,6 +68,7 @@ pub fn DashboardNavbarDropdown() -> Element {
     }
 }
 
+/// The home page for the dashboards.
 #[component]
 pub fn DashboardsHomePage() -> Element {
     rsx! {

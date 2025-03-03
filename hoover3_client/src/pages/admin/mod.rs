@@ -9,6 +9,7 @@ pub use new_datasource_form::*;
 
 use dioxus::prelude::*;
 
+/// The admin home page.
 #[component]
 pub fn AdminHomePage() -> Element {
     rsx! {

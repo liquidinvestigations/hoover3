@@ -107,7 +107,7 @@ fn generate_new_item_struct(
                     }
                 } else {
                     syn::parse_quote! {
-                        ::charybdis::types::#column_type
+                        ::hoover3_database::charybdis::types::#column_type
                     }
                 }
             };
@@ -162,7 +162,7 @@ fn generate_inventory_submit(model_def: &ModelDefinition) -> TokenStream {
             let nullable = f.nullable;
             let field_type_original = f.field_type_original.clone();
             quote::quote! {
-                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                     name: #name,
                     field_type: #field_type,
                     docstring: #docstring,
@@ -179,7 +179,7 @@ fn generate_inventory_submit(model_def: &ModelDefinition) -> TokenStream {
         .collect::<Vec<_>>();
 
     quote::quote! {
-        ::hoover3_types::inventory::submit!{::hoover3_types::db_schema::ModelDefinitionStatic {
+        ::hoover3_database::inventory::submit!{hoover3_database::models::collection::ModelDefinitionStatic {
             table_name: #table_name,
             model_name: #model_name,
             docstring: #docstring,
@@ -540,13 +540,13 @@ fn test_generate_new_item_struct() {
         )]
         pub struct SimpleModel {
             /// Primary key field
-            pub id: ::charybdis::types::Text,
+            pub id: ::hoover3_database::charybdis::types::Text,
             /// Other Field
-            pub other_field: ::charybdis::types::BigInt,
+            pub other_field: ::hoover3_database::charybdis::types::BigInt,
             /// Another field
-            pub another_field: ::charybdis::types::Int,
+            pub another_field: ::hoover3_database::charybdis::types::Int,
             /// Timestamp field
-            pub created_at: ::charybdis::types::Timestamp,
+            pub created_at: ::hoover3_database::charybdis::types::Timestamp,
         }
     };
 
@@ -597,13 +597,13 @@ fn test_generate_inventory_submit() {
     let result = generate_inventory_submit(&model_def);
 
     let expected = quote::quote! {
-        ::hoover3_types::inventory::submit!{::hoover3_types::db_schema::ModelDefinitionStatic {
+        ::hoover3_database::inventory::submit!{hoover3_database::models::collection::ModelDefinitionStatic {
             table_name: "my_model",
             model_name: "MyModel",
             docstring: "This is a test model",
             charybdis_code: "",
             fields: & [
-                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                     name: "pk",
                     field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
                     docstring: "a",
@@ -615,7 +615,7 @@ fn test_generate_inventory_submit() {
                     nullable: false,
                     field_type_original: "String",
                 },
-                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                     name: "ck",
                     field_type: ::hoover3_types::db_schema::DatabaseColumnType::Int64,
                     docstring: "b",
@@ -665,19 +665,19 @@ fn test_model_macro() {
         #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         struct MyModel {
             /// Doc One
-            pub pk: ::charybdis::types::Text,
+            pub pk: ::hoover3_database::charybdis::types::Text,
             /// Doc Two
             pub created_at: Option<::charybdis::types::Timestamp>,
         }
 
-        ::hoover3_types::inventory::submit! {
-            ::hoover3_types::db_schema::ModelDefinitionStatic {
+        ::hoover3_database::inventory::submit! {
+            hoover3_database::models::collection::ModelDefinitionStatic {
                 table_name : "my_model",
                 model_name : "MyModel",
                 docstring : "This is a test model",
-                charybdis_code :  "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                charybdis_code :  "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::hoover3_database::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
                 fields : & [
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name : "pk",
                         field_type : ::hoover3_types::db_schema::DatabaseColumnType::String,
                         docstring :    "Doc One",
@@ -689,7 +689,7 @@ fn test_model_macro() {
                         nullable : false,
                         field_type_original : "String",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name : "created_at",
                         field_type : ::hoover3_types::db_schema::DatabaseColumnType::Timestamp,
                         docstring : "Doc Two",
@@ -741,19 +741,19 @@ fn test_model_with_custom_type() {
         #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         struct CustomModel {
             /// Primary key field
-            pub id: ::charybdis::types::Text,
+            pub id: ::hoover3_database::charybdis::types::Text,
             /// Custom type field
             pub custom_field: my_crate::CustomType,
         }
 
-        ::hoover3_types::inventory::submit! {
-            ::hoover3_types::db_schema::ModelDefinitionStatic {
+        ::hoover3_database::inventory::submit! {
+            hoover3_database::models::collection::ModelDefinitionStatic {
                 table_name: "custom_model",
                 model_name: "CustomModel",
                 docstring: "Test model with custom type",
-                charybdis_code: "/// Test model with custom type\n#[::charybdis::macros::charybdis_model(\n    table_name = custom_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct CustomModel {\n    /// Primary key field\n    pub id: ::charybdis::types::Text,\n    /// Custom type field\n    pub custom_field: my_crate::CustomType,\n}\n",
+                charybdis_code: "/// Test model with custom type\n#[::charybdis::macros::charybdis_model(\n    table_name = custom_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct CustomModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Custom type field\n    pub custom_field: my_crate::CustomType,\n}\n",
                 fields: &[
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
                         docstring: "Primary key field",
@@ -765,7 +765,7 @@ fn test_model_with_custom_type() {
                         nullable: false,
                         field_type_original: "String",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "custom_field",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::UnspecifiedType,
                         docstring: "Custom type field",
@@ -939,7 +939,7 @@ fn generate_new_udt_item_struct(
                     }
                 } else {
                     syn::parse_quote! {
-                        ::charybdis::types::#column_type
+                        ::hoover3_database::charybdis::types::#column_type
                     }
                 }
             };
@@ -983,7 +983,7 @@ fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream 
             let nullable = f.nullable;
             let field_type_original = f.field_type_original.clone();
             quote::quote! {
-                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                     name: #name,
                     field_type: #field_type,
                     docstring: #docstring,
@@ -1000,7 +1000,7 @@ fn generate_udt_inventory_submit(model_def: &UdtModelDefinition) -> TokenStream 
         .collect::<Vec<_>>();
 
     quote::quote! {
-        ::hoover3_types::inventory::submit!{::hoover3_types::db_schema::UdtModelDefinitionStatic {
+        ::hoover3_database::inventory::submit!{::hoover3_database::models::collection::UdtModelDefinitionStatic {
             udt_name: #udt_name,
             model_name: #model_name,
             docstring: #docstring,
@@ -1124,13 +1124,13 @@ fn test_generate_new_udt_item_struct() {
         )]
         pub struct simple_udt {
             /// First field
-            pub field1: ::charybdis::types::Text,
+            pub field1: ::hoover3_database::charybdis::types::Text,
             /// Second field
-            pub field2: ::charybdis::types::BigInt,
+            pub field2: ::hoover3_database::charybdis::types::BigInt,
             /// Third field
             pub field3: Option<::charybdis::types::Int>,
             /// Fourth field
-            pub created_at: ::charybdis::types::Timestamp,
+            pub created_at: ::hoover3_database::charybdis::types::Timestamp,
         }
     };
 
@@ -1181,13 +1181,13 @@ fn test_generate_udt_inventory_submit() {
     let result = generate_udt_inventory_submit(&udt_def);
 
     let expected = quote::quote! {
-        ::hoover3_types::inventory::submit!{::hoover3_types::db_schema::UdtModelDefinitionStatic {
+        ::hoover3_database::inventory::submit!{::hoover3_database::models::collection::UdtModelDefinitionStatic {
             udt_name: "my_udt",
             model_name: "my_udt",
             docstring: "This is a test UDT",
             charybdis_code: "test code",
             fields: & [
-                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                     name: "field1",
                     field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
                     docstring: "first field",
@@ -1199,7 +1199,7 @@ fn test_generate_udt_inventory_submit() {
                     nullable: false,
                     field_type_original: "String",
                 },
-                ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                     name: "field2",
                     field_type: ::hoover3_types::db_schema::DatabaseColumnType::Int64,
                     docstring: "second field",
@@ -1244,20 +1244,20 @@ fn test_udt_model_macro() {
         #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         struct my_udt {
             /// Doc One
-            pub field1: ::charybdis::types::Text,
+            pub field1: ::hoover3_database::charybdis::types::Text,
             /// Doc Two
             pub created_at: Option<::charybdis::types::Timestamp>,
         }
 
-        ::hoover3_types::inventory::submit! {
-            ::hoover3_types::db_schema::UdtModelDefinitionStatic {
+        ::hoover3_database::inventory::submit! {
+            ::hoover3_database::models::collection::UdtModelDefinitionStatic {
                 udt_name : "my_udt",
                 model_name : "my_udt",
                 docstring : "This is a test UDT",
                 charybdis_code :
-                "/// This is a test UDT\n#[::charybdis::macros::charybdis_udt_model(type_name = my_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct my_udt {\n    /// Doc One\n    pub field1: ::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                "/// This is a test UDT\n#[::charybdis::macros::charybdis_udt_model(type_name = my_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct my_udt {\n    /// Doc One\n    pub field1: ::hoover3_database::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
                 fields : & [
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name : "field1",
                         field_type : ::hoover3_types::db_schema::DatabaseColumnType::String,
                         docstring : "Doc One",
@@ -1269,7 +1269,7 @@ fn test_udt_model_macro() {
                         nullable : false,
                         field_type_original : "String",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name : "created_at",
                         field_type : ::hoover3_types::db_schema::DatabaseColumnType::Timestamp,
                         docstring : "Doc Two",

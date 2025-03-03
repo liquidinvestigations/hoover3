@@ -16,7 +16,7 @@ use scylla::transport::topology::NativeType;
 /// Test that the code schema object works.
 #[test]
 fn test_get_scylla_code_schema_1() {
-    use hoover3_types::db_schema::get_scylla_schema_from_inventory;
+    use crate::models::collection::get_scylla_schema_from_inventory;
     let _schema = get_scylla_schema_from_inventory();
     println!("{:?}", _schema);
 }
@@ -28,7 +28,7 @@ fn test_get_scylla_code_schema_1() {
 /// the #[model] macro.
 #[tokio::test]
 async fn test_get_scylla_code_schema_2() {
-    use hoover3_types::db_schema::get_scylla_schema_from_inventory;
+    use crate::models::collection::get_scylla_schema_from_inventory;
     let code_schema = get_scylla_schema_from_inventory();
     let c1 = CollectionId::new("test_get_scylla_code_schema_2").unwrap();
     let session = ScyllaDatabaseHandle::global_session().await.unwrap();

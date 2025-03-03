@@ -11,3 +11,6 @@ pub use _scylla_graph_models::*;
 
 mod _scylla_graph;
 pub use _scylla_graph::*;
+
+mod model_inventory;
+pub use model_inventory::*;

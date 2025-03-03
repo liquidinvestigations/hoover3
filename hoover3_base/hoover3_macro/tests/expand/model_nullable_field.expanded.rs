@@ -4,7 +4,7 @@ use serde::Serialize;
 /// Documentation
 pub struct SimpleModel {
     /// Primary key field
-    pub id: ::charybdis::types::Text,
+    pub id: ::hoover3_database::charybdis::types::Text,
     /// Nullable Field
     pub created_at: Option<::charybdis::types::Timestamp>,
 }
@@ -212,7 +212,7 @@ const _: () = {
                     __A: _serde::de::SeqAccess<'de>,
                 {
                     let __field0 = match _serde::de::SeqAccess::next_element::<
-                        ::charybdis::types::Text,
+                        ::hoover3_database::charybdis::types::Text,
                     >(&mut __seq)? {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
@@ -251,7 +251,7 @@ const _: () = {
                     __A: _serde::de::MapAccess<'de>,
                 {
                     let mut __field0: _serde::__private::Option<
-                        ::charybdis::types::Text,
+                        ::hoover3_database::charybdis::types::Text,
                     > = _serde::__private::None;
                     let mut __field1: _serde::__private::Option<
                         Option<::charybdis::types::Timestamp>,
@@ -268,7 +268,7 @@ const _: () = {
                                 }
                                 __field0 = _serde::__private::Some(
                                     _serde::de::MapAccess::next_value::<
-                                        ::charybdis::types::Text,
+                                        ::hoover3_database::charybdis::types::Text,
                                     >(&mut __map)?,
                                 );
                             }
@@ -343,7 +343,7 @@ impl<
             match spec.name() {
                 "id" => {
                     if !visited_id {
-                        <::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::type_check(spec.typ())
@@ -481,7 +481,7 @@ impl<
                         }
                     }
                     f_id = ::std::option::Option::Some(
-                        <::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::deserialize(col.spec.typ(), col.slice)
@@ -594,7 +594,7 @@ impl ::scylla::_macro_internal::SerializeRow for SimpleModel {
                     let sub_writer = ::scylla::_macro_internal::RowWriter::make_cell_writer(
                         writer,
                     );
-                    match <::charybdis::types::Text as ::scylla::_macro_internal::SerializeValue>::serialize(
+                    match <::hoover3_database::charybdis::types::Text as ::scylla::_macro_internal::SerializeValue>::serialize(
                         &self.id,
                         spec.typ(),
                         sub_writer,
@@ -675,10 +675,10 @@ impl ::scylla::_macro_internal::SerializeRow for SimpleModel {
 }
 impl SimpleModel {
     pub fn find_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::ModelRow,
     > {
@@ -688,10 +688,10 @@ impl SimpleModel {
         )
     }
     pub fn find_first_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::ModelRow,
     > {
@@ -701,10 +701,10 @@ impl SimpleModel {
         )
     }
     pub fn maybe_find_first_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::OptionalModelRow,
     > {
@@ -714,10 +714,10 @@ impl SimpleModel {
         )
     }
     pub fn delete_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::ModelMutation,
     > {
@@ -728,8 +728,8 @@ impl SimpleModel {
     }
 }
 impl charybdis::model::BaseModel for SimpleModel {
-    type PrimaryKey = (::charybdis::types::Text,);
-    type PartitionKey = (::charybdis::types::Text,);
+    type PrimaryKey = (::hoover3_database::charybdis::types::Text,);
+    type PartitionKey = (::hoover3_database::charybdis::types::Text,);
     const DB_MODEL_NAME: &'static str = "simple_model";
     const FIND_ALL_QUERY: &'static str = "SELECT id, created_at FROM simple_model";
     const FIND_BY_PRIMARY_KEY_QUERY: &'static str = "SELECT id, created_at FROM simple_model WHERE id = ?";
@@ -760,13 +760,13 @@ pub(crate) use delete_simple_model;
 const _: () = {
     static __INVENTORY: ::inventory::Node = ::inventory::Node {
         value: &{
-            ::hoover3_types::db_schema::ModelDefinitionStatic {
+            hoover3_database::models::collection::ModelDefinitionStatic {
                 table_name: "simple_model",
                 model_name: "SimpleModel",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::charybdis::types::Text,\n    /// Nullable Field\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Nullable Field\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
                 fields: &[
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
                         docstring: "Primary key field",
@@ -778,7 +778,7 @@ const _: () = {
                         nullable: false,
                         field_type_original: "String",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "created_at",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::Timestamp,
                         docstring: "Nullable Field",
@@ -805,3 +805,39 @@ const _: () = {
     #[link_section = ".init_array"]
     static __CTOR: unsafe extern "C" fn() = __ctor;
 };
+impl ::charybdis::callbacks::Callbacks for SimpleModel {
+    /// Error type for the callbacks - we always use anyhow.
+    type Error = ::anyhow::Error;
+    /// Extension type for the callbacks - see [DatabaseExtraCallbacks].
+    type Extension = ::hoover3_database::models::collection::DatabaseExtraCallbacks;
+    /// Callback calls the `insert` method on the `DatabaseExtraCallbacks` instance.
+    async fn after_insert(
+        &mut self,
+        _session: &::charybdis::scylla::CachingSession,
+        extension: &::hoover3_database::models::collection::DatabaseExtraCallbacks,
+    ) -> ::anyhow::Result<()> {
+        extension.insert(&[self.clone()]).await
+    }
+    /// Callback calls the `delete` method on the `DatabaseExtraCallbacks` instance.
+    async fn after_delete(
+        &mut self,
+        _session: &::charybdis::scylla::CachingSession,
+        extension: &::hoover3_database::models::collection::DatabaseExtraCallbacks,
+    ) -> ::anyhow::Result<()> {
+        extension.delete(&[self.clone()]).await
+    }
+}
+impl SimpleModel {
+    /// Compute a stable hash of a row's primary key, and concatenate it with table name.
+    pub fn row_pk_hash(&self) -> String {
+        use ::charybdis::model::BaseModel;
+        ::hoover3_database::models::collection::row_pk_hash::<
+            SimpleModel,
+        >(&self.primary_key_values())
+    }
+    /// Get a JSON representation of a row's primary key.
+    pub fn row_pk_json(&self) -> ::anyhow::Result<::serde_json::Value> {
+        use ::charybdis::model::BaseModel;
+        Ok(::serde_json::to_value(&self.primary_key_values())?)
+    }
+}

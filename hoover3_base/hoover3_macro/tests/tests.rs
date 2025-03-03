@@ -1,5 +1,7 @@
 //! Integration tests for the hoover3_macro crate.
 
+#![allow(unused_crate_dependencies)]
+
 /// Test that the macros expand correctly.
 /// After changing the macros, delete affected `*.expanded.rs` files and run this test again.
 #[test]

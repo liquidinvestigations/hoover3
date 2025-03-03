@@ -1,6 +1,7 @@
 //! This module contains the database migration functions,
 //! including mirroring the Scylla schema into other databases.
 
+use charybdis::stream::CharybdisModelStream;
 use hoover3_types::db_schema::CollectionSchemaDynamic;
 
 use anyhow::Context;
@@ -11,6 +12,8 @@ use crate::db_management::redis::drop_redis_cache;
 use crate::db_management::CollectionId;
 use crate::db_management::MeilisearchDatabaseHandle;
 use crate::db_management::S3DatabaseHandle;
+use crate::models::collection::get_graph_edges_types_from_inventory;
+use crate::models::collection::get_scylla_schema_from_inventory;
 use crate::system_paths::get_db_package_dir;
 use crate::{db_management::DatabaseSpaceManager, db_management::ScyllaDatabaseHandle};
 use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
@@ -19,9 +22,9 @@ use super::db_management::redis::with_redis_lock;
 
 /// Load and check all database schemas. This call will panic if the schema is not valid.
 pub fn check_code_schema() {
-    let scylla_schema = hoover3_types::db_schema::get_scylla_schema_from_inventory();
+    let scylla_schema = get_scylla_schema_from_inventory();
     info!("scylla schema ok: {} tables", scylla_schema.tables.len());
-    let graph_edge_schema = hoover3_types::db_schema::get_graph_edges_types_from_inventory();
+    let graph_edge_schema = get_graph_edges_types_from_inventory();
     info!(
         "graph edge schema ok: {} edges",
         graph_edge_schema.edges_by_types.len()
@@ -41,7 +44,7 @@ pub async fn migrate_all() -> Result<()> {
     let session = ScyllaDatabaseHandle::global_session()
         .await
         .context("scylla global session")?;
-    let mut collections_stream: charybdis::stream::CharybdisModelStream<CollectionDbRow> =
+    let mut collections_stream: CharybdisModelStream<CollectionDbRow> =
         CollectionDbRow::find_all().execute(&session).await?;
     use futures::StreamExt;
     while let Some(Ok(c)) = collections_stream.next().await {
@@ -247,7 +250,7 @@ pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchemaDy
         collection_id: c.clone(),
         scylla: crate::db_management::query_scylla_schema(&c).await?,
         meilisearch: crate::db_management::query_meilisearch_schema(&c).await?,
-        graph: (hoover3_types::db_schema::get_graph_edges_types_from_inventory().as_ref()).clone(),
+        graph: (get_graph_edges_types_from_inventory().as_ref()).clone(),
     })
 }
 

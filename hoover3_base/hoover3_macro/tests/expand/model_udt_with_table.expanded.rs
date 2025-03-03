@@ -5,11 +5,11 @@ use serde::Serialize;
 /// Documentation
 pub struct simple_model_udt {
     /// Some Field
-    pub id: ::charybdis::types::Text,
+    pub id: ::hoover3_database::charybdis::types::Text,
     /// Other Field
     pub another_field: Option<::charybdis::types::Int>,
     /// Timestamp field
-    pub created_at: ::charybdis::types::Timestamp,
+    pub created_at: ::hoover3_database::charybdis::types::Timestamp,
 }
 #[automatically_derived]
 #[allow(non_camel_case_types)]
@@ -246,7 +246,7 @@ const _: () = {
                     __A: _serde::de::SeqAccess<'de>,
                 {
                     let __field0 = match _serde::de::SeqAccess::next_element::<
-                        ::charybdis::types::Text,
+                        ::hoover3_database::charybdis::types::Text,
                     >(&mut __seq)? {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
@@ -272,7 +272,7 @@ const _: () = {
                         }
                     };
                     let __field2 = match _serde::de::SeqAccess::next_element::<
-                        ::charybdis::types::Timestamp,
+                        ::hoover3_database::charybdis::types::Timestamp,
                     >(&mut __seq)? {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
@@ -299,13 +299,13 @@ const _: () = {
                     __A: _serde::de::MapAccess<'de>,
                 {
                     let mut __field0: _serde::__private::Option<
-                        ::charybdis::types::Text,
+                        ::hoover3_database::charybdis::types::Text,
                     > = _serde::__private::None;
                     let mut __field1: _serde::__private::Option<
                         Option<::charybdis::types::Int>,
                     > = _serde::__private::None;
                     let mut __field2: _serde::__private::Option<
-                        ::charybdis::types::Timestamp,
+                        ::hoover3_database::charybdis::types::Timestamp,
                     > = _serde::__private::None;
                     while let _serde::__private::Some(__key) = _serde::de::MapAccess::next_key::<
                         __Field,
@@ -319,7 +319,7 @@ const _: () = {
                                 }
                                 __field0 = _serde::__private::Some(
                                     _serde::de::MapAccess::next_value::<
-                                        ::charybdis::types::Text,
+                                        ::hoover3_database::charybdis::types::Text,
                                     >(&mut __map)?,
                                 );
                             }
@@ -347,7 +347,7 @@ const _: () = {
                                 }
                                 __field2 = _serde::__private::Some(
                                     _serde::de::MapAccess::next_value::<
-                                        ::charybdis::types::Timestamp,
+                                        ::hoover3_database::charybdis::types::Timestamp,
                                     >(&mut __map)?,
                                 );
                             }
@@ -432,7 +432,7 @@ impl<
             match std::ops::Deref::deref(cql_field_name) {
                 "id" => {
                     if !visited_id {
-                        <::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::type_check(cql_field_typ)
@@ -502,7 +502,7 @@ impl<
                 }
                 "created_at" => {
                     if !visited_created_at {
-                        <::charybdis::types::Timestamp as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Timestamp as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::type_check(cql_field_typ)
@@ -614,7 +614,7 @@ impl<
                     }
                     let value = value.flatten();
                     f_id = ::std::option::Option::Some(
-                        <::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::deserialize(cql_field_typ, value)
@@ -672,7 +672,7 @@ impl<
                     }
                     let value = value.flatten();
                     f_created_at = ::std::option::Option::Some(
-                        <::charybdis::types::Timestamp as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Timestamp as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::deserialize(cql_field_typ, value)
@@ -789,7 +789,7 @@ impl ::scylla::_macro_internal::SerializeValue for simple_model_udt {
                     let sub_builder = ::scylla::_macro_internal::CellValueBuilder::make_sub_writer(
                         &mut builder,
                     );
-                    match <::charybdis::types::Text as ::scylla::_macro_internal::SerializeValue>::serialize(
+                    match <::hoover3_database::charybdis::types::Text as ::scylla::_macro_internal::SerializeValue>::serialize(
                         &self.id,
                         field_type,
                         sub_builder,
@@ -855,7 +855,7 @@ impl ::scylla::_macro_internal::SerializeValue for simple_model_udt {
                     let sub_builder = ::scylla::_macro_internal::CellValueBuilder::make_sub_writer(
                         &mut builder,
                     );
-                    match <::charybdis::types::Timestamp as ::scylla::_macro_internal::SerializeValue>::serialize(
+                    match <::hoover3_database::charybdis::types::Timestamp as ::scylla::_macro_internal::SerializeValue>::serialize(
                         &self.created_at,
                         field_type,
                         sub_builder,
@@ -921,13 +921,13 @@ impl ::scylla::_macro_internal::SerializeValue for simple_model_udt {
 const _: () = {
     static __INVENTORY: ::inventory::Node = ::inventory::Node {
         value: &{
-            ::hoover3_types::db_schema::UdtModelDefinitionStatic {
+            ::hoover3_database::models::collection::UdtModelDefinitionStatic {
                 udt_name: "simple_model_udt",
                 model_name: "simple_model_udt",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_udt_model(type_name = simple_model_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct simple_model_udt {\n    /// Some Field\n    pub id: ::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<::charybdis::types::Int>,\n    /// Timestamp field\n    pub created_at: ::charybdis::types::Timestamp,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_udt_model(type_name = simple_model_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct simple_model_udt {\n    /// Some Field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<::charybdis::types::Int>,\n    /// Timestamp field\n    pub created_at: ::hoover3_database::charybdis::types::Timestamp,\n}\n",
                 fields: &[
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
                         docstring: "Some Field",
@@ -939,7 +939,7 @@ const _: () = {
                         nullable: false,
                         field_type_original: "String",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "another_field",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::Int32,
                         docstring: "Other Field",
@@ -951,7 +951,7 @@ const _: () = {
                         nullable: true,
                         field_type_original: "i32",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "created_at",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::Timestamp,
                         docstring: "Timestamp field",
@@ -981,7 +981,7 @@ const _: () = {
 /// Documentation
 pub struct SimpleModelUdtWithTable {
     /// Some Field
-    pub id: ::charybdis::types::Text,
+    pub id: ::hoover3_database::charybdis::types::Text,
     /// Other Field
     pub another_field: Option<simple_model_udt>,
     /// The Field
@@ -1216,7 +1216,7 @@ const _: () = {
                     __A: _serde::de::SeqAccess<'de>,
                 {
                     let __field0 = match _serde::de::SeqAccess::next_element::<
-                        ::charybdis::types::Text,
+                        ::hoover3_database::charybdis::types::Text,
                     >(&mut __seq)? {
                         _serde::__private::Some(__value) => __value,
                         _serde::__private::None => {
@@ -1269,7 +1269,7 @@ const _: () = {
                     __A: _serde::de::MapAccess<'de>,
                 {
                     let mut __field0: _serde::__private::Option<
-                        ::charybdis::types::Text,
+                        ::hoover3_database::charybdis::types::Text,
                     > = _serde::__private::None;
                     let mut __field1: _serde::__private::Option<
                         Option<simple_model_udt>,
@@ -1287,7 +1287,7 @@ const _: () = {
                                 }
                                 __field0 = _serde::__private::Some(
                                     _serde::de::MapAccess::next_value::<
-                                        ::charybdis::types::Text,
+                                        ::hoover3_database::charybdis::types::Text,
                                     >(&mut __map)?,
                                 );
                             }
@@ -1389,7 +1389,7 @@ for SimpleModelUdtWithTable {
             match spec.name() {
                 "id" => {
                     if !visited_id {
-                        <::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::type_check(spec.typ())
@@ -1569,7 +1569,7 @@ for SimpleModelUdtWithTable {
                         }
                     }
                     f_id = ::std::option::Option::Some(
-                        <::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
+                        <::hoover3_database::charybdis::types::Text as scylla::_macro_internal::DeserializeValue<
                             'lifetime,
                             'lifetime_,
                         >>::deserialize(col.spec.typ(), col.slice)
@@ -1721,7 +1721,7 @@ impl ::scylla::_macro_internal::SerializeRow for SimpleModelUdtWithTable {
                     let sub_writer = ::scylla::_macro_internal::RowWriter::make_cell_writer(
                         writer,
                     );
-                    match <::charybdis::types::Text as ::scylla::_macro_internal::SerializeValue>::serialize(
+                    match <::hoover3_database::charybdis::types::Text as ::scylla::_macro_internal::SerializeValue>::serialize(
                         &self.id,
                         spec.typ(),
                         sub_writer,
@@ -1833,10 +1833,10 @@ impl ::scylla::_macro_internal::SerializeRow for SimpleModelUdtWithTable {
 }
 impl SimpleModelUdtWithTable {
     pub fn find_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::ModelRow,
     > {
@@ -1846,10 +1846,10 @@ impl SimpleModelUdtWithTable {
         )
     }
     pub fn find_first_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::ModelRow,
     > {
@@ -1859,10 +1859,10 @@ impl SimpleModelUdtWithTable {
         )
     }
     pub fn maybe_find_first_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::OptionalModelRow,
     > {
@@ -1872,10 +1872,10 @@ impl SimpleModelUdtWithTable {
         )
     }
     pub fn delete_by_id<'a>(
-        id: ::charybdis::types::Text,
+        id: ::hoover3_database::charybdis::types::Text,
     ) -> charybdis::query::CharybdisQuery<
         'a,
-        (::charybdis::types::Text,),
+        (::hoover3_database::charybdis::types::Text,),
         Self,
         charybdis::query::ModelMutation,
     > {
@@ -1886,8 +1886,8 @@ impl SimpleModelUdtWithTable {
     }
 }
 impl charybdis::model::BaseModel for SimpleModelUdtWithTable {
-    type PrimaryKey = (::charybdis::types::Text,);
-    type PartitionKey = (::charybdis::types::Text,);
+    type PrimaryKey = (::hoover3_database::charybdis::types::Text,);
+    type PartitionKey = (::hoover3_database::charybdis::types::Text,);
     const DB_MODEL_NAME: &'static str = "simple_model_udt_with_table";
     const FIND_ALL_QUERY: &'static str = "SELECT id, another_field, the_field FROM simple_model_udt_with_table";
     const FIND_BY_PRIMARY_KEY_QUERY: &'static str = "SELECT id, another_field, the_field FROM simple_model_udt_with_table WHERE id = ?";
@@ -1918,13 +1918,13 @@ pub(crate) use delete_simple_model_udt_with_table;
 const _: () = {
     static __INVENTORY: ::inventory::Node = ::inventory::Node {
         value: &{
-            ::hoover3_types::db_schema::ModelDefinitionStatic {
+            hoover3_database::models::collection::ModelDefinitionStatic {
                 table_name: "simple_model_udt_with_table",
                 model_name: "SimpleModelUdtWithTable",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model_udt_with_table,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModelUdtWithTable {\n    /// Some Field\n    pub id: ::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<simple_model_udt>,\n    /// The Field\n    pub the_field: simple_model_udt,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model_udt_with_table,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModelUdtWithTable {\n    /// Some Field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<simple_model_udt>,\n    /// The Field\n    pub the_field: simple_model_udt,\n}\n",
                 fields: &[
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::String,
                         docstring: "Some Field",
@@ -1936,7 +1936,7 @@ const _: () = {
                         nullable: false,
                         field_type_original: "String",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "another_field",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::UnspecifiedType,
                         docstring: "Other Field",
@@ -1948,7 +1948,7 @@ const _: () = {
                         nullable: true,
                         field_type_original: "simple_model_udt",
                     },
-                    ::hoover3_types::db_schema::ModelFieldDefinitionStatic {
+                    ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "the_field",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::UnspecifiedType,
                         docstring: "The Field",
@@ -1975,3 +1975,39 @@ const _: () = {
     #[link_section = ".init_array"]
     static __CTOR: unsafe extern "C" fn() = __ctor;
 };
+impl ::charybdis::callbacks::Callbacks for SimpleModelUdtWithTable {
+    /// Error type for the callbacks - we always use anyhow.
+    type Error = ::anyhow::Error;
+    /// Extension type for the callbacks - see [DatabaseExtraCallbacks].
+    type Extension = ::hoover3_database::models::collection::DatabaseExtraCallbacks;
+    /// Callback calls the `insert` method on the `DatabaseExtraCallbacks` instance.
+    async fn after_insert(
+        &mut self,
+        _session: &::charybdis::scylla::CachingSession,
+        extension: &::hoover3_database::models::collection::DatabaseExtraCallbacks,
+    ) -> ::anyhow::Result<()> {
+        extension.insert(&[self.clone()]).await
+    }
+    /// Callback calls the `delete` method on the `DatabaseExtraCallbacks` instance.
+    async fn after_delete(
+        &mut self,
+        _session: &::charybdis::scylla::CachingSession,
+        extension: &::hoover3_database::models::collection::DatabaseExtraCallbacks,
+    ) -> ::anyhow::Result<()> {
+        extension.delete(&[self.clone()]).await
+    }
+}
+impl SimpleModelUdtWithTable {
+    /// Compute a stable hash of a row's primary key, and concatenate it with table name.
+    pub fn row_pk_hash(&self) -> String {
+        use ::charybdis::model::BaseModel;
+        ::hoover3_database::models::collection::row_pk_hash::<
+            SimpleModelUdtWithTable,
+        >(&self.primary_key_values())
+    }
+    /// Get a JSON representation of a row's primary key.
+    pub fn row_pk_json(&self) -> ::anyhow::Result<::serde_json::Value> {
+        use ::charybdis::model::BaseModel;
+        Ok(::serde_json::to_value(&self.primary_key_values())?)
+    }
+}

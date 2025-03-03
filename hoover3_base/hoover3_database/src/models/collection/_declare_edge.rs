@@ -36,7 +36,7 @@ macro_rules! declare_graph_edge {
             type SourceType = $source;
             type DestType = $dest;
         }
-        ::hoover3_types::inventory::submit!(::hoover3_types::db_schema::GraphEdgeTypeStatic {
+        $crate::inventory::submit!($crate::models::collection::GraphEdgeTypeStatic {
             edge_type: $edge_name,
             source_type: $crate::paste::paste!(
                 <$source as $crate::charybdis::model::BaseModel>::DB_MODEL_NAME

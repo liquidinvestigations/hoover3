@@ -10,4 +10,5 @@
     "[rust]": {
         "editor.inlayHints.enabled": "on",
     },
+    "rust-analyzer.checkOnSave": true,
 }

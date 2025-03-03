@@ -127,7 +127,7 @@ impl DatabaseSpaceManager for SeekstormDatabaseHandle {
             prefix: None,
             key: MASTER_API_KEY.to_string(),
         });
-        let scylla_schema = hoover3_types::db_schema::get_scylla_schema_from_inventory();
+        let scylla_schema = crate::models::collection::get_scylla_schema_from_inventory();
         let mut schema = vec![];
 
         for (table_name, table) in scylla_schema.tables.iter() {

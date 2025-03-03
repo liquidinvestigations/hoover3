@@ -107,6 +107,7 @@ fn _DatabaseExplorerPage(explorer_route: ReadOnlySignal<DatabaseExplorerRoute>) 
     }
 }
 
+/// The root page for the database explorer.
 #[component]
 pub fn DatabaseExplorerRootPage() -> Element {
     let collections_res = use_resource(move || async move { get_all_collections(()).await });

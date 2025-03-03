@@ -147,7 +147,7 @@ impl DatabaseSpaceManager for ScyllaDatabaseHandle {
         let space_name = _c.database_name()?.to_string();
 
         // collect codes from inventory and extra files that will be listed by hand
-        let schema_code = hoover3_types::db_schema::get_all_charybdis_codes();
+        let schema_code = crate::models::collection::get_all_charybdis_codes();
         let extra_codes = crate::migrate::get_extra_charybdis_codes();
 
         // we put the codes in a temp file in some temp dir

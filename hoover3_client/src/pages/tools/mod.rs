@@ -14,6 +14,8 @@ mod database_explorer;
 pub use database_explorer::*;
 
 use dioxus::prelude::*;
+
+/// The home page for the tools.
 #[component]
 pub fn ToolsHomePage() -> Element {
     rsx! {

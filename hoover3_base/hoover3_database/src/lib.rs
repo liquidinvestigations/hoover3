@@ -9,4 +9,5 @@ pub mod system_paths;
 
 // re-export for usage in macros:
 pub use charybdis;
+pub use inventory;
 pub use paste;

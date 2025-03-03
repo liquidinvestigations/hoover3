@@ -15,8 +15,8 @@ workspace = true
 tokio = {workspace = true}
 futures= {workspace = true}
 anyhow = {workspace = true}
-futures-util = {workspace = true}
-once_cell= {workspace = true}
+# futures-util = {workspace = true}
+# once_cell= {workspace = true}
 tracing.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -24,6 +24,7 @@ paste.workspace = true
 hoover3_types.workspace = true
 hoover3_macro.workspace = true
 hoover3_database.workspace = true
+inventory.workspace = true
 buildid = "1.0.3"
 # temporal
 temporal-client = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e" }
@@ -33,4 +34,3 @@ temporal-sdk-core-api = { git = "https://github.com/temporalio/sdk-core" , rev =
 temporal-sdk-core-protos = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e"}
 prost-wkt-types = "0.6.0"
 tonic = "0.12.3"
-inventory = "0.3.19"

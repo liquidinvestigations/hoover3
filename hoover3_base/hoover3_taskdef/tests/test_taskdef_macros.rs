@@ -1,5 +1,8 @@
 //! Integration tests for taskdef macros.
 
+#![allow(unused_crate_dependencies)]
+#![allow(unused_extern_crates)]
+
 use hoover3_taskdef::*;
 
 declare_task_queue!(TestQueue2, "taskdef_test_external_task_queue", 2, 4, 256);
