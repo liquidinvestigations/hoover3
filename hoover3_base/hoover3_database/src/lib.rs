@@ -8,5 +8,5 @@ pub mod models;
 pub mod system_paths;
 
 // re-export for usage in macros:
-pub use paste;
 pub use charybdis;
+pub use paste;

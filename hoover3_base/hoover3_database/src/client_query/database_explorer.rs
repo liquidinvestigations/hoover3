@@ -19,8 +19,7 @@ use scylla::{
 };
 
 use crate::db_management::{
-    redis::with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle,
-    ScyllaDatabaseHandle,
+    redis::with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle, ScyllaDatabaseHandle,
 };
 
 /// Get Scylla table row count by running SQL request `SELECT COUNT * FROM ...`.
@@ -72,7 +71,6 @@ pub async fn db_explorer_run_query(
         elapsed_seconds: dt,
     })
 }
-
 
 async fn db_explorer_run_meilisearch_query(
     (collection_id, sql_query): (CollectionId, String),

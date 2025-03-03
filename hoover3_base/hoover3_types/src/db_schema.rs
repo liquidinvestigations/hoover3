@@ -601,7 +601,11 @@ pub struct GraphEdgeSchemaDynamic {
 
 impl From<&GraphEdgeTypeStatic> for GraphEdgeTypeDynamic {
     fn from(value: &GraphEdgeTypeStatic) -> Self {
-        GraphEdgeTypeDynamic { edge_type: DatabaseIdentifier::new(value.edge_type).unwrap(), source_type: DatabaseIdentifier::new(value.source_type).unwrap(), target_type: DatabaseIdentifier::new(value.target_type).unwrap() }
+        GraphEdgeTypeDynamic {
+            edge_type: DatabaseIdentifier::new(value.edge_type).unwrap(),
+            source_type: DatabaseIdentifier::new(value.source_type).unwrap(),
+            target_type: DatabaseIdentifier::new(value.target_type).unwrap(),
+        }
     }
 }
 
@@ -624,7 +628,9 @@ fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchemaDyna
         let Ok(edge_type_id) = DatabaseIdentifier::new(edge_type_def.edge_type) else {
             panic!("invalid edge type name: `{}`", edge_type_def.edge_type);
         };
-        let edge_type_id = GraphEdgeType { edge_type: edge_type_id };
+        let edge_type_id = GraphEdgeType {
+            edge_type: edge_type_id,
+        };
 
         if edges_by_types.contains_key(&edge_type_id) {
             panic!(

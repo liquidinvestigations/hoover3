@@ -1,6 +1,6 @@
 //! This module contains the table definitions for all the datasource related models.
 
-// 
+//
 #![allow(missing_docs)]
 
 use hoover3_macro::model;

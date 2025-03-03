@@ -4,7 +4,8 @@ pub use sql_query_tool::*;
 use dioxus::prelude::*;
 use hoover3_types::{
     db_schema::{
-        DatabaseServiceType, GraphEdgeSchemaDynamic, MeilisearchDatabaseSchema,  ScyllaDatabaseSchema
+        DatabaseServiceType, GraphEdgeSchemaDynamic, MeilisearchDatabaseSchema,
+        ScyllaDatabaseSchema,
     },
     identifier::{CollectionId, DatabaseIdentifier},
 };

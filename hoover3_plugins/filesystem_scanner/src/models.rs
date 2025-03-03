@@ -150,7 +150,27 @@ impl FsFileDbRow {
     }
 }
 
-declare_graph_edge!(FsDirectoryDatasource, "fs_directory_datasource", FsDirectoryDbRow, DatasourceDbRow);
-declare_graph_edge!(FsFileDatasource, "fs_file_datasource", FsFileDbRow, DatasourceDbRow);
-declare_graph_edge!(FsDirectoryParent, "fs_directory_parent", FsDirectoryDbRow, FsDirectoryDbRow);
-declare_graph_edge!(FsFileParent, "fs_file_parent", FsFileDbRow, FsDirectoryDbRow);
+declare_graph_edge!(
+    FsDirectoryDatasource,
+    "fs_directory_datasource",
+    FsDirectoryDbRow,
+    DatasourceDbRow
+);
+declare_graph_edge!(
+    FsFileDatasource,
+    "fs_file_datasource",
+    FsFileDbRow,
+    DatasourceDbRow
+);
+declare_graph_edge!(
+    FsDirectoryParent,
+    "fs_directory_parent",
+    FsDirectoryDbRow,
+    FsDirectoryDbRow
+);
+declare_graph_edge!(
+    FsFileParent,
+    "fs_file_parent",
+    FsFileDbRow,
+    FsDirectoryDbRow
+);

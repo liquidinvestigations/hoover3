@@ -10,8 +10,6 @@ use charybdis::model::BaseModel;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 
-
-
 /// Compute a stable hash of a row's primary key, and concatenate it with table name.
 pub fn row_pk_hash<T>(data: &T::PrimaryKey) -> String
 where
@@ -246,7 +244,6 @@ impl DatabaseExtraCallbacks {
             .collect::<Vec<String>>();
 
         let _search_result = self.search_index.delete_documents(&pks).await?;
-
 
         // takes too much time
         meilisearch_wait_for_task(_search_result).await?;

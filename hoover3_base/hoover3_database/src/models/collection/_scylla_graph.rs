@@ -61,22 +61,34 @@ pub struct EdgeBatchOperation<E: GraphEdge> {
     edges: Vec<(String, String)>,
 }
 
-impl <E: GraphEdge> EdgeBatchOperation<E> {
+impl<E: GraphEdge> EdgeBatchOperation<E> {
     /// Create a new batch operation for inserting edges into the graph.
-    pub (crate) fn new(collection_id: CollectionId) -> Self {
-        Self { collection_id, edges: Vec::new(), _ph: std::marker::PhantomData }
+    pub(crate) fn new(collection_id: CollectionId) -> Self {
+        Self {
+            collection_id,
+            edges: Vec::new(),
+            _ph: std::marker::PhantomData,
+        }
     }
 
     /// Execute the batch operation.
     pub async fn execute(&self) -> anyhow::Result<usize> {
-        graph_add_edges(self.collection_id.clone(), E::edge_type(), self.edges.clone()).await
+        graph_add_edges(
+            self.collection_id.clone(),
+            E::edge_type(),
+            self.edges.clone(),
+        )
+        .await
     }
 }
-impl <E: GraphEdge> EdgeBatchOperation<E>
-where E::SourceType: BaseModel + Send + Sync,
-      E::DestType: BaseModel + Send + Sync,
-      <E::SourceType as BaseModel>::PrimaryKey: serde::Serialize + for<'a> serde::Deserialize<'a> + 'static,
-      <E::DestType as BaseModel>::PrimaryKey: serde::Serialize + for<'a> serde::Deserialize<'a> + 'static,
+impl<E: GraphEdge> EdgeBatchOperation<E>
+where
+    E::SourceType: BaseModel + Send + Sync,
+    E::DestType: BaseModel + Send + Sync,
+    <E::SourceType as BaseModel>::PrimaryKey:
+        serde::Serialize + for<'a> serde::Deserialize<'a> + 'static,
+    <E::DestType as BaseModel>::PrimaryKey:
+        serde::Serialize + for<'a> serde::Deserialize<'a> + 'static,
 {
     pub fn add_edge(&mut self, source: &E::SourceType, dest: &E::DestType) {
         let s = row_pk_hash::<E::SourceType>(&source.primary_key_values());
@@ -84,7 +96,11 @@ where E::SourceType: BaseModel + Send + Sync,
         self.edges.push((s, d));
     }
 
-    pub fn add_edge_from_pk(&mut self, source: &<E::SourceType as BaseModel>::PrimaryKey, dest: &<E::DestType as BaseModel> ::PrimaryKey) {
+    pub fn add_edge_from_pk(
+        &mut self,
+        source: &<E::SourceType as BaseModel>::PrimaryKey,
+        dest: &<E::DestType as BaseModel>::PrimaryKey,
+    ) {
         let s = row_pk_hash::<E::SourceType>(source);
         let d = row_pk_hash::<E::DestType>(dest);
         self.edges.push((s, d));

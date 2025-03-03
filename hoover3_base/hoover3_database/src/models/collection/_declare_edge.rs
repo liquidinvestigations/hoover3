@@ -29,7 +29,8 @@ macro_rules! declare_graph_edge {
         impl $crate::models::collection::GraphEdge for $struct_name {
             fn edge_type() -> ::hoover3_types::db_schema::GraphEdgeType {
                 ::hoover3_types::db_schema::GraphEdgeType {
-                    edge_type: ::hoover3_types::identifier::DatabaseIdentifier::new($edge_name).expect("invalid edge name: is not DatabaseIdentifier")
+                    edge_type: ::hoover3_types::identifier::DatabaseIdentifier::new($edge_name)
+                        .expect("invalid edge name: is not DatabaseIdentifier"),
                 }
             }
             type SourceType = $source;
@@ -37,8 +38,12 @@ macro_rules! declare_graph_edge {
         }
         ::hoover3_types::inventory::submit!(::hoover3_types::db_schema::GraphEdgeTypeStatic {
             edge_type: $edge_name,
-            source_type: $crate::paste::paste!(<$source as $crate::charybdis::model::BaseModel>::DB_MODEL_NAME),
-            target_type: $crate::paste::paste!(<$dest as $crate::charybdis::model::BaseModel>::DB_MODEL_NAME),
+            source_type: $crate::paste::paste!(
+                <$source as $crate::charybdis::model::BaseModel>::DB_MODEL_NAME
+            ),
+            target_type: $crate::paste::paste!(
+                <$dest as $crate::charybdis::model::BaseModel>::DB_MODEL_NAME
+            ),
         });
     };
 }
@@ -65,7 +70,13 @@ mod test {
     #[test]
     fn test_declare_graph_edge_macro_compiles() {
         let mut _batch = TestEdge::edge_batch(&CollectionId::new("test_batch_collection").unwrap());
-        _batch.add_edge(&TestModel { id: "test_source".into() }, &TestModel { id: "test_dest".into() });
+        _batch.add_edge(
+            &TestModel {
+                id: "test_source".into(),
+            },
+            &TestModel {
+                id: "test_dest".into(),
+            },
+        );
     }
-
 }

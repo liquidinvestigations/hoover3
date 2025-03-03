@@ -165,7 +165,8 @@ async fn fs_do_scan_datasource(
     let ds_row = hoover3_data_access::api::get_datasource((
         arg.collection_id.clone(),
         arg.datasource_id.clone(),
-    )).await?;
+    ))
+    .await?;
 
     let DatasourceSettings::LocalDisk { path: root_path } = &ds_row.datasource_settings else {
         anyhow::bail!("Datasource is not a local disk");

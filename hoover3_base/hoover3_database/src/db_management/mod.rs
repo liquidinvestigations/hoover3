@@ -12,7 +12,6 @@ pub use meilisearch::meilisearch_wait_for_task;
 pub use meilisearch::query_meilisearch_schema;
 pub use meilisearch::MeilisearchDatabaseHandle;
 
-
 mod scylla;
 mod scylla_migrate;
 pub use scylla::ScyllaDatabaseHandle;
