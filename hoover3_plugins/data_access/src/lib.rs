@@ -2,5 +2,4 @@
 //! that are scanned by the system.
 
 pub mod api;
-pub(crate) mod models;
-pub(crate) mod tasks;
+pub mod models;

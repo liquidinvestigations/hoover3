@@ -1,4 +1,4 @@
-use super::_nebula_edges::GraphEdgeIdentifier;
+use super::_declare_edge::GraphEdge;
 use super::_scylla_graph_models::*;
 use super::row_pk_hash;
 use crate::db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle};
@@ -6,6 +6,7 @@ use charybdis::{batch::ModelBatch, model::BaseModel};
 use futures::pin_mut;
 use futures::FutureExt;
 use futures::{stream::FuturesUnordered, StreamExt};
+use hoover3_types::db_schema::GraphEdgeType;
 use hoover3_types::identifier::CollectionId;
 
 use scylla::batch::{Batch, BatchType};
@@ -53,15 +54,52 @@ where
     Ok(nodes.len())
 }
 
+/// A batch for inserting edges into the graph.
+pub struct EdgeBatchOperation<E: GraphEdge> {
+    collection_id: CollectionId,
+    _ph: std::marker::PhantomData<E>,
+    edges: Vec<(String, String)>,
+}
+
+impl <E: GraphEdge> EdgeBatchOperation<E> {
+    /// Create a new batch operation for inserting edges into the graph.
+    pub (crate) fn new(collection_id: CollectionId) -> Self {
+        Self { collection_id, edges: Vec::new(), _ph: std::marker::PhantomData }
+    }
+
+    /// Execute the batch operation.
+    pub async fn execute(&self) -> anyhow::Result<usize> {
+        graph_add_edges(self.collection_id.clone(), E::edge_type(), self.edges.clone()).await
+    }
+}
+impl <E: GraphEdge> EdgeBatchOperation<E>
+where E::SourceType: BaseModel + Send + Sync,
+      E::DestType: BaseModel + Send + Sync,
+      <E::SourceType as BaseModel>::PrimaryKey: serde::Serialize + for<'a> serde::Deserialize<'a> + 'static,
+      <E::DestType as BaseModel>::PrimaryKey: serde::Serialize + for<'a> serde::Deserialize<'a> + 'static,
+{
+    pub fn add_edge(&mut self, source: &E::SourceType, dest: &E::DestType) {
+        let s = row_pk_hash::<E::SourceType>(&source.primary_key_values());
+        let d = row_pk_hash::<E::DestType>(&dest.primary_key_values());
+        self.edges.push((s, d));
+    }
+
+    pub fn add_edge_from_pk(&mut self, source: &<E::SourceType as BaseModel>::PrimaryKey, dest: &<E::DestType as BaseModel> ::PrimaryKey) {
+        let s = row_pk_hash::<E::SourceType>(source);
+        let d = row_pk_hash::<E::DestType>(dest);
+        self.edges.push((s, d));
+    }
+}
+
 /// Add many edges to graph for a specific edge type.
 /// Internally, they are batched and inserted in parallel.
 /// Returns the number of edges added or an error.
-pub async fn graph_add_edges(
+async fn graph_add_edges(
     collection_id: CollectionId,
-    edge_type: impl GraphEdgeIdentifier,
+    edge_type: GraphEdgeType,
     edges: Vec<(String, String)>,
 ) -> Result<usize, anyhow::Error> {
-    let edge_type = edge_type.to_owned().name.to_string();
+    let edge_type = edge_type.edge_type.to_string();
     let mut futures = FuturesUnordered::new();
     let mut count = 0;
     // let edge_type = edge_type.to_owned().name.to_string();

@@ -12,10 +12,10 @@ pub struct CollectionSchemaDynamic {
     pub collection_id: CollectionId,
     /// Schema information for Scylla database
     pub scylla: ScyllaDatabaseSchema,
-    /// Schema information for Nebula database
-    pub nebula: NebulaDatabaseSchema,
     /// Schema information for Meilisearch database
     pub meilisearch: MeilisearchDatabaseSchema,
+    /// Schema info for graph db
+    pub graph: std::sync::Arc<GraphEdgeSchemaDynamic>,
 }
 
 /// Schema information specific to Meilisearch database
@@ -32,15 +32,6 @@ pub struct MeilisearchDatabaseSchema {
 pub struct ScyllaDatabaseSchema {
     /// Map of table identifiers to their corresponding table definitions
     pub tables: BTreeMap<DatabaseIdentifier, DatabaseTable>,
-}
-
-/// Schema information specific to Nebula graph database
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-pub struct NebulaDatabaseSchema {
-    /// Map of vertex tag identifiers to their corresponding table definitions
-    pub tags: BTreeMap<DatabaseIdentifier, DatabaseTable>,
-    /// List of edge types defined in the graph
-    pub edges: Vec<GraphEdgeType>,
 }
 
 /// Represents a database table structure
@@ -67,7 +58,7 @@ pub struct DatabaseColumn {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct GraphEdgeType {
     /// Name/identifier of the edge type
-    pub name: DatabaseIdentifier,
+    pub edge_type: DatabaseIdentifier,
 }
 
 /// Represents the possible data types for database columns
@@ -330,8 +321,6 @@ impl DynamicQueryResult {
 pub enum DatabaseServiceType {
     /// ScyllaDB (Cassandra-compatible database)
     Scylla,
-    /// Nebula Graph database
-    Nebula,
     /// Meilisearch search engine
     Meilisearch,
 }
@@ -585,30 +574,48 @@ pub struct GraphEdgeTypeStatic {
     pub target_type: &'static str,
 }
 
+/// Dynamic version of GraphEdgeType - used for runtime queries.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct GraphEdgeTypeDynamic {
+    /// The name of the edge type
+    pub edge_type: DatabaseIdentifier,
+    /// The source node type
+    pub source_type: DatabaseIdentifier,
+    /// The target node type
+    pub target_type: DatabaseIdentifier,
+}
+
 inventory::collect!(GraphEdgeTypeStatic);
 
 /// Schema for graph edges - contains all edge types, and for each edge type, the
 /// source and target types (table names).
-pub struct GraphEdgeSchema {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct GraphEdgeSchemaDynamic {
     /// Map of edge type names to their definitions
-    pub edges_by_types: BTreeMap<DatabaseIdentifier, GraphEdgeTypeStatic>,
+    pub edges_by_types: BTreeMap<GraphEdgeType, GraphEdgeTypeDynamic>,
     /// Map of source node types to their edge types
-    pub edges_by_source: BTreeMap<DatabaseIdentifier, Vec<GraphEdgeTypeStatic>>,
+    pub edges_by_source: BTreeMap<DatabaseIdentifier, Vec<GraphEdgeTypeDynamic>>,
     /// Map of target node types to their edge types
-    pub edges_by_target: BTreeMap<DatabaseIdentifier, Vec<GraphEdgeTypeStatic>>,
+    pub edges_by_target: BTreeMap<DatabaseIdentifier, Vec<GraphEdgeTypeDynamic>>,
+}
+
+impl From<&GraphEdgeTypeStatic> for GraphEdgeTypeDynamic {
+    fn from(value: &GraphEdgeTypeStatic) -> Self {
+        GraphEdgeTypeDynamic { edge_type: DatabaseIdentifier::new(value.edge_type).unwrap(), source_type: DatabaseIdentifier::new(value.source_type).unwrap(), target_type: DatabaseIdentifier::new(value.target_type).unwrap() }
+    }
 }
 
 /// Compile the graph edge schema from the inventory of edge types.
 /// Index into a [GraphEdgeSchema] object by edge type name, source node type, or target node type.
-pub fn get_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchema> {
+pub fn get_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchemaDynamic> {
     GRAPH_EDGE_SCHEMA.clone()
 }
 
 lazy_static::lazy_static! {
-    static ref GRAPH_EDGE_SCHEMA: std::sync::Arc<GraphEdgeSchema> = read_graph_edges_types_from_inventory();
+    static ref GRAPH_EDGE_SCHEMA: std::sync::Arc<GraphEdgeSchemaDynamic> = read_graph_edges_types_from_inventory();
 }
 
-fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchema> {
+fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchemaDynamic> {
     tracing::info!("read_graph_edges_types_from_inventory()");
     let mut edges_by_types = BTreeMap::new();
     let mut edges_by_source = BTreeMap::new();
@@ -617,6 +624,7 @@ fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchema> {
         let Ok(edge_type_id) = DatabaseIdentifier::new(edge_type_def.edge_type) else {
             panic!("invalid edge type name: `{}`", edge_type_def.edge_type);
         };
+        let edge_type_id = GraphEdgeType { edge_type: edge_type_id };
 
         if edges_by_types.contains_key(&edge_type_id) {
             panic!(
@@ -624,7 +632,7 @@ fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchema> {
                 edge_type_def.edge_type
             );
         }
-        edges_by_types.insert(edge_type_id.clone(), edge_type_def.clone());
+        edges_by_types.insert(edge_type_id.clone(), edge_type_def.into());
 
         let source_id = DatabaseIdentifier::new(edge_type_def.source_type).unwrap();
         let target_id = DatabaseIdentifier::new(edge_type_def.target_type).unwrap();
@@ -632,14 +640,14 @@ fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchema> {
         edges_by_source
             .entry(source_id)
             .or_insert_with(Vec::new)
-            .push(edge_type_def.clone());
+            .push(edge_type_def.into());
         edges_by_target
             .entry(target_id)
             .or_insert_with(Vec::new)
-            .push(edge_type_def.clone());
+            .push(edge_type_def.into());
     }
 
-    std::sync::Arc::new(GraphEdgeSchema {
+    std::sync::Arc::new(GraphEdgeSchemaDynamic {
         edges_by_types,
         edges_by_source,
         edges_by_target,

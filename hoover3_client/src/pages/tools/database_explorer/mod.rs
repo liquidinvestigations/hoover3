@@ -4,7 +4,7 @@ pub use sql_query_tool::*;
 use dioxus::prelude::*;
 use hoover3_types::{
     db_schema::{
-        DatabaseServiceType, MeilisearchDatabaseSchema, NebulaDatabaseSchema, ScyllaDatabaseSchema,
+        DatabaseServiceType, GraphEdgeSchemaDynamic, MeilisearchDatabaseSchema,  ScyllaDatabaseSchema
     },
     identifier::{CollectionId, DatabaseIdentifier},
 };
@@ -229,7 +229,7 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
     });
 
     let sql_schema = use_memo(move || schema.read().as_ref().map(|x| x.scylla.clone()));
-    let graph_schema = use_memo(move || schema.read().as_ref().map(|x| x.nebula.clone()));
+    let _graph_schema = use_memo(move || schema.read().as_ref().map(|x| x.graph.clone()));
     let search_schema = use_memo(move || schema.read().as_ref().map(|x| x.meilisearch.clone()));
 
     rsx! {
@@ -257,18 +257,6 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
                 "Freeform Scylla/Cassandra SQL Query"
             }
             LinkCard {
-                subtitle: "Graph".to_string(),
-                title: "NebulaDB".to_string(),
-                link: Route::DatabaseExplorerPage{
-                    explorer_route: DatabaseExplorerRoute::QueryToolPage{
-                        collection_id: collection_id.read().clone(),
-                        db_type: DatabaseServiceType::Nebula,
-                        query_state: SqlQueryToolState::default()
-                    }.into()
-                },
-                "Freeform Cypher/NebulaQL Query"
-            }
-            LinkCard {
                 subtitle: "Index".to_string(),
                 title: "Meilisearch".to_string(),
                 link: Route::DatabaseExplorerPage{
@@ -285,14 +273,14 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
         CardGridDisplay {
             SQLTableCards{collection_id, sql_schema}
         }
-        h2 { "Graph Nodes"}
-        CardGridDisplay {
-            GraphNodesCards{collection_id, graph_schema}
-        }
-        h2 { "Graph Edges"}
-        CardGridDisplay {
-            GraphEdgesCards{collection_id, graph_schema}
-        }
+        // h2 { "Graph Nodes"}
+        // CardGridDisplay {
+        //     GraphNodesCards{collection_id, graph_schema}
+        // }
+        // h2 { "Graph Edges"}
+        // CardGridDisplay {
+        //     GraphEdgesCards{collection_id, graph_schema}
+        // }
         h2 { "Search Index"}
         CardGridDisplay {
             SearchIndexCards{collection_id, search_schema}
@@ -354,52 +342,52 @@ fn SQLRowCountDisplayString(
 #[component]
 fn GraphNodesCards(
     collection_id: ReadOnlySignal<CollectionId>,
-    graph_schema: ReadOnlySignal<Option<NebulaDatabaseSchema>>,
+    graph_schema: ReadOnlySignal<Option<GraphEdgeSchemaDynamic>>,
 ) -> Element {
     rsx! {
-        if let Some(schema) = graph_schema.read().as_ref() {
-            for tag in schema.tags.values() {
-                LinkCard {
-                    subtitle: "tag".to_string(),
-                    title: tag.name.to_string(),
-                    link: Route::DatabaseExplorerPage{
-                        explorer_route: DatabaseExplorerRoute::GraphNodesPage {
-                            collection_id: collection_id.read().clone(),
-                            tag_name: tag.name.clone()
-                        }.into()
-                    },
-                    div {
-                        p { "Column Count: {tag.columns.len()}" }
-                    }
-                }
-            }
-        }
+        // if let Some(schema) = graph_schema.read().as_ref() {
+        //     for tag in schema.edges_by_source.values() {
+        //         LinkCard {
+        //             subtitle: "tag".to_string(),
+        //             title: tag.name.to_string(),
+        //             link: Route::DatabaseExplorerPage{
+        //                 explorer_route: DatabaseExplorerRoute::GraphNodesPage {
+        //                     collection_id: collection_id.read().clone(),
+        //                     tag_name: tag.name.clone()
+        //                 }.into()
+        //             },
+        //             div {
+        //                 p { "Column Count: {tag.columns.len()}" }
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 
 #[component]
 fn GraphEdgesCards(
     collection_id: ReadOnlySignal<CollectionId>,
-    graph_schema: ReadOnlySignal<Option<NebulaDatabaseSchema>>,
+    graph_schema: ReadOnlySignal<Option<GraphEdgeSchemaDynamic>>,
 ) -> Element {
     rsx! {
-        if let Some(schema) = graph_schema.read().as_ref() {
-            for edge in schema.edges.iter() {
-                LinkCard {
-                    subtitle: "edge".to_string(),
-                    title: edge.name.to_string(),
-                    link: Route::DatabaseExplorerPage{
-                        explorer_route: DatabaseExplorerRoute::GraphEdgesPage {
-                            collection_id: collection_id.read().clone(),
-                            edge_name: edge.name.clone()
-                        }.into()
-                    },
-                    div {
-                        "..."
-                    }
-                }
-            }
-        }
+        // if let Some(schema) = graph_schema.read().as_ref() {
+        //     for edge in schema.edges.iter() {
+        //         LinkCard {
+        //             subtitle: "edge".to_string(),
+        //             title: edge.edge_type.to_string(),
+        //             link: Route::DatabaseExplorerPage{
+        //                 explorer_route: DatabaseExplorerRoute::GraphEdgesPage {
+        //                     collection_id: collection_id.read().clone(),
+        //                     edge_name: edge.edge_type.clone()
+        //                 }.into()
+        //             },
+        //             div {
+        //                 "..."
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 

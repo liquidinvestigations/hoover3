@@ -19,7 +19,7 @@ use scylla::{
 };
 
 use crate::db_management::{
-    redis::with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle, NebulaDatabaseHandle,
+    redis::with_redis_cache, DatabaseSpaceManager, MeilisearchDatabaseHandle,
     ScyllaDatabaseHandle,
 };
 
@@ -56,9 +56,7 @@ pub async fn db_explorer_run_query(
         DatabaseServiceType::Scylla => {
             db_explorer_run_scylla_query((collection_id, sql_query.clone())).await
         }
-        DatabaseServiceType::Nebula => {
-            db_explorer_run_nebula_query((collection_id, sql_query.clone())).await
-        }
+
         DatabaseServiceType::Meilisearch => {
             db_explorer_run_meilisearch_query((collection_id, sql_query.clone())).await
         }
@@ -75,185 +73,6 @@ pub async fn db_explorer_run_query(
     })
 }
 
-async fn db_explorer_run_nebula_query(
-    (collection_id, sql_query): (CollectionId, String),
-) -> anyhow::Result<DynamicQueryResult> {
-    let session = NebulaDatabaseHandle::collection_session(&collection_id).await?;
-    let mut session = session.lock().await;
-    let query_bin = sql_query.as_bytes().to_vec();
-    // let json_bytes = session.execute_json(&sql_query.as_bytes().to_vec()).await?;
-    // let json: serde_json::Value = serde_json::from_slice(&json_bytes)?;
-    // Ok(DynamicQueryResult {
-    //     columns: vec![("value".to_string(), DatabaseColumnType::String)],
-    //     rows: vec![vec![Some(DatabaseValue::String(json.to_string()))]],
-    //     next_page: None,
-    // })
-
-    let resp = session.execute(&query_bin).await?;
-    if resp.error_code != nebula_fbthrift_common_v3::types::ErrorCode::SUCCEEDED {
-        anyhow::bail!(
-            "Nebula Error Code: {}\nNebula Error Message: {}",
-            resp.error_code,
-            String::from_utf8_lossy(&resp.error_msg.unwrap_or_default())
-        );
-    };
-    let Some(dataset) = resp.data else {
-        return DynamicQueryResult::from_single_string("OK - no data".to_string());
-    };
-    let column_names = dataset
-        .column_names
-        .iter()
-        .map(|v| String::from_utf8_lossy(v).to_string())
-        .collect::<Vec<_>>();
-    if column_names.is_empty() {
-        return DynamicQueryResult::from_single_string("OK - no columns".to_string());
-    }
-    let rows = dataset.rows;
-    if rows.is_empty() {
-        return Ok(DynamicQueryResult {
-            columns: column_names
-                .into_iter()
-                .map(|v| (v, DatabaseColumnType::Other("Unknown".to_string())))
-                .collect(),
-            rows: vec![],
-            next_page: None,
-        });
-    }
-    let first_row = rows.first().unwrap();
-    let first_row_values = first_row
-        .values
-        .iter()
-        .map(nebula_value_to_database_type)
-        .collect::<Result<Vec<_>, _>>()?;
-    let columns = column_names
-        .into_iter()
-        .zip(first_row_values)
-        .collect::<Vec<_>>();
-    let rows = rows
-        .into_iter()
-        .map(|r| {
-            r.values
-                .into_iter()
-                .map(nebula_value_to_database_value)
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    Ok(DynamicQueryResult {
-        columns,
-        rows,
-        next_page: None,
-    })
-}
-
-use nebula_fbthrift_common_v3::types::Value as NebulaValue;
-
-fn nebula_value_to_database_value(v: NebulaValue) -> Option<DatabaseValue> {
-    match v {
-        NebulaValue::nVal(_null_type) => None,
-        NebulaValue::bVal(b) => Some(DatabaseValue::Boolean(b)),
-        NebulaValue::iVal(i) => Some(DatabaseValue::Int64(i)),
-        NebulaValue::fVal(d) => Some(DatabaseValue::Double(d.0)),
-        NebulaValue::sVal(s) => Some(DatabaseValue::String(
-            String::from_utf8_lossy(&s).to_string(),
-        )),
-        NebulaValue::dtVal(dt) => {
-            chrono::NaiveDate::from_ymd_opt(dt.year as i32, dt.month as u32, dt.day as u32)
-                .and_then(move |d| {
-                    d.and_hms_nano_opt(
-                        dt.hour as u32,
-                        dt.minute as u32,
-                        dt.sec as u32,
-                        dt.microsec as u32 * 1000,
-                    )
-                })
-                .and_then(|d| d.and_local_timezone(chrono::Utc).single())
-                .map(DatabaseValue::Timestamp)
-        }
-        NebulaValue::vVal(_v) => {
-            let NebulaValue::sVal(vertex_id) = _v.vid.as_ref() else {
-                return None;
-            };
-            let vertex_id = String::from_utf8_lossy(&vertex_id).to_string();
-            let tags = _v
-                .tags
-                .iter()
-                .map(|tag| {
-                    let tag_name = String::from_utf8_lossy(&tag.name).to_string();
-                    let props = tag
-                        .props
-                        .iter()
-                        .map(|(k, v)| {
-                            let field_name = String::from_utf8_lossy(k).to_string();
-                            (field_name, nebula_value_to_database_value(v.clone()))
-                        })
-                        .collect();
-                    (tag_name, props)
-                })
-                .collect();
-
-            Some(DatabaseValue::GraphVertex {
-                id: vertex_id,
-                tags,
-            })
-        }
-        NebulaValue::eVal(edge) => {
-            let NebulaValue::sVal(src_id) = edge.src.as_ref() else {
-                tracing::error!("Source vertex ID is not a string");
-                return None;
-            };
-            let NebulaValue::sVal(dst_id) = edge.dst.as_ref() else {
-                tracing::error!("Target vertex ID is not a string");
-                return None;
-            };
-            Some(DatabaseValue::GraphEdge {
-                edge_type: String::from_utf8_lossy(&edge.name).to_string(),
-                source_vertex: String::from_utf8_lossy(&src_id).to_string(),
-                target_vertex: String::from_utf8_lossy(&dst_id).to_string(),
-                ranking: edge.ranking,
-            })
-        }
-        _x => Some(DatabaseValue::Other(format!("{:?}", _x))),
-    }
-}
-
-fn nebula_value_to_database_type(v: &NebulaValue) -> anyhow::Result<DatabaseColumnType> {
-    use anyhow::Context;
-    Ok(match v {
-        NebulaValue::dtVal(_) => DatabaseColumnType::Timestamp,
-        NebulaValue::sVal(_) => DatabaseColumnType::String,
-        NebulaValue::iVal(_) => DatabaseColumnType::Int64,
-        NebulaValue::fVal(_) => DatabaseColumnType::Double,
-        NebulaValue::bVal(_) => DatabaseColumnType::Boolean,
-        NebulaValue::vVal(_v) => {
-            let NebulaValue::sVal(vertex_id) = _v.vid.as_ref() else {
-                anyhow::bail!("Vertex ID is not a string");
-            };
-            let _vertex_id = String::from_utf8_lossy(&vertex_id).to_string();
-            let tags: anyhow::Result<_> = _v
-                .tags
-                .iter()
-                .map(move |tag| {
-                    let tag_name = String::from_utf8_lossy(&tag.name).to_string();
-                    let props: anyhow::Result<_> = tag
-                        .props
-                        .iter()
-                        .map(|(k, v)| {
-                            let field_name = String::from_utf8_lossy(k).to_string();
-                            let field_type = nebula_value_to_database_type(v)
-                                .context("nebula extract field type")?;
-                            anyhow::Result::Ok((field_name, Box::new(field_type)))
-                        })
-                        .collect::<Result<BTreeMap<_, _>, _>>();
-                    anyhow::Result::Ok((tag_name, props?))
-                })
-                .collect::<Result<BTreeMap<_, _>, _>>();
-
-            DatabaseColumnType::GraphVertex(tags?)
-        }
-        NebulaValue::eVal(_) => DatabaseColumnType::GraphEdge,
-        _ => DatabaseColumnType::Other(format!("{:?}", v)),
-    })
-}
 
 async fn db_explorer_run_meilisearch_query(
     (collection_id, sql_query): (CollectionId, String),

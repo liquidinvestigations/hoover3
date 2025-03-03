@@ -3446,6 +3446,7 @@ dependencies = [
  "nebula-client",
  "nebula-fbthrift-common-v3",
  "once_cell",
+ "paste",
  "redis",
  "rslock",
  "rust-s3",

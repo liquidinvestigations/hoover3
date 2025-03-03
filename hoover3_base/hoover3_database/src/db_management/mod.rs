@@ -12,11 +12,6 @@ pub use meilisearch::meilisearch_wait_for_task;
 pub use meilisearch::query_meilisearch_schema;
 pub use meilisearch::MeilisearchDatabaseHandle;
 
-mod nebula;
-mod nebula_migrate;
-pub use nebula::nebula_execute_retry;
-pub use nebula::NebulaDatabaseHandle;
-pub use nebula_migrate::query_nebula_schema;
 
 mod scylla;
 mod scylla_migrate;

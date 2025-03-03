@@ -2,15 +2,15 @@
 //! These callbacks are used to insert/update/delete rows in the secondary databases, Nebula and Meilisearch.
 
 use crate::db_management::meilisearch_wait_for_task;
-use crate::db_management::nebula_execute_retry;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::MeilisearchDatabaseHandle;
 use crate::models::collection::graph_add_nodes;
 use charybdis::model::BaseModel;
 
-use hoover3_types::db_schema::NebulaDatabaseSchema;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
+
+
 
 /// Compute a stable hash of a row's primary key, and concatenate it with table name.
 pub fn row_pk_hash<T>(data: &T::PrimaryKey) -> String
@@ -174,8 +174,6 @@ pub struct DatabaseExtraCallbacks {
     /// Unique identifier for the collection
     pub collection_id: CollectionId,
     /// Schema of the Nebula database
-    pub nebula_schema: NebulaDatabaseSchema,
-    /// Handle to the Meilisearch database
     pub search_index: std::sync::Arc<
         <meilisearch_sdk::client::Client as DatabaseSpaceManager>::CollectionSessionType,
     >,
@@ -184,11 +182,9 @@ pub struct DatabaseExtraCallbacks {
 impl DatabaseExtraCallbacks {
     /// Create a new `DatabaseExtraCallbacks` instance by opening sessiosn and fetching schemas..
     pub async fn new(c: &CollectionId) -> anyhow::Result<Self> {
-        let nebula_schema = crate::db_management::query_nebula_schema(c).await?;
         let search_client = MeilisearchDatabaseHandle::collection_session(c).await?;
         Ok(Self {
             collection_id: c.clone(),
-            nebula_schema,
             search_index: search_client,
         })
     }
@@ -251,17 +247,6 @@ impl DatabaseExtraCallbacks {
 
         let _search_result = self.search_index.delete_documents(&pks).await?;
 
-        let nebula_pks = pks
-            .into_iter()
-            .map(|pk| format!("\"{pk}\""))
-            .collect::<Vec<String>>()
-            .join(",");
-        let nebula_delete_query = format!(
-            "
-            DELETE VERTEX {nebula_pks} WITH EDGE;
-            "
-        );
-        nebula_execute_retry::<()>(&self.collection_id, &nebula_delete_query).await?;
 
         // takes too much time
         meilisearch_wait_for_task(_search_result).await?;

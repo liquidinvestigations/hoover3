@@ -1,6 +1,7 @@
 //! This module contains the table definitions for all the collection related models.
 
-pub mod _nebula_edges;
+mod _declare_edge;
+pub use _declare_edge::*;
 
 mod _model_extra;
 pub use _model_extra::*;

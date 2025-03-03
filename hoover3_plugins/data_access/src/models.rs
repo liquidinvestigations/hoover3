@@ -1,5 +1,8 @@
 //! This module contains the table definitions for all the datasource related models.
 
+// 
+#![allow(missing_docs)]
+
 use hoover3_macro::model;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::CollectionId;

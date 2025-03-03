@@ -31,6 +31,7 @@ tracing-subscriber.workspace = true
 log.workspace = true
 tracing-log.workspace = true
 lazy_static.workspace = true
+paste.workspace = true
 
 ### CLI
 rustyline = "9"
