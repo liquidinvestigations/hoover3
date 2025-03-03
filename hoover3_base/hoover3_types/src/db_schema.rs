@@ -1,6 +1,6 @@
 //! Types and structures related to database schemas - Scylla, Nebula, Meilisearch, tables, columns, values.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::identifier::{CollectionId, DatabaseIdentifier};
 
@@ -497,14 +497,40 @@ pub fn get_all_charybdis_codes() -> Vec<String> {
 }
 
 /// Get the Scylla database schema from the inventory of models and UDTs.
-pub fn get_scylla_schema_from_inventory() -> ScyllaDatabaseSchema {
+pub fn get_scylla_schema_from_inventory() -> std::sync::Arc<ScyllaDatabaseSchema> {
+    SCYLLA_CODE_SCHEMA.clone()
+}
+
+lazy_static::lazy_static! {
+    static ref SCYLLA_CODE_SCHEMA: std::sync::Arc<ScyllaDatabaseSchema> = read_scylla_schema_from_inventory();
+}
+
+fn read_scylla_schema_from_inventory() -> std::sync::Arc<ScyllaDatabaseSchema> {
+    tracing::info!("read_scylla_schema_from_inventory()");
+    let mut table_names = BTreeSet::new();
+    let mut model_names = BTreeSet::new();
+
     let mut udts = BTreeMap::new();
     for udt_static in inventory::iter::<UdtModelDefinitionStatic> {
+        if udts.contains_key(&udt_static.udt_name)
+            || table_names.contains(udt_static.udt_name)
+            || model_names.contains(udt_static.model_name)
+        {
+            panic!(
+                "UDT `{}` defined multiple times in inventory",
+                udt_static.udt_name
+            );
+        }
         udts.insert(udt_static.udt_name, udt_static);
+        table_names.insert(udt_static.udt_name.to_string());
+        model_names.insert(udt_static.model_name.to_string());
     }
     let mut tables = BTreeMap::new();
     for model_static in inventory::iter::<ModelDefinitionStatic> {
         let table_name = DatabaseIdentifier::new(model_static.table_name).unwrap();
+        if table_names.contains(&table_name.to_string()) {
+            panic!("table {} collides with UDT of same name", table_name);
+        }
         if tables.contains_key(&table_name) {
             panic!("table {} defined multiple times in inventory", table_name);
         }
@@ -512,6 +538,7 @@ pub fn get_scylla_schema_from_inventory() -> ScyllaDatabaseSchema {
             name: table_name.clone(),
             columns: Vec::new(),
         };
+
         for field in model_static.fields {
             table.columns.push(DatabaseColumn {
                 name: DatabaseIdentifier::new(field.name).unwrap(),
@@ -521,7 +548,7 @@ pub fn get_scylla_schema_from_inventory() -> ScyllaDatabaseSchema {
         }
         tables.insert(table_name, table);
     }
-    ScyllaDatabaseSchema { tables }
+    std::sync::Arc::new(ScyllaDatabaseSchema { tables })
 }
 
 fn resolve_field_type(
@@ -545,4 +572,76 @@ fn resolve_field_type(
 
         other => other,
     }
+}
+
+/// Static version of GraphEdgeType - used for compile-time inventory.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GraphEdgeTypeStatic {
+    /// The name of the edge type - must be unique
+    pub edge_type: &'static str,
+    /// The source node type of the edge (table name in scylladb)
+    pub source_type: &'static str,
+    /// The target node type of the edge (table name in scylladb)
+    pub target_type: &'static str,
+}
+
+inventory::collect!(GraphEdgeTypeStatic);
+
+/// Schema for graph edges - contains all edge types, and for each edge type, the
+/// source and target types (table names).
+pub struct GraphEdgeSchema {
+    /// Map of edge type names to their definitions
+    pub edges_by_types: BTreeMap<DatabaseIdentifier, GraphEdgeTypeStatic>,
+    /// Map of source node types to their edge types
+    pub edges_by_source: BTreeMap<DatabaseIdentifier, Vec<GraphEdgeTypeStatic>>,
+    /// Map of target node types to their edge types
+    pub edges_by_target: BTreeMap<DatabaseIdentifier, Vec<GraphEdgeTypeStatic>>,
+}
+
+/// Compile the graph edge schema from the inventory of edge types.
+/// Index into a [GraphEdgeSchema] object by edge type name, source node type, or target node type.
+pub fn get_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchema> {
+    GRAPH_EDGE_SCHEMA.clone()
+}
+
+lazy_static::lazy_static! {
+    static ref GRAPH_EDGE_SCHEMA: std::sync::Arc<GraphEdgeSchema> = read_graph_edges_types_from_inventory();
+}
+
+fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchema> {
+    tracing::info!("read_graph_edges_types_from_inventory()");
+    let mut edges_by_types = BTreeMap::new();
+    let mut edges_by_source = BTreeMap::new();
+    let mut edges_by_target = BTreeMap::new();
+    for edge_type_def in inventory::iter::<GraphEdgeTypeStatic> {
+        let Ok(edge_type_id) = DatabaseIdentifier::new(edge_type_def.edge_type) else {
+            panic!("invalid edge type name: `{}`", edge_type_def.edge_type);
+        };
+
+        if edges_by_types.contains_key(&edge_type_id) {
+            panic!(
+                "edge type `{}` defined multiple times in inventory",
+                edge_type_def.edge_type
+            );
+        }
+        edges_by_types.insert(edge_type_id.clone(), edge_type_def.clone());
+
+        let source_id = DatabaseIdentifier::new(edge_type_def.source_type).unwrap();
+        let target_id = DatabaseIdentifier::new(edge_type_def.target_type).unwrap();
+
+        edges_by_source
+            .entry(source_id)
+            .or_insert_with(Vec::new)
+            .push(edge_type_def.clone());
+        edges_by_target
+            .entry(target_id)
+            .or_insert_with(Vec::new)
+            .push(edge_type_def.clone());
+    }
+
+    std::sync::Arc::new(GraphEdgeSchema {
+        edges_by_types,
+        edges_by_source,
+        edges_by_target,
+    })
 }

@@ -23,6 +23,9 @@ fn test_get_scylla_code_schema_1() {
 
 /// Test that the code schema is same as the db schema. They are parsed by different code paths,
 /// so table order might be different. The db schema does not have the correct table field order.
+///
+/// Also, some db tabels might not exist in the code schema, because they are defined without
+/// the #[model] macro.
 #[tokio::test]
 async fn test_get_scylla_code_schema_2() {
     use hoover3_types::db_schema::get_scylla_schema_from_inventory;

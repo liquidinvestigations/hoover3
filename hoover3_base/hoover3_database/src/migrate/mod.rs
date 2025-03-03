@@ -17,10 +17,21 @@ use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 
 use super::db_management::redis::with_redis_lock;
 
+/// Load and check all database schemas. This call will panic if the schema is not valid.
+pub fn check_code_schema() {
+    let scylla_schema = hoover3_types::db_schema::get_scylla_schema_from_inventory();
+    info!("scylla schema ok: {} tables", scylla_schema.tables.len());
+    let graph_edge_schema = hoover3_types::db_schema::get_graph_edges_types_from_inventory();
+    info!(
+        "graph edge schema ok: {} edges",
+        graph_edge_schema.edges_by_types.len()
+    );
+}
+
 /// Migrate all databases for all collections.
 pub async fn migrate_all() -> Result<()> {
-    info!("migrate()");
-
+    info!("migrate_all()");
+    check_code_schema();
     info!("session ok");
     migrate_common().await.context("migrate common")?;
     info!("common ok");

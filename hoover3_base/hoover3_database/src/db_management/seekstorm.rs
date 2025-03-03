@@ -130,8 +130,8 @@ impl DatabaseSpaceManager for SeekstormDatabaseHandle {
         let scylla_schema = hoover3_types::db_schema::get_scylla_schema_from_inventory();
         let mut schema = vec![];
 
-        for (table_name, table) in scylla_schema.tables {
-            for column in table.columns {
+        for (table_name, table) in scylla_schema.tables.iter() {
+            for column in table.columns.iter() {
                 let column_name = format!("{}.{}", table_name, column.name);
                 let field = SchemaField {
                     indexed: true,

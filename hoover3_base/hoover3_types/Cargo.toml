@@ -20,3 +20,5 @@ bincode.workspace = true
 serde_json.workspace = true
 cap = "0.1.2"
 inventory = "0.3.19"
+lazy_static.workspace = true
+tracing.workspace = true

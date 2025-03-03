@@ -1,7 +1,14 @@
 //! Hoover3 server library - re-exports
 
+/// ================================================
+/// ====== EXTERNALLY USED UTILITIES ===============
+/// ================================================
+
 /// Re-export the function to migrate all databases;
 pub use hoover3_database::migrate::migrate_all;
+
+mod init;
+pub use init::init_server_plugins;
 
 // ===================
 // ===== PLUGINS =====

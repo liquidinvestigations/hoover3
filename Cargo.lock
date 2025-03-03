@@ -3586,10 +3586,12 @@ dependencies = [
  "cap",
  "chrono",
  "inventory",
+ "lazy_static",
  "regex",
  "serde",
  "serde_json",
  "stable-hash",
+ "tracing",
 ]
 
 [[package]]
