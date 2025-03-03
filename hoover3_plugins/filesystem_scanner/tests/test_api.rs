@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use hoover3_database::migrate::migrate_common;
 use hoover3_filesystem_scanner::{
     api::{get_scan_status, start_scan, wait_for_scan_results},
-    tasks::AllTasks,
+    tasks::FilesystemScannerQueue,
 };
 use hoover3_types::{
     datasource::DatasourceSettings,
@@ -28,7 +28,7 @@ async fn test_fs_do_scan_datasource_small() -> anyhow::Result<()> {
     };
     create_datasource((collection_id.clone(), datasource_id.clone(), settings)).await?;
 
-    hoover3_taskdef::spawn_worker_on_thread::<AllTasks>();
+    hoover3_taskdef::spawn_worker_on_thread(FilesystemScannerQueue);
 
     start_scan((collection_id.clone(), datasource_id.clone())).await?;
     let status = wait_for_scan_results((collection_id.clone(), datasource_id.clone())).await?;

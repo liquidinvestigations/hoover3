@@ -13,8 +13,9 @@ use temporal_sdk_core_protos::temporal::api::workflowservice::v1::CountWorkflowE
 use temporal_sdk_core_protos::temporal::api::workflowservice::v1::ListWorkflowExecutionsRequest;
 use temporal_sdk_core_protos::temporal::api::workflowservice::v1::ListWorkflowExecutionsResponse;
 
-use super::convert_status;
-use super::query_workflow_execution_status;
+use super::status::convert_status;
+use super::status::query_workflow_execution_status;
+
 const TREE_NODE_LIMIT: usize = 24;
 
 /// Retrieves a cached workflow status tree for the given workflow ID
@@ -67,7 +68,7 @@ async fn _temporalio_get_workflow_status_tree(
                     .context("no id")?
                     .workflow_id
                     .clone();
-                let child_status = super::convert_status(child_info.status());
+                let child_status = convert_status(child_info.status());
                 tree.nodes.insert(child_id.clone(), child_status.clone());
                 open.insert(child_id.clone());
                 tree.parent.insert(child_id.clone(), parent_id.clone());

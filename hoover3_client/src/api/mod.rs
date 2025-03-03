@@ -246,7 +246,7 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_taskdef::tasks::status_tree,
+    hoover3_taskdef::api::status_tree,
     get_workflow_status_tree,
     String,
     TemporalioWorkflowStatusTree

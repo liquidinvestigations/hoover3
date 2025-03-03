@@ -33,3 +33,4 @@ temporal-sdk-core-api = { git = "https://github.com/temporalio/sdk-core" , rev =
 temporal-sdk-core-protos = { git = "https://github.com/temporalio/sdk-core" , rev = "6e4079151d583afa14180a405785d5420513804e"}
 prost-wkt-types = "0.6.0"
 tonic = "0.12.3"
+inventory = "0.3.19"

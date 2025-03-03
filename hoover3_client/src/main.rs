@@ -28,8 +28,8 @@ pub fn main() {
                 hoover3_server::init_server_plugins().unwrap();
                 hoover3_server::migrate_all().await.unwrap();
 
-                // start workers
-                // hoover3_taskdef::spawn_worker_on_thread::<hoover3_filesystem_scanner::AllTasks>();
+                // Start workers. Dioxus doesn't reap threads, so if we use `spawn_worker_on_thread` here,
+                //
 
                 // build our application with some routes
                 let app = axum::routing::Router::new()

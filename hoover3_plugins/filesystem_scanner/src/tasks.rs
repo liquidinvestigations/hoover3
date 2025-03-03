@@ -8,6 +8,7 @@ use hoover3_database::client_query;
 use hoover3_database::db_management::DatabaseSpaceManager;
 use hoover3_database::db_management::ScyllaDatabaseHandle;
 use hoover3_database::models::collection::GraphEdge;
+use hoover3_taskdef::declare_task_queue;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
     activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
@@ -26,7 +27,6 @@ use crate::models::FsDirectoryParent;
 use crate::models::FsFileDatasource;
 use crate::models::FsFileDbRow;
 use crate::models::FsFileParent;
-const FILESYSTEM_SCANNER_TASK_QUEUE: &str = "filesystem_scanner";
 
 /// Arguments for filesystem datasource scanning
 #[derive(Serialize, Deserialize, Clone)]
@@ -39,16 +39,10 @@ pub struct ScanDatasourceArgs {
     pub path: Option<PathBuf>,
 }
 
-/// Collection of filesystem scanner task implementations
-pub type AllTasks = (
-    fs_scan_datasource_workflow,
-    fs_do_scan_datasource_activity,
-    fs_scan_datasource_group_workflow,
-    fs_save_dir_scan_total_result_activity,
-);
+declare_task_queue!(FilesystemScannerQueue, "filesystem_scanner", 1, 1, 1024);
 
 /// Workflow for scanning a filesystem datasource
-#[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
+#[workflow(FilesystemScannerQueue)]
 async fn fs_scan_datasource(
     wf_ctx: WfContext,
     args: ScanDatasourceArgs,
@@ -98,7 +92,7 @@ async fn fs_scan_datasource(
 }
 
 /// Activity for saving directory scan results
-#[activity(FILESYSTEM_SCANNER_TASK_QUEUE)]
+#[activity(FilesystemScannerQueue)]
 async fn fs_save_dir_scan_total_result(
     (args, scan_result): (Vec<ScanDatasourceArgs>, FsScanDatasourceResult),
 ) -> anyhow::Result<()> {
@@ -137,7 +131,7 @@ async fn fs_save_dir_scan_total_result(
 }
 
 /// Workflow for processing groups of filesystem scans, used to avoid large workflow history
-#[workflow(FILESYSTEM_SCANNER_TASK_QUEUE)]
+#[workflow(FilesystemScannerQueue)]
 async fn fs_scan_datasource_group(
     wf_ctx: WfContext,
     args: Vec<ScanDatasourceArgs>,
@@ -155,7 +149,7 @@ async fn fs_scan_datasource_group(
 }
 
 /// Activity for performing filesystem directory scanning
-#[activity(FILESYSTEM_SCANNER_TASK_QUEUE)]
+#[activity(FilesystemScannerQueue)]
 async fn fs_do_scan_datasource(
     arg: ScanDatasourceArgs,
 ) -> anyhow::Result<(FsScanDatasourceResult, Vec<PathBuf>)> {

@@ -2,19 +2,21 @@
 
 use hoover3_taskdef::*;
 
-#[activity("taskdef_test_external_task_queue")]
+declare_task_queue!(TestQueue2, "taskdef_test_external_task_queue", 2, 4, 256);
+
+#[activity(TestQueue2)]
 async fn test_function_async2(_payload: u32) -> anyhow::Result<u32> {
     println!("test_function_async T={:?}", std::thread::current().id());
     Ok(_payload)
 }
 
-#[activity("taskdef_test_external_task_queue")]
+#[activity(TestQueue2)]
 fn test_function_sync2(_payload: u32) -> anyhow::Result<u32> {
     println!("test_function_sync T={:?}", std::thread::current().id());
     Ok(_payload)
 }
 
-#[workflow("taskdef_test_external_task_queue")]
+#[workflow(TestQueue2)]
 async fn sample_workflow3(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
     println!("sample_workflow 1 T={:?}", std::thread::current().id());
     let act1 = test_function_async2_activity::run(&ctx, arg).await?;
@@ -35,11 +37,7 @@ async fn test_task_client_and_worker_integration() -> anyhow::Result<()> {
     let x = 4_u32;
 
     println!("running on main thread 1");
-    spawn_worker_on_thread::<(
-        test_function_async2_activity,
-        test_function_sync2_activity,
-        sample_workflow3_workflow,
-    )>();
+    spawn_worker_on_thread(TestQueue2);
     println!("{}", test_function_async2_activity::name());
 
     sample_workflow3_workflow::client_start(&x).await?;

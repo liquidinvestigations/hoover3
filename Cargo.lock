@@ -3550,6 +3550,7 @@ dependencies = [
  "hoover3_database",
  "hoover3_macro",
  "hoover3_types",
+ "inventory",
  "once_cell",
  "paste",
  "prost-wkt-types",
