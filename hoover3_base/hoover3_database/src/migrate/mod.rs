@@ -247,7 +247,7 @@ pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchemaDy
         collection_id: c.clone(),
         scylla: crate::db_management::query_scylla_schema(&c).await?,
         meilisearch: crate::db_management::query_meilisearch_schema(&c).await?,
-        graph: hoover3_types::db_schema::get_graph_edges_types_from_inventory(),
+        graph: (hoover3_types::db_schema::get_graph_edges_types_from_inventory().as_ref()).clone(),
     })
 }
 

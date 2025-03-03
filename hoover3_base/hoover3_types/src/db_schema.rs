@@ -15,7 +15,7 @@ pub struct CollectionSchemaDynamic {
     /// Schema information for Meilisearch database
     pub meilisearch: MeilisearchDatabaseSchema,
     /// Schema info for graph db
-    pub graph: std::sync::Arc<GraphEdgeSchemaDynamic>,
+    pub graph: GraphEdgeSchemaDynamic,
 }
 
 /// Schema information specific to Meilisearch database
@@ -56,10 +56,10 @@ pub struct DatabaseColumn {
 
 /// Represents an edge type in a graph database
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-pub struct GraphEdgeType {
+pub struct GraphEdgeType(
     /// Name/identifier of the edge type
-    pub edge_type: DatabaseIdentifier,
-}
+    pub DatabaseIdentifier,
+);
 
 /// Represents the possible data types for database columns
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
@@ -628,9 +628,7 @@ fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchemaDyna
         let Ok(edge_type_id) = DatabaseIdentifier::new(edge_type_def.edge_type) else {
             panic!("invalid edge type name: `{}`", edge_type_def.edge_type);
         };
-        let edge_type_id = GraphEdgeType {
-            edge_type: edge_type_id,
-        };
+        let edge_type_id = GraphEdgeType(edge_type_id);
 
         if edges_by_types.contains_key(&edge_type_id) {
             panic!(

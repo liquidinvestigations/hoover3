@@ -28,10 +28,10 @@ macro_rules! declare_graph_edge {
         pub struct $struct_name;
         impl $crate::models::collection::GraphEdge for $struct_name {
             fn edge_type() -> ::hoover3_types::db_schema::GraphEdgeType {
-                ::hoover3_types::db_schema::GraphEdgeType {
-                    edge_type: ::hoover3_types::identifier::DatabaseIdentifier::new($edge_name)
+                ::hoover3_types::db_schema::GraphEdgeType(
+                    ::hoover3_types::identifier::DatabaseIdentifier::new($edge_name)
                         .expect("invalid edge name: is not DatabaseIdentifier"),
-                }
+                )
             }
             type SourceType = $source;
             type DestType = $dest;

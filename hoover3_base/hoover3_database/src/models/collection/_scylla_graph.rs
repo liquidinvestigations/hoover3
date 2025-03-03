@@ -90,12 +90,14 @@ where
     <E::DestType as BaseModel>::PrimaryKey:
         serde::Serialize + for<'a> serde::Deserialize<'a> + 'static,
 {
+    /// Add edge to batch, using references to models.
     pub fn add_edge(&mut self, source: &E::SourceType, dest: &E::DestType) {
         let s = row_pk_hash::<E::SourceType>(&source.primary_key_values());
         let d = row_pk_hash::<E::DestType>(&dest.primary_key_values());
         self.edges.push((s, d));
     }
 
+    /// Add edge to batch, using references to primary keys.
     pub fn add_edge_from_pk(
         &mut self,
         source: &<E::SourceType as BaseModel>::PrimaryKey,
@@ -115,7 +117,7 @@ async fn graph_add_edges(
     edge_type: GraphEdgeType,
     edges: Vec<(String, String)>,
 ) -> Result<usize, anyhow::Error> {
-    let edge_type = edge_type.edge_type.to_string();
+    let edge_type = edge_type.0.to_string();
     let mut futures = FuturesUnordered::new();
     let mut count = 0;
     // let edge_type = edge_type.to_owned().name.to_string();
