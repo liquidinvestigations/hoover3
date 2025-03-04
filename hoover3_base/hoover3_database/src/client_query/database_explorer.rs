@@ -29,7 +29,7 @@ pub async fn scylla_row_count(
 ) -> anyhow::Result<i64> {
     with_redis_cache(
         "scylla_row_count",
-        60,
+        360,
         move |(collection_id, table_name)| async move {
             let client = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
             let client_query =

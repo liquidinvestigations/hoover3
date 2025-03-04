@@ -7,6 +7,10 @@ edition.workspace = true
 publish.workspace = true
 rust-version.workspace = true
 
+[lib]
+name = "hoover3_filesystem_scanner"
+crate-type = ["cdylib", "rlib"]
+
 [lints]
 workspace = true
 

@@ -4,6 +4,7 @@ use crate::components::make_page_title;
 use crate::components::InfoCard;
 use dioxus::prelude::*;
 use dioxus_logger::tracing;
+use dioxus_logger::tracing::info;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
 use hoover3_types::tasks::UiWorkflowStatus;
@@ -54,7 +55,7 @@ pub fn DatasourceAdminDetailsPage(
             crate::time::sleep(std::time::Duration::from_secs(3)).await;
             if let Some(Ok(status)) = scan_status.peek().as_ref() {
                 if status.task_status == UiWorkflowStatusCode::Running {
-                    dioxus_logger::tracing::info!("Refreshing scan status");
+                    info!("Refreshing scan status");
                     scan_status_res.restart();
                 } else {
                     if !scan_result.peek().is_some() {
@@ -158,14 +159,14 @@ pub fn WorkflowStatusDisplay(
             crate::time::sleep(std::time::Duration::from_secs(5)).await;
             if let Some(status_tree) = status_tree.peek().as_ref() {
                 if status_tree.root_status == UiWorkflowStatusCode::Running {
-                    dioxus_logger::tracing::info!("Refreshing scan tree");
+                    info!("Refreshing scan tree");
                     status_tree_res.restart();
                 } else {
                     break;
                 }
             }
         }
-        dioxus_logger::tracing::info!("done refreshing scan tree");
+        info!("done refreshing scan tree");
     });
 
     let tree_counts = use_memo(move || {

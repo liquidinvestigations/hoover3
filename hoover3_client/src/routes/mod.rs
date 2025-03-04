@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use dioxus::prelude::*;
 
-use crate::app::ServerCallHistory;
+use crate::components::Navbar;
 use crate::pages::*;
 
 /// The enum of all the routes for the Hoover3 client.
@@ -92,96 +92,6 @@ pub enum Route {
     PageNotFound { route: Vec<String> },
 }
 
-#[component]
-fn Navbar() -> Element {
-    let ServerCallHistory {
-        show_pic,
-        loading_count,
-        ..
-    } = use_context();
-    rsx! {
-        nav { id: "navbar",
-            // title crumbs with links to parent pages
-            ul {
-                li {
-                    NavbarTitleCrumbs {}
-                }
-            }
-            // loading icon and count
-            ul {
-                div { class: "loading_box",
-
-                    if *show_pic.read() {
-                        img { src: "/assets/img/loading.gif" }
-                        div { class: "loading_count", "{loading_count}" }
-                    }
-                }
-            }
-            // Dropdowns
-            ul {
-                // dropdown with dashboard links
-                li { DashboardNavbarDropdown {} }
-                // dropdown with tools
-                li {
-                    NavbarDropdown {
-                        title: "Tools",
-                        links: vec![
-                            ("DatabaseExplorer".to_string(), Route::DatabaseExplorerPage {
-                                explorer_route: DatabaseExplorerRoute::RootPage.into()
-                            }.to_string()),
-                            ("ServerCallLogPage".to_string(), Route::ServerCallLogPage {}.to_string()),
-                            ("DioxusTranslate".to_string(), Route::DioxusTranslatePage {}.to_string()),
-                            ("DockerHealth".to_string(), Route::DockerHealthPage {}.to_string()),
-                        ],
-                    }
-                }
-                // dropdown with admin links
-                li {
-                    NavbarDropdown {
-                        title: "Admin",
-                        links: vec![
-                            ("Collections".to_string(), Route::CollectionsAdminListPage {}.to_string()),
-                        ],
-                    }
-                }
-            }
-        }
-    }
-}
-
-#[component]
-fn NavbarTitleCrumbs() -> Element {
-    let route = use_route::<Route>();
-    let mut parents = vec![];
-    let mut route2 = route.clone();
-    while let Some(route_parent) = route2.parent() {
-        route2 = route_parent.clone();
-        parents.push(route_parent);
-    }
-    parents.reverse();
-
-    rsx! {
-        div {
-            style: "overflow:hidden; white-space:nowrap; max-width: 50vw; margin:0.3rem; padding: 0.3rem;",
-            for parent in parents {
-                Link {
-                    style:"overflow:hidden; white-space:nowrap; max-width: 10vw; margin:0.3rem; padding: 0.3rem; display:inline;",
-                    to: parent.clone(),
-                    "{parent:?}"
-                }
-                span {
-                    style:"margin:0.3rem; padding: 0.3rem; display:inline;",
-                    " > "
-                }
-            }
-            Link {
-                style:"overflow:hidden; white-space:nowrap; max-width: 10vw; margin:0.3rem; padding: 0.3rem; display:inline;",
-                to:route.clone(),
-                " {route:?}"
-            }
-        }
-    }
-}
 
 #[component]
 fn DisplayError(title: String, err: String) -> Element {
@@ -196,22 +106,6 @@ fn DisplayError(title: String, err: String) -> Element {
     }
 }
 
-/// Component for a dropdown menu in the navbar.
-#[component]
-pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
-    rsx! {
-        details { class: "dropdown",
-            summary { {title} }
-            ul {
-                for (link_name , link) in links {
-                    li { key: link.clone(),
-                        Link { to: link.clone(), {link_name} }
-                    }
-                }
-            }
-        }
-    }
-}
 
 /// Component that wraps the main page with the navbar and error handler.
 /// Also initializes the component tracking backend server calls.

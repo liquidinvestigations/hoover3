@@ -38,12 +38,12 @@ pub fn App() -> Element {
     use_future(move || async move {
         use web_sys::wasm_bindgen::prelude::*;
         // allow some time for the browser to load the page
-        dioxus_logger::tracing::info!("Setting up browser back button callback...");
+        info!("Setting up browser back button callback...");
         let callback = Closure::wrap(Box::new(move |_e: web_sys::PopStateEvent| {
             let window = web_sys::window().expect("no global `window` exists");
             let document = window.document().expect("should have a document on window");
             let url = document.location().unwrap().href().unwrap();
-            dioxus_logger::tracing::info!("Back button pressed: {:?}", url);
+            info!("Back button pressed: {:?}", url);
             coro_set_global.send(url);
         }) as Box<dyn FnMut(_)>);
         let window = web_sys::window().expect("no global `window` exists");
@@ -68,7 +68,7 @@ pub fn App() -> Element {
         Router::<Route> {
             config: move || RouterConfig::default().on_update(move |state|{
                 let current_url: Route = state.current();
-                tracing::info!("Routing to URL: {}", current_url.to_string());
+                // tracing::info!("Routing to URL: {}", current_url.to_string());
                 coro_set_global.send(current_url.to_string());
                 None
             })
@@ -109,8 +109,8 @@ fn use_init_server_call_history() {
 
     use_effect(move || {
         // we can't use `use_router::Route` because we want this to live in the App root component.
-        let route = global_app_url.read().clone();
-        info!("Router URL Changed, dropping loading state: {:?}", route);
+        let _route = global_app_url.read().clone();
+        // info!("Router URL Changed, dropping loading state: {:?}", route);
         currently_loading.write().clear();
         show_pic.set(false);
     });

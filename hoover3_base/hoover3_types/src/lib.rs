@@ -8,8 +8,3 @@ pub mod filesystem;
 pub mod identifier;
 pub mod stable_hash;
 pub mod tasks;
-
-// Globally limit memory to 2 GB
-#[global_allocator]
-static ALLOCATOR: cap::Cap<std::alloc::System> =
-    cap::Cap::new(std::alloc::System, 2 * 1024 * 1024 * 1024);

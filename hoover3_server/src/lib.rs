@@ -10,6 +10,8 @@ pub use hoover3_database::migrate::migrate_all;
 mod init;
 pub use init::init_server_plugins;
 
+pub mod api;
+
 // ===================
 // ===== PLUGINS =====
 // ===================

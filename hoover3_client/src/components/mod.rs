@@ -6,3 +6,6 @@ pub use table::*;
 
 mod titles;
 pub use titles::*;
+
+mod navbar;
+pub use navbar::*;

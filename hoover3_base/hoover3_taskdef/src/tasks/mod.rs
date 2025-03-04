@@ -561,6 +561,7 @@ pub fn run_worker<T: TaskQueue>(t: T) -> anyhow::Result<()> {
         .thread_name("hoover3_worker")
         .build()
         .unwrap();
+    hoover3_tracing::set_process_memory_limit(t.max_memory_mb())?;
     rt.block_on(async move { run_worker_async::<T>(t).await })
 }
 
@@ -574,6 +575,7 @@ async fn run_worker_async<T: TaskQueue>(t: T) -> anyhow::Result<()> {
 }
 
 /// Integration tests for the taskdef macros.
+#[cfg(test)]
 pub mod test {
     use crate::declare_task_queue;
 

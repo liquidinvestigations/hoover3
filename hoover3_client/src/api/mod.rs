@@ -18,7 +18,6 @@ use hoover3_types::identifier::*;
 use hoover3_types::tasks::*;
 
 /// Struct records previous server calls, their timing and results.
-
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub struct ServerCallEvent {
     /// Timestamp when the server call was initiated
@@ -61,7 +60,7 @@ fn _after_call(
     ts: f64,
     duration: f64,
 ) {
-    // dioxus_logger::tracing::info!("after_call: {function} {argument_val}");
+    // info!("after_call: {function} {argument_val}");
     nav_push_server_call_event(ServerCallEvent {
         ts,
         function: function.to_string(),
@@ -95,6 +94,7 @@ macro_rules! server_wrapper {
         ::paste::paste! {
             mod [<__ $id __>] {
                 use dioxus::prelude::*;
+                #[allow(unused_imports)]
                 use super::*;
 
                 #[server]
@@ -278,4 +278,11 @@ server_wrapper!(
     db_explorer_run_query,
     (CollectionId, DatabaseServiceType, String),
     DynamicQueryResponse
+);
+
+server_wrapper!(
+    hoover3_server::api,
+    get_server_memory_usage,
+    (),
+    (u32, u32)
 );

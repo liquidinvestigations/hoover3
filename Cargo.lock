@@ -3274,6 +3274,7 @@ dependencies = [
 name = "hoover3_server"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "hoover3_data_access",
  "hoover3_database",
  "hoover3_database_operations",
@@ -3295,8 +3296,10 @@ dependencies = [
  "futures",
  "hoover3_database",
  "hoover3_macro",
+ "hoover3_tracing",
  "hoover3_types",
  "inventory",
+ "lazy_static",
  "paste",
  "prost-wkt-types",
  "serde",
@@ -3315,6 +3318,8 @@ dependencies = [
 name = "hoover3_tracing"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "cap",
  "dioxus-logger",
  "log",
  "tracing",
@@ -3328,7 +3333,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode",
- "cap",
  "chrono",
  "regex",
  "serde",

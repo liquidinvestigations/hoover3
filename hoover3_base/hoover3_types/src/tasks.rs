@@ -91,3 +91,45 @@ pub struct TemporalioWorkflowStatusTree {
     /// Aggregate counts of all status codes across all workflows
     pub total_counts: BTreeMap<UiWorkflowStatusCode, i64>,
 }
+
+/// Represents all task queues, workflows and activities in the system.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct AllTaskDefinitions {
+    /// Map of task queue names to their definitions
+    pub worker_queues: BTreeMap<String, WorkerQueueDefinition>,
+    /// Map of workflow names to their definitions
+    pub workflows: BTreeMap<String, WorkflowDefinition>,
+    /// Map of activity names to their definitions
+    pub activities: BTreeMap<String, ActivityDefinition>,
+}
+
+/// Represents a task queue definition in the system.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct WorkerQueueDefinition {
+    /// Name of the task queue
+    pub name: String,
+    /// Maximum number of concurrent tasks in the queue
+    pub max_concurrency: u32,
+    /// Maximum number of blocking threads in the queue
+    pub max_blocking_threads: u32,
+    /// Maximum memory limit in MB
+    pub max_memory_mb: u32,
+}
+
+/// Represents a workflow definition in the system.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct WorkflowDefinition {
+    /// Name of the workflow
+    pub name: String,
+    /// Name of the task queue the workflow belongs to
+    pub queue_name: String,
+}
+
+/// Represents an activity definition in the system.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ActivityDefinition {
+    /// Name of the activity
+    pub name: String,
+    /// Name of the task queue the activity belongs to
+    pub queue_name: String,
+}

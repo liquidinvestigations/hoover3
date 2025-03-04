@@ -3,6 +3,7 @@
 /// Main dioxus Entrypoint. Sets up launch configurations for Dioxus, as well as server backend main function.
 pub fn main() {
     hoover3_tracing::init_tracing();
+    hoover3_tracing::set_process_memory_limit(4096).unwrap();
 
     #[cfg(feature = "web")]
     {

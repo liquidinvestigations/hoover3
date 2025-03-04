@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
-use dioxus_logger::tracing::info;
+use dioxus_logger::tracing::{error, info};
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::{collection::CollectionUiRow, identifier::CollectionId};
 
@@ -99,7 +99,7 @@ pub fn CollectionsAdminListPage() -> Element {
                             }
                         );
                     } else {
-                        dioxus_logger::tracing::error!(
+                        error!(
                             "failed to create collection {:#?}", c.clone());
                     }
                 });

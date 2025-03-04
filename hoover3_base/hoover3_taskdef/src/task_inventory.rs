@@ -1,5 +1,10 @@
 //! Task definition inventory - static lists of task queues, activities, workflows.
 
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
+
 use crate::Worker;
 
 /// Inventory task queue definition.
@@ -98,6 +103,10 @@ macro_rules! declare_task_queue {
     };
 }
 pub use declare_task_queue;
+use hoover3_types::tasks::{
+    ActivityDefinition, AllTaskDefinitions, WorkerQueueDefinition, WorkflowDefinition,
+};
+use tracing::info;
 
 #[cfg(test)]
 mod test_declare_task_queue_compiles {
@@ -143,4 +152,121 @@ pub(crate) fn list_task_register_fns_for_queue(
         }
     }
     result
+}
+
+/// Check all task definitions.
+/// This will panic if there are any issues.
+pub fn check_task_definitions() {
+    info!("checking task definitions...");
+    let task_definitions = get_task_definitions_from_inventory();
+    info!(
+        "found {} worker queues: {:#?}",
+        task_definitions.worker_queues.len(),
+        task_definitions.worker_queues.keys()
+    );
+    info!(
+        "found {} activities: {:#?}",
+        task_definitions.activities.len(),
+        task_definitions.activities.keys()
+    );
+    info!(
+        "found {} workflows: {:#?}",
+        task_definitions.workflows.len(),
+        task_definitions.workflows.keys()
+    );
+    info!("task definitions ok!");
+}
+
+/// Read all task definitions from inventory.
+/// Load the results into a global - and only compute them once.
+pub fn get_task_definitions_from_inventory() -> Arc<AllTaskDefinitions> {
+    TASK_DEFINITIONS.clone()
+}
+
+lazy_static::lazy_static! {
+    static ref TASK_DEFINITIONS: Arc<AllTaskDefinitions> = Arc::new(read_task_definitions_from_inventory());
+}
+
+fn read_task_definitions_from_inventory() -> AllTaskDefinitions {
+    let mut worker_queues = BTreeMap::new();
+    let mut workflows = BTreeMap::new();
+    let mut activities = BTreeMap::new();
+    let mut all_names = BTreeSet::new();
+
+    for task_queue in inventory::iter::<TaskQueueStatic> {
+        if worker_queues.contains_key(task_queue.queue_name) {
+            panic!(
+                "Task queue {} already exists, is it defined twice?",
+                task_queue.queue_name
+            );
+        }
+        worker_queues.insert(task_queue.queue_name.to_string(), task_queue.into());
+        all_names.insert(task_queue.queue_name.to_string());
+    }
+    for activity in inventory::iter::<ActivityDefinitionStatic> {
+        if activities.contains_key(activity.name) {
+            panic!(
+                "Activity {} already exists, is it defined twice?",
+                activity.name
+            );
+        }
+        if all_names.contains(&activity.name.to_string()) {
+            panic!(
+                "Activity {} is defined as different things (queue, activity, workflow)",
+                activity.name
+            );
+        }
+        all_names.insert(activity.name.to_string());
+        activities.insert(activity.name.to_string(), activity.into());
+    }
+    for workflow in inventory::iter::<WorkflowDefinitionStatic> {
+        if workflows.contains_key(workflow.name) {
+            panic!(
+                "Workflow {} already exists, is it defined twice?",
+                workflow.name
+            );
+        }
+        if all_names.contains(&workflow.name.to_string()) {
+            panic!(
+                "Workflow {} is defined as different things (queue, activity, workflow)",
+                workflow.name
+            );
+        }
+        all_names.insert(workflow.name.to_string());
+        workflows.insert(workflow.name.to_string(), workflow.into());
+    }
+    AllTaskDefinitions {
+        worker_queues,
+        workflows,
+        activities,
+    }
+}
+
+impl From<&TaskQueueStatic> for WorkerQueueDefinition {
+    fn from(task_queue: &TaskQueueStatic) -> Self {
+        WorkerQueueDefinition {
+            name: task_queue.queue_name.to_string(),
+            max_concurrency: task_queue.max_concurrency,
+            max_blocking_threads: task_queue.max_blocking_threads,
+            max_memory_mb: task_queue.max_memory_mb,
+        }
+    }
+}
+
+impl From<&ActivityDefinitionStatic> for ActivityDefinition {
+    fn from(activity: &ActivityDefinitionStatic) -> Self {
+        ActivityDefinition {
+            name: activity.name.to_string(),
+            queue_name: activity.queue_name.to_string(),
+        }
+    }
+}
+
+impl From<&WorkflowDefinitionStatic> for WorkflowDefinition {
+    fn from(workflow: &WorkflowDefinitionStatic) -> Self {
+        WorkflowDefinition {
+            name: workflow.name.to_string(),
+            queue_name: workflow.queue_name.to_string(),
+        }
+    }
 }
