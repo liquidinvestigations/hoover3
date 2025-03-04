@@ -1,7 +1,12 @@
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, warn};
 
-use crate::{app::ServerCallHistory, pages::{DashboardNavbarDropdown, DatabaseExplorerRoute}, routes::Route, time::sleep};
+use crate::{
+    app::ServerCallHistory,
+    pages::{DashboardNavbarDropdown, DatabaseExplorerRoute},
+    routes::Route,
+    time::sleep,
+};
 
 /// Component for the navbar - a single <nav> element with the stuff on the top row.
 /// Also contains some `position_absolute` overlay elements in [ExtraLayout]
@@ -104,7 +109,6 @@ fn NavbarTitleCrumbs() -> Element {
     }
 }
 
-
 /// Component for a dropdown menu in the navbar.
 #[component]
 pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
@@ -159,7 +163,6 @@ fn MemoryUsageDisplayBrowser() -> Element {
             mem_usage.set(usage);
             mem_limit.set(limit);
             sleep(std::time::Duration::from_secs(60)).await;
-
         }
     });
 

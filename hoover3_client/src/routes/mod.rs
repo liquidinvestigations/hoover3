@@ -92,7 +92,6 @@ pub enum Route {
     PageNotFound { route: Vec<String> },
 }
 
-
 #[component]
 fn DisplayError(title: String, err: String) -> Element {
     rsx! {
@@ -105,7 +104,6 @@ fn DisplayError(title: String, err: String) -> Element {
         }
     }
 }
-
 
 /// Component that wraps the main page with the navbar and error handler.
 /// Also initializes the component tracking backend server calls.

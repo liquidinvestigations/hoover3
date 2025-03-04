@@ -280,9 +280,4 @@ server_wrapper!(
     DynamicQueryResponse
 );
 
-server_wrapper!(
-    hoover3_server::api,
-    get_server_memory_usage,
-    (),
-    (u32, u32)
-);
+server_wrapper!(hoover3_server::api, get_server_memory_usage, (), (u32, u32));

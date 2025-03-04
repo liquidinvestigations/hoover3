@@ -14,10 +14,10 @@ pub fn set_process_memory_limit(limit_mb: u32) -> anyhow::Result<()> {
 
 /// Get the current memory limit for the current process in MB.
 pub fn get_process_memory_limit() -> u32 {
-    (ALLOCATOR.limit() / 1024 / 1024)  as u32
+    (ALLOCATOR.limit() / 1024 / 1024) as u32
 }
 
 /// Get the current memory usage for the current process in MB.
 pub fn get_process_memory_usage() -> u32 {
-    (ALLOCATOR.allocated()  / 1024 / 1024) as u32
+    (ALLOCATOR.allocated() / 1024 / 1024) as u32
 }
