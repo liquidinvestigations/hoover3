@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashSet, VecDeque};
 
 use crate::{api::ServerCallEvent, routes::Route};
 use dioxus::prelude::*;
-use dioxus_logger::tracing::{self, info};
+use dioxus_logger::tracing::info;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
 // const PICO_CSS: Asset = asset!("/assets/libs/pico.min.css");
@@ -15,7 +15,7 @@ const FAVICON: Asset = asset!("/assets/favicon.ico");
 /// The main app component that loads extra CSS and the router.
 #[component]
 pub fn App() -> Element {
-    tracing::info!("dioxus App()...");
+    info!("dioxus App()...");
 
     let mut global_app_url: Signal<Option<String>> = use_signal(move || None);
     use_context_provider(|| GlobalUrlContext {
