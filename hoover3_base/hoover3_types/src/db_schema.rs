@@ -61,6 +61,12 @@ pub struct GraphEdgeType(
     pub DatabaseIdentifier,
 );
 
+impl std::fmt::Display for GraphEdgeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Represents the possible data types for database columns
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 #[non_exhaustive]

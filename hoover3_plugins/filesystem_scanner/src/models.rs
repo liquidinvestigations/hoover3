@@ -70,9 +70,9 @@ pub struct FsDirectoryDbRow {
     /// Size of the directory in bytes
     pub size_bytes: i64,
     /// Timestamp of the most recent modification to the directory
-    pub modified: Option<Timestamp>,
+    pub fs_modified: Option<Timestamp>,
     /// Timestamp of the directory's creation
-    pub created: Option<Timestamp>,
+    pub fs_created: Option<Timestamp>,
     /// Scan results for the directory's direct children
     pub scan_children: fs_directory_scan_result,
     /// Scan results for the directory's total contents, including all descendants
@@ -86,8 +86,8 @@ impl FsDirectoryDbRow {
             datasource_id: DatabaseIdentifier::new(&self.datasource_id)?,
             path: self.path.as_str().into(),
             size_bytes: self.size_bytes as u64,
-            modified: self.modified,
-            created: self.created,
+            modified: self.fs_modified,
+            created: self.fs_created,
             scan_children: self.scan_children.into(),
             scan_total: self.scan_total.into(),
         })
@@ -100,8 +100,8 @@ impl FsDirectoryDbRow {
             datasource_id: ds.to_string(),
             path: meta.path.to_str().unwrap().into(),
             size_bytes: meta.size_bytes as i64,
-            modified: meta.modified,
-            created: meta.created,
+            fs_modified: meta.modified,
+            fs_created: meta.created,
             scan_children: Default::default(),
             scan_total: Default::default(),
         }
@@ -120,9 +120,9 @@ pub struct FsFileDbRow {
     /// Size of the file in bytes
     pub size_bytes: i64,
     /// Timestamp of the file's last modification
-    pub modified: Option<Timestamp>,
+    pub fs_modified: Option<Timestamp>,
     /// Timestamp of the file's creation
-    pub created: Option<Timestamp>,
+    pub fs_created: Option<Timestamp>,
 }
 
 impl FsFileDbRow {
@@ -132,8 +132,8 @@ impl FsFileDbRow {
             datasource_id: DatabaseIdentifier::new(&self.datasource_id)?,
             path: self.path.as_str().into(),
             size_bytes: self.size_bytes as u64,
-            modified: self.modified,
-            created: self.created,
+            modified: self.fs_modified,
+            created: self.fs_created,
         })
     }
     /// Create a `FsFileDbRow` from a `FsMetadataBasic` which comes from a datasource scan.
@@ -144,8 +144,8 @@ impl FsFileDbRow {
             datasource_id: ds.to_string(),
             path: meta.path.to_str().unwrap().into(),
             size_bytes: meta.size_bytes as i64,
-            modified: meta.modified,
-            created: meta.created,
+            fs_modified: meta.modified,
+            fs_created: meta.created,
         }
     }
 }
@@ -174,3 +174,23 @@ declare_graph_edge!(
     FsFileDbRow,
     FsDirectoryDbRow
 );
+
+/// Database representation of a unique document and its hashes.
+#[model]
+pub struct FsBlobHashesDbRow {
+    /// The SHA3-256 hash of the blob.
+    #[model(primary(partition))]
+    pub blob_sha3_256: String,
+
+    /// The SHA256 hash of the blob.
+    pub blob_sha256: String,
+
+    /// The md5 hash of the blob.
+    pub blob_md5: String,
+
+    /// The sha1 hash of the blob.
+    pub blob_sha1: String,
+
+    /// The size of the blob in bytes.
+    pub size_bytes: i64,
+}

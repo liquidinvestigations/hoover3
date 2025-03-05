@@ -11,7 +11,7 @@ use charybdis::types::{Boolean, Counter, Frozen, Int, Text, Tuple};
     clustering_keys = [edge_type, direction_out],
 )]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-pub struct GraphEdgePagesCounter {
+pub struct GraphEdgeSourceCounter {
     /// Primary key string
     pub pk_source: Text,
     /// The type of edge
@@ -25,12 +25,12 @@ pub struct GraphEdgePagesCounter {
 /// Edge data keyed by page - each partition contains a page of edges sorted by target_pk.
 /// Useful for listing through all edges for a given source and type.
 #[charybdis_model(
-    table_name = graph_edge_page,
+    table_name = graph_edge_page_content,
     partition_keys = [pk_source, edge_type, direction_out, page_id],
     clustering_keys = [pk_target],
 )]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-pub struct GraphEdgePage {
+pub struct GraphEdgePageContent {
     /// Source primary key string
     pub pk_source: Text,
     /// The type of edge
@@ -41,6 +41,24 @@ pub struct GraphEdgePage {
     pub page_id: Int,
     /// Target primary key string
     pub pk_target: Text,
+}
+
+/// Edge data pages - a list of all the pages for a given source, type, direction
+#[charybdis_model(
+    table_name = graph_edge_page,
+    partition_keys = [pk_source, edge_type, direction_out],
+    clustering_keys = [page_id],
+)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+pub struct GraphEdgePageList {
+    /// Source primary key string
+    pub pk_source: Text,
+    /// The type of edge
+    pub edge_type: Text,
+    /// Edge Direction - true = OUT, false = IN
+    pub direction_out: Boolean,
+    /// Page identifier
+    pub page_id: Int,
 }
 
 /// Edge data keyed by source and target primary keys.

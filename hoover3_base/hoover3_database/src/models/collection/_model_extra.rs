@@ -4,7 +4,7 @@
 use crate::db_management::meilisearch_wait_for_task;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::MeilisearchDatabaseHandle;
-use crate::models::collection::graph_add_nodes;
+use crate::models::collection::graph::graph_add_nodes;
 use charybdis::model::BaseModel;
 
 use hoover3_types::identifier::CollectionId;
@@ -199,13 +199,8 @@ impl DatabaseExtraCallbacks {
             return Ok(());
         }
         let _table_id = DatabaseIdentifier::new(T::DB_MODEL_NAME)?;
-        let mut nebula_data = vec![];
         let mut search_data = vec![];
         for d in data.iter() {
-            let row_pk_hash = row_pk_hash::<T>(&d.primary_key_values());
-            let data_json = serde_json::to_value(d)?;
-            nebula_data.push((row_pk_hash.clone(), data_json.clone()));
-
             search_data.push(get_search_index_json(d)?);
         }
         use tokio::time::Duration;

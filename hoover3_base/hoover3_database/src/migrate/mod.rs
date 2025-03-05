@@ -258,5 +258,5 @@ pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchemaDy
 /// Useful for adding tables that we don't implemented with the `#[model]` macro,
 /// since they are part of that macro's implementation -- things like the graph tables.
 pub fn get_extra_charybdis_codes() -> Vec<String> {
-    vec![include_str!("../../src/models/collection/_scylla_graph_models.rs").to_string()]
+    vec![include_str!("../../src/models/collection/graph_models.rs").to_string()]
 }

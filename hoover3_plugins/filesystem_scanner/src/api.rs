@@ -7,8 +7,8 @@ use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use hoover3_types::tasks::UiWorkflowStatus;
 
-use crate::tasks::fs_scan_datasource_workflow;
-use crate::tasks::ScanDatasourceArgs;
+use crate::tasks::scan_filesystem::fs_scan_datasource_workflow;
+use crate::tasks::scan_filesystem::ScanDatasourceArgs;
 
 /// Initiates a filesystem scan operation
 pub async fn start_scan(

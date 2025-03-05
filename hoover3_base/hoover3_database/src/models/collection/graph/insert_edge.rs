@@ -1,6 +1,6 @@
-use super::_declare_edge::GraphEdge;
-use super::_scylla_graph_models::*;
-use super::row_pk_hash;
+use super::super::graph_models::*;
+use super::super::row_pk_hash;
+use super::declare_edge::GraphEdge;
 use crate::db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle};
 use charybdis::{batch::ModelBatch, model::BaseModel};
 use futures::pin_mut;
@@ -178,12 +178,13 @@ async fn add_edges_single_batch(
     // Build and execute queries using charybdis batch
     let mut edge_pages_rows = Vec::new();
     let mut edge_page_assign_rows = Vec::new();
+    let mut edge_page_list_rows = Vec::new();
 
     // Add edge pages
     for (source, pages) in page_assignments {
         for (page_id, targets) in pages {
             for target in targets {
-                edge_pages_rows.push(GraphEdgePage {
+                edge_pages_rows.push(GraphEdgePageContent {
                     pk_source: source.clone(),
                     edge_type: edge_type.clone(),
                     direction_out,
@@ -196,17 +197,25 @@ async fn add_edges_single_batch(
                     direction_out,
                     page_id,
                 });
+                edge_page_list_rows.push(GraphEdgePageList {
+                    pk_source: source.clone(),
+                    edge_type: edge_type.clone(),
+                    direction_out,
+                    page_id,
+                });
             }
         }
     }
 
     let session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
-    GraphEdgePage::batch()
+    GraphEdgePageContent::batch()
         .chunked_insert(&session, &edge_pages_rows, 1024)
         .await?;
-
     GraphEdgePageAssignment::batch()
         .chunked_insert(&session, &edge_page_assign_rows, 1024)
+        .await?;
+    GraphEdgePageList::batch()
+        .chunked_insert(&session, &edge_page_list_rows, 1024)
         .await?;
 
     let edge_count = edges.len();
@@ -215,6 +224,8 @@ async fn add_edges_single_batch(
     Ok(edge_count)
 }
 
+/// Compute the page assignments for the edges being added.
+/// Returns a map of source to page id to target.
 async fn add_edges_get_page_assignments(
     collection_id: &CollectionId,
     edge_type: &str,
@@ -241,7 +252,7 @@ async fn add_edges_get_page_assignments(
         .collect::<Vec<_>>()
         .chunks(CQL_SELECT_BATCH_SIZE)
     {
-        let counters = find_graph_edge_pages_counter!(
+        let counters = find_graph_edge_source_counter!(
             "pk_source IN ? AND edge_type = ? AND direction_out = ?",
             (source_chunk, edge_type.to_string(), direction_out)
         )
@@ -429,7 +440,7 @@ mod tests {
         let session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
 
         // Check counter was initialized properly
-        let counter = find_graph_edge_pages_counter!(
+        let counter = find_graph_edge_source_counter!(
             "pk_source = ? AND edge_type = ? AND direction_out = ?",
             ("doc1", edge_type.clone(), direction_out)
         )
@@ -458,7 +469,7 @@ mod tests {
         assert_eq!(result, 0);
 
         // check the counter is still 1
-        let counter = find_graph_edge_pages_counter!(
+        let counter = find_graph_edge_source_counter!(
             "pk_source = ? AND edge_type = ? AND direction_out = ?",
             ("doc1", edge_type.clone(), direction_out)
         )

@@ -1,14 +1,14 @@
-//! Filesystem scanner task implementation.
+//! Filesystem scanner - go over data access api and scan that filesystem.
+//! Scan results (files and directories) are saved to the database.
 
 use charybdis::batch::ModelBatch;
 use charybdis::model::BaseModel;
 use charybdis::operations::Find;
 use charybdis::operations::UpdateWithCallbacks;
-use hoover3_database::client_query;
+use hoover3_database::client_query::list_disk::list_directory;
 use hoover3_database::db_management::DatabaseSpaceManager;
 use hoover3_database::db_management::ScyllaDatabaseHandle;
 use hoover3_database::models::collection::GraphEdge;
-use hoover3_taskdef::declare_task_queue;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
     activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
@@ -28,6 +28,8 @@ use crate::models::FsFileDatasource;
 use crate::models::FsFileDbRow;
 use crate::models::FsFileParent;
 
+use super::FilesystemScannerQueue;
+
 /// Arguments for filesystem datasource scanning
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ScanDatasourceArgs {
@@ -38,8 +40,6 @@ pub struct ScanDatasourceArgs {
     /// Optional path to scan, defaults to root if None
     pub path: Option<PathBuf>,
 }
-
-declare_task_queue!(FilesystemScannerQueue, "filesystem_scanner", 1, 1, 1024);
 
 /// Workflow for scanning a filesystem datasource
 #[workflow(FilesystemScannerQueue)]
@@ -168,7 +168,7 @@ async fn fs_do_scan_datasource(
     let dir_path = root_path
         .to_path_buf()
         .join(arg.path.clone().unwrap_or(PathBuf::from("")));
-    let children = client_query::list_disk::list_directory(dir_path).await?;
+    let children = list_directory(dir_path).await?;
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];

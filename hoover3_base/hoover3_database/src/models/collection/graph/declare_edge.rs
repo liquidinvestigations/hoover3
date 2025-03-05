@@ -1,12 +1,18 @@
-//! This module contains the definitions for all the nebula edges.
+//! This module contains the definitions for all the graph edges.
 //! Unit structs are used to identify edges, and are converted to `GraphEdgeType`s for use at runtime.
+
+use std::future::Future;
 
 use charybdis::model::BaseModel;
 use hoover3_types::{db_schema::GraphEdgeType, identifier::CollectionId};
+use serde::{Deserialize, Serialize};
 
-use super::EdgeBatchOperation;
+use super::{
+    query_edge::{graph_edge_sources_for_target, graph_edge_targets_for_source, ResultStream},
+    EdgeBatchOperation,
+};
 
-/// Trait for unit structs that can be used to identify a Nebula edge.
+/// Trait for unit structs that can be used to identify a graph edge.
 /// These structs are to be used in code as a type safe identifier for an edge.
 pub trait GraphEdge: Sized {
     type SourceType: BaseModel + Send + Sync + 'static;
@@ -18,6 +24,36 @@ pub trait GraphEdge: Sized {
     /// Get a batch for inserting into this edge type.
     fn edge_batch(collection_id: &CollectionId) -> EdgeBatchOperation<Self> {
         EdgeBatchOperation::<Self>::new(collection_id.clone())
+    }
+
+    /// Go over edge in the forward direction
+    /// from a source node, and return a stream of all the target nodes.
+    fn graph_edge_targets_for_source(
+        collection_id: &CollectionId,
+        source: &<Self::SourceType as BaseModel>::PrimaryKey,
+    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::DestType as BaseModel>::PrimaryKey>>>
+    where
+        <Self::SourceType as BaseModel>::PrimaryKey:
+            Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
+        <Self::DestType as BaseModel>::PrimaryKey:
+            Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
+    {
+        graph_edge_targets_for_source::<Self>(collection_id, source)
+    }
+
+    /// Go over edge in the reverse direction
+    /// from a target node, and return a stream of all the source nodes.
+    fn graph_edge_sources_for_target(
+        collection_id: &CollectionId,
+        target: &<Self::DestType as BaseModel>::PrimaryKey,
+    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::SourceType as BaseModel>::PrimaryKey>>>
+    where
+        <Self::SourceType as BaseModel>::PrimaryKey:
+            Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
+        <Self::DestType as BaseModel>::PrimaryKey:
+            Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
+    {
+        graph_edge_sources_for_target::<Self>(collection_id, target)
     }
 }
 
