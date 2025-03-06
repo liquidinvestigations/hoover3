@@ -8,7 +8,7 @@ use futures::StreamExt;
 use hoover3_database::{
     client_query::collections::{create_new_collection, drop_collection},
     db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle},
-    declare_graph_edge,
+    declare_implicit_graph_edge, declare_stored_graph_edge,
     migrate::migrate_common,
     models::collection::*,
 };
@@ -32,7 +32,54 @@ pub struct TestModelB {
     pub id_b: String,
 }
 
-declare_graph_edge!(TestModelEdge, "test_model_edge", TestModelA, TestModelB);
+/// Docs
+#[model]
+pub struct TestModelChildB {
+    /// Docs
+    #[model(primary(partition))]
+    pub id_b: String,
+    /// Docs
+    #[model(primary(clustering))]
+    pub id_cluster: String,
+}
+
+/// Docs
+#[model]
+pub struct TestModelGrandchildB {
+    /// Docs
+    #[model(primary(partition))]
+    pub id_b: String,
+
+    /// Docs
+    #[model(primary(partition))]
+    pub id_cluster: String,
+
+    /// Docs
+    #[model(primary(clustering))]
+    pub id_cluster2: String,
+
+    /// Docs
+    pub normal: String,
+}
+declare_stored_graph_edge!(TestModelEdge, "test_model_edge", TestModelA, TestModelB);
+declare_stored_graph_edge!(
+    TestModelEdge2,
+    "test_model_edge2",
+    TestModelChildB,
+    TestModelB
+);
+declare_implicit_graph_edge!(
+    TestImplicitEdge,
+    "test_implicit_edge",
+    TestModelB,
+    TestModelChildB
+);
+declare_implicit_graph_edge!(
+    TestImplicitEdge2,
+    "test_implicit_edge2",
+    TestModelChildB,
+    TestModelGrandchildB
+);
 
 async fn create_test_collection(name: &str) -> Result<CollectionId, anyhow::Error> {
     init_tracing();
@@ -53,6 +100,16 @@ async fn test_graph_query() -> Result<(), anyhow::Error> {
     let mut test_model_b = TestModelB {
         id_b: "test_b".to_string(),
     };
+    let mut test_model_child_b = TestModelChildB {
+        id_b: "test_b".to_string(),
+        id_cluster: "test_cluster".to_string(),
+    };
+    let mut test_model_grandchild_b = TestModelGrandchildB {
+        id_b: "test_b".to_string(),
+        id_cluster: "test_cluster".to_string(),
+        id_cluster2: "test_cluster2".to_string(),
+        normal: "test_normal".to_string(),
+    };
 
     let cb = DatabaseExtraCallbacks::new(&c).await?;
     let session = ScyllaDatabaseHandle::collection_session(&c).await?;
@@ -63,18 +120,62 @@ async fn test_graph_query() -> Result<(), anyhow::Error> {
     TestModelB::insert_cb(&mut test_model_b, &cb)
         .execute(&session)
         .await?;
-
+    TestModelChildB::insert_cb(&mut test_model_child_b, &cb)
+        .execute(&session)
+        .await?;
+    TestModelGrandchildB::insert_cb(&mut test_model_grandchild_b, &cb)
+        .execute(&session)
+        .await?;
+    // ================================
+    // Stored Edges
+    // ================================
     let mut edges = TestModelEdge::edge_batch(&c);
     edges.add_edge(&test_model_a, &test_model_b);
     edges.execute().await?;
 
-    let targets =
-        TestModelEdge::graph_edge_targets_for_source(&c, &test_model_a.primary_key_values())
-            .await?;
+    let targets = TestModelEdge::list_target_pks(&c, &test_model_a.primary_key_values()).await?;
     let targets = targets.collect::<Vec<_>>().await;
     assert_eq!(targets.len(), 1);
     let t0 = targets[0].as_ref().unwrap();
     assert_eq!(t0, &test_model_b.primary_key_values());
+
+    let sources = TestModelEdge::list_source_pks(&c, &test_model_b.primary_key_values()).await?;
+    let sources = sources.collect::<Vec<_>>().await;
+    assert_eq!(sources.len(), 1);
+    let s0 = sources[0].as_ref().unwrap();
+    assert_eq!(s0, &test_model_a.primary_key_values());
+    // ================================
+    // Implicit Edges
+    // ================================
+    let edges = TestImplicitEdge::list_target_pks(&c, &test_model_b.primary_key_values()).await?;
+    let edges = edges.collect::<Vec<_>>().await;
+    assert_eq!(edges.len(), 1);
+    let e0 = edges[0].as_ref().unwrap();
+    assert_eq!(e0, &test_model_child_b.primary_key_values());
+
+    let sources =
+        TestImplicitEdge::list_source_pks(&c, &test_model_child_b.primary_key_values()).await?;
+    let sources = sources.collect::<Vec<_>>().await;
+    assert_eq!(sources.len(), 1);
+    let s0 = sources[0].as_ref().unwrap();
+    assert_eq!(s0, &test_model_b.primary_key_values());
+
+    let edges =
+        TestImplicitEdge2::list_target_pks(&c, &test_model_child_b.primary_key_values()).await?;
+    let edges = edges.collect::<Vec<_>>().await;
+    assert_eq!(edges.len(), 1);
+    let e0 = edges[0].as_ref().unwrap();
+    assert_eq!(e0, &test_model_grandchild_b.primary_key_values());
+
+    let sources =
+        TestImplicitEdge2::list_source_pks(&c, &test_model_grandchild_b.primary_key_values())
+            .await?;
+    let sources = sources.collect::<Vec<_>>().await;
+    assert_eq!(sources.len(), 1);
+    let s0 = sources[0].as_ref().unwrap();
+    assert_eq!(s0, &test_model_child_b.primary_key_values());
+
+    drop_collection(c).await?;
 
     Ok(())
 }

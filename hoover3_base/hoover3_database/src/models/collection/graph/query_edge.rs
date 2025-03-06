@@ -10,22 +10,15 @@ use async_stream::try_stream;
 use charybdis::model::BaseModel;
 use charybdis::operations::Find;
 use futures::{pin_mut, stream::Stream, StreamExt};
-use hoover3_types::{db_schema::GraphEdgeType, identifier::CollectionId};
-use serde::{Deserialize, Serialize};
+use hoover3_types::{db_schema::GraphEdgeId, identifier::CollectionId};
 use std::pin::Pin;
 
 /// Go over edge E in the forward direction
 /// from a source node, and return a stream of all the target nodes.
-pub async fn graph_edge_targets_for_source<E: GraphEdge>(
+pub async fn edge_list_targets_pk<E: GraphEdge>(
     collection_id: &CollectionId,
     source: &<E::SourceType as BaseModel>::PrimaryKey,
-) -> anyhow::Result<ResultStream<<E::DestType as BaseModel>::PrimaryKey>>
-where
-    <E::SourceType as BaseModel>::PrimaryKey:
-        Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
-    <E::DestType as BaseModel>::PrimaryKey:
-        Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
-{
+) -> anyhow::Result<ResultStream<<E::DestType as BaseModel>::PrimaryKey>> {
     let source_pk_hash = row_pk_hash::<E::SourceType>(&source);
     let stream =
         list_edges_of_type(collection_id.clone(), E::edge_type(), true, source_pk_hash).await?;
@@ -38,16 +31,10 @@ where
 
 /// Go over edge E in the reverse direction
 /// from a target node, and return a stream of all the source nodes.
-pub async fn graph_edge_sources_for_target<E: GraphEdge>(
+pub async fn edge_list_source_pk<E: GraphEdge>(
     collection_id: &CollectionId,
     target: &<E::DestType as BaseModel>::PrimaryKey,
-) -> anyhow::Result<ResultStream<<E::SourceType as BaseModel>::PrimaryKey>>
-where
-    <E::SourceType as BaseModel>::PrimaryKey:
-        Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
-    <E::DestType as BaseModel>::PrimaryKey:
-        Send + Sync + 'static + Serialize + for<'a> Deserialize<'a>,
-{
+) -> anyhow::Result<ResultStream<<E::SourceType as BaseModel>::PrimaryKey>> {
     let target_pk_hash = row_pk_hash::<E::DestType>(&target);
     let stream =
         list_edges_of_type(collection_id.clone(), E::edge_type(), false, target_pk_hash).await?;
@@ -60,7 +47,7 @@ where
 
 async fn list_edges_of_type(
     collection_id: CollectionId,
-    edge_type: GraphEdgeType,
+    edge_type: GraphEdgeId,
     direction_out: bool,
     source_pk_hash: String,
 ) -> anyhow::Result<ResultStream<String>> {
@@ -131,7 +118,7 @@ fn chunk_stream<T: Send + 'static>(
 /// of the target node.
 async fn list_edge_targets(
     collection_id: CollectionId,
-    edge_type: GraphEdgeType,
+    edge_type: GraphEdgeId,
     direction_out: bool,
     source_pk_hash: String,
 ) -> anyhow::Result<ResultStream<String>> {

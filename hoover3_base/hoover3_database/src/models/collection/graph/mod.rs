@@ -5,3 +5,4 @@ mod declare_edge;
 pub use declare_edge::*;
 
 mod query_edge;
+pub use query_edge::*;

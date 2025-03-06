@@ -56,12 +56,12 @@ pub struct DatabaseColumn {
 
 /// Represents an edge type in a graph database
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-pub struct GraphEdgeType(
+pub struct GraphEdgeId(
     /// Name/identifier of the edge type
     pub DatabaseIdentifier,
 );
 
-impl std::fmt::Display for GraphEdgeType {
+impl std::fmt::Display for GraphEdgeId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -397,6 +397,20 @@ pub struct GraphEdgeTypeDynamic {
     pub source_type: DatabaseIdentifier,
     /// The target node type
     pub target_type: DatabaseIdentifier,
+    /// Implementation of the edge store
+    pub edge_store_type: EdgeStoreImplementation,
+}
+
+/// Implementation of the edge store
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+pub enum EdgeStoreImplementation {
+    /// Scylla Graph Tables models
+    Stored = 1,
+    /// Scylla Parent/Child Implicit where
+    /// the partition key of the child is the primary key of the parent
+    Implicit = 2,
 }
 
 /// Schema for graph edges - contains all edge types, and for each edge type, the
@@ -404,7 +418,7 @@ pub struct GraphEdgeTypeDynamic {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct GraphEdgeSchemaDynamic {
     /// Map of edge type names to their definitions
-    pub edges_by_types: BTreeMap<GraphEdgeType, GraphEdgeTypeDynamic>,
+    pub edges_by_types: BTreeMap<GraphEdgeId, GraphEdgeTypeDynamic>,
     /// Map of source node types to their edge types
     pub edges_by_source: BTreeMap<DatabaseIdentifier, Vec<GraphEdgeTypeDynamic>>,
     /// Map of target node types to their edge types

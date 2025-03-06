@@ -8,7 +8,7 @@ use charybdis::operations::UpdateWithCallbacks;
 use hoover3_database::client_query::list_disk::list_directory;
 use hoover3_database::db_management::DatabaseSpaceManager;
 use hoover3_database::db_management::ScyllaDatabaseHandle;
-use hoover3_database::models::collection::GraphEdge;
+use hoover3_database::models::collection::GraphEdgeInsert;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
     activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
@@ -21,12 +21,8 @@ use hoover3_types::identifier::DatabaseIdentifier;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-use crate::models::FsDirectoryDatasource;
 use crate::models::FsDirectoryDbRow;
-use crate::models::FsDirectoryParent;
-use crate::models::FsFileDatasource;
 use crate::models::FsFileDbRow;
-use crate::models::FsFileParent;
 
 use super::FilesystemScannerQueue;
 
@@ -172,10 +168,6 @@ async fn fs_do_scan_datasource(
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];
-    let mut file_parent_batch = FsFileParent::edge_batch(&arg.collection_id);
-    let mut dir_parent_batch = FsDirectoryParent::edge_batch(&arg.collection_id);
-    let mut dir_datasource_batch = FsDirectoryDatasource::edge_batch(&arg.collection_id);
-    let mut file_datasource_batch = FsFileDatasource::edge_batch(&arg.collection_id);
     let ds_pk = (arg.datasource_id.to_string(),);
 
     let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
@@ -201,19 +193,13 @@ async fn fs_do_scan_datasource(
         c.path = c.path.strip_prefix(root_path).unwrap().to_path_buf();
         if c.is_file {
             let new_file = FsFileDbRow::from_basic_meta(&arg.datasource_id, &c);
-            if let Some(parent_pk) = &parent_pk {
-                file_parent_batch.add_edge(&new_file, parent_pk);
-            }
-            file_datasource_batch.add_edge_from_pk(&new_file.primary_key_values(), &ds_pk);
+
             files.push(new_file);
             file_count += 1;
             file_size_bytes += c.size_bytes;
         } else if c.is_dir {
             let new_dir = FsDirectoryDbRow::from_basic_meta(&arg.datasource_id, &c);
-            if let Some(parent_pk) = &parent_pk {
-                dir_parent_batch.add_edge(&new_dir, parent_pk);
-            }
-            dir_datasource_batch.add_edge_from_pk(&new_dir.primary_key_values(), &ds_pk);
+
             dirs.push(new_dir);
             dir_count += 1;
             next_paths.push(c.path.clone());
@@ -233,11 +219,6 @@ async fn fs_do_scan_datasource(
     .await?;
     db_extra.insert(&files).await?;
     db_extra.insert(&dirs).await?;
-
-    file_parent_batch.execute().await?;
-    dir_parent_batch.execute().await?;
-    file_datasource_batch.execute().await?;
-    dir_datasource_batch.execute().await?;
 
     next_paths.sort();
     next_paths.dedup();

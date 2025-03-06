@@ -2,9 +2,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use hoover3_types::{
     db_schema::{
-        DatabaseColumn, DatabaseColumnType, DatabaseTable, GraphEdgeSchemaDynamic, GraphEdgeType,
-        GraphEdgeTypeDynamic, ModelDefinition, ModelFieldDefinition, ScyllaDatabaseSchema,
-        UdtModelDefinition,
+        DatabaseColumn, DatabaseColumnType, DatabaseTable, EdgeStoreImplementation, GraphEdgeId,
+        GraphEdgeSchemaDynamic, GraphEdgeTypeDynamic, ModelDefinition, ModelFieldDefinition,
+        ScyllaDatabaseSchema, UdtModelDefinition,
     },
     identifier::DatabaseIdentifier,
 };
@@ -199,6 +199,8 @@ pub struct GraphEdgeTypeStatic {
     pub source_type: &'static str,
     /// The target node type of the edge (table name in scylladb)
     pub target_type: &'static str,
+    /// Implementation of the edge store
+    pub edge_store_type: EdgeStoreImplementation,
 }
 
 impl From<&GraphEdgeTypeStatic> for GraphEdgeTypeDynamic {
@@ -207,6 +209,7 @@ impl From<&GraphEdgeTypeStatic> for GraphEdgeTypeDynamic {
             edge_type: DatabaseIdentifier::new(value.edge_type).unwrap(),
             source_type: DatabaseIdentifier::new(value.source_type).unwrap(),
             target_type: DatabaseIdentifier::new(value.target_type).unwrap(),
+            edge_store_type: value.edge_store_type,
         }
     }
 }
@@ -230,7 +233,7 @@ fn read_graph_edges_types_from_inventory() -> std::sync::Arc<GraphEdgeSchemaDyna
         let Ok(edge_type_id) = DatabaseIdentifier::new(edge_type_def.edge_type) else {
             panic!("invalid edge type name: `{}`", edge_type_def.edge_type);
         };
-        let edge_type_id = GraphEdgeType(edge_type_id);
+        let edge_type_id = GraphEdgeId(edge_type_id);
 
         if edges_by_types.contains_key(&edge_type_id) {
             panic!(

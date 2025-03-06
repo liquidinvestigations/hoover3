@@ -9,10 +9,10 @@ pub struct SimpleModel {
     #[model(primary(partition))]
     pub id: String,
     /// Other Field
-    #[model(primary(clustering))]
+    #[model(primary(partition))]
     pub other_field: i64,
     /// Another field
-    #[model(primary(partition))]
+    #[model(primary(clustering))]
     pub another_field: i32,
     /// Timestamp field
     pub created_at: Timestamp,

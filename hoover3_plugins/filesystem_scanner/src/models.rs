@@ -2,8 +2,11 @@
 
 #![allow(missing_docs)]
 
+use std::path::PathBuf;
+
 use hoover3_data_access::models::DatasourceDbRow;
-use hoover3_database::declare_graph_edge;
+use hoover3_database::declare_implicit_graph_edge;
+use hoover3_database::declare_stored_graph_edge;
 use hoover3_macro::model;
 use hoover3_macro::udt_model;
 use hoover3_taskdef::anyhow;
@@ -116,7 +119,10 @@ pub struct FsFileDbRow {
     pub datasource_id: String,
     /// Path to the file
     #[model(primary(partition))]
-    pub path: String,
+    pub parent_dir_path: String,
+    /// Name of the file
+    #[model(primary(clustering))]
+    pub file_name: String,
     /// Size of the file in bytes
     pub size_bytes: i64,
     /// Timestamp of the file's last modification
@@ -130,7 +136,7 @@ impl FsFileDbRow {
     pub fn to_ui_row(self) -> anyhow::Result<FsFileUiRow> {
         Ok(FsFileUiRow {
             datasource_id: DatabaseIdentifier::new(&self.datasource_id)?,
-            path: self.path.as_str().into(),
+            path: PathBuf::from(self.parent_dir_path).join(self.file_name.as_str()),
             size_bytes: self.size_bytes as u64,
             modified: self.fs_modified,
             created: self.fs_created,
@@ -142,7 +148,8 @@ impl FsFileDbRow {
         assert!(meta.is_file);
         Self {
             datasource_id: ds.to_string(),
-            path: meta.path.to_str().unwrap().into(),
+            parent_dir_path: meta.path.parent().unwrap().to_str().unwrap().into(),
+            file_name: meta.path.file_name().unwrap().to_str().unwrap().into(),
             size_bytes: meta.size_bytes as i64,
             fs_modified: meta.modified,
             fs_created: meta.created,
@@ -150,29 +157,17 @@ impl FsFileDbRow {
     }
 }
 
-declare_graph_edge!(
-    FsDirectoryDatasource,
+declare_implicit_graph_edge!(
+    FsDatasourceToDirectory,
     "fs_directory_datasource",
-    FsDirectoryDbRow,
-    DatasourceDbRow
-);
-declare_graph_edge!(
-    FsFileDatasource,
-    "fs_file_datasource",
-    FsFileDbRow,
-    DatasourceDbRow
-);
-declare_graph_edge!(
-    FsDirectoryParent,
-    "fs_directory_parent",
-    FsDirectoryDbRow,
+    DatasourceDbRow,
     FsDirectoryDbRow
 );
-declare_graph_edge!(
-    FsFileParent,
-    "fs_file_parent",
-    FsFileDbRow,
-    FsDirectoryDbRow
+declare_implicit_graph_edge!(
+    FsDirectoryToFile,
+    "fs_directory_file",
+    FsDirectoryDbRow,
+    FsFileDbRow
 );
 
 /// Database representation of a unique document and its hashes.

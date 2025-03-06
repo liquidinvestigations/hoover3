@@ -337,6 +337,20 @@ fn parse_model(item: TokenStream) -> ModelDefinition {
         })
         .collect();
 
+    for i in 0..(fields.len() - 1) {
+        let field_left = &fields[i];
+        let field_right = &fields[i + 1];
+        if field_right.partition_key && (!field_left.partition_key) {
+            panic!(
+                "partition keys must all be first in the struct, but {} is after {}",
+                field_right.name, field_left.name
+            );
+        }
+        if field_right.clustering_key && (!field_left.partition_key && !field_left.clustering_key) {
+            panic!("clustering keys must come after the partition keys and before the normal keys, but {} is after {}", field_right.name, field_left.name);
+        }
+    }
+
     ModelDefinition {
         table_name,
         model_name,
@@ -404,7 +418,7 @@ fn test_parse_model() {
             #[model(search(facet))]
             pub field3: hoover3_types::db_schema::Timestamp,
             #[doc = "Doc Six"]
-            #[model(primary(clustering), search(store))]
+            #[model(search(store))]
             pub field4: i16,
         }
     };
@@ -481,7 +495,7 @@ fn test_parse_model() {
                 ModelFieldDefinition {
                     name: "field4".to_string(),
                     field_type: DatabaseColumnType::Int16,
-                    clustering_key: true,
+                    clustering_key: false,
                     partition_key: false,
                     search_store: true,
                     search_index: false,
@@ -505,10 +519,10 @@ fn test_generate_new_item_struct() {
             #[model(primary(partition))]
             pub id: String,
             /// Other Field
-            #[model(primary(clustering))]
+            #[model(primary(partition))]
             pub other_field: i64,
             /// Another field
-            #[model(primary(partition))]
+            #[model(primary(clustering))]
             pub another_field: i32,
             /// Timestamp field
             pub created_at: hoover3_types::db_schema::Timestamp,
@@ -523,8 +537,8 @@ fn test_generate_new_item_struct() {
         /// Test model documentation
         #[::charybdis::macros::charybdis_model(
             table_name = simple_model,
-            partition_keys = [id, another_field],
-            clustering_keys = [other_field],
+            partition_keys = [id, other_field],
+            clustering_keys = [another_field],
             global_secondary_indexes = [],
             local_secondary_indexes = [],
             static_columns = []

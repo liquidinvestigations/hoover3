@@ -6,7 +6,7 @@ use charybdis::{batch::ModelBatch, model::BaseModel};
 use futures::pin_mut;
 use futures::FutureExt;
 use futures::{stream::FuturesUnordered, StreamExt};
-use hoover3_types::db_schema::GraphEdgeType;
+use hoover3_types::db_schema::GraphEdgeId;
 use hoover3_types::identifier::CollectionId;
 
 use scylla::batch::{Batch, BatchType};
@@ -63,7 +63,7 @@ pub struct EdgeBatchOperation<E: GraphEdge> {
 
 impl<E: GraphEdge> EdgeBatchOperation<E> {
     /// Create a new batch operation for inserting edges into the graph.
-    pub(crate) fn new(collection_id: CollectionId) -> Self {
+    pub fn new(collection_id: CollectionId) -> Self {
         Self {
             collection_id,
             edges: Vec::new(),
@@ -114,7 +114,7 @@ where
 /// Returns the number of edges added or an error.
 async fn graph_add_edges(
     collection_id: CollectionId,
-    edge_type: GraphEdgeType,
+    edge_type: GraphEdgeId,
     edges: Vec<(String, String)>,
 ) -> Result<usize, anyhow::Error> {
     let edge_type = edge_type.0.to_string();
@@ -240,7 +240,7 @@ async fn add_edges_get_page_assignments(
     for (source, _) in edges.iter() {
         unique_sources.insert(source.clone());
     }
-    tracing::info!("add_edges: unique_sources: {:?}", unique_sources.len());
+    // tracing::info!("add_edges: unique_sources: {:?}", unique_sources.len());
     // Track which pages need to be updated
     let mut page_assignments: HashMap<String, HashMap<i32, Vec<String>>> = HashMap::new();
 
@@ -289,7 +289,7 @@ async fn add_edges_get_page_assignments(
         // Increment counter for this source, to change the page assignment
         *edge_counters.entry(source.clone()).or_insert(0) += 1;
     }
-    tracing::info!("add_edges: page_assignments: {:?}", page_assignments.len());
+    // tracing::info!("add_edges: page_assignments: {:?}", page_assignments.len());
     Ok(page_assignments)
 }
 
@@ -320,7 +320,7 @@ async fn add_edges_batch_increment_counters(
       ",
         collection_id.database_name()?.to_string()
     );
-    tracing::info!("add_edges: q: {}", q);
+    // tracing::info!("add_edges: q: {}", q);
     let q = session.get_session().prepare(q).await?;
 
     for (source, increment) in counter_increments {
@@ -332,7 +332,7 @@ async fn add_edges_batch_increment_counters(
             direction_out,
         ));
     }
-    tracing::info!("add_edges: batch_values: {:?}", batch_values.len());
+    // tracing::info!("add_edges: batch_values: {:?}", batch_values.len());
     session.batch(&scylla_counter_batch, &batch_values).await?;
     Ok(())
 }

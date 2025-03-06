@@ -1028,179 +1028,179 @@ impl ::scylla::_macro_internal::SerializeRow for SimpleModel {
     }
 }
 impl SimpleModel {
-    pub fn find_by_id_and_another_field<'a>(
+    pub fn find_by_id_and_other_field<'a>(
         id: ::hoover3_database::charybdis::types::Text,
-        another_field: ::hoover3_database::charybdis::types::Int,
+        other_field: ::hoover3_database::charybdis::types::BigInt,
     ) -> charybdis::query::CharybdisQuery<
         'a,
         (
             ::hoover3_database::charybdis::types::Text,
-            ::hoover3_database::charybdis::types::Int,
+            ::hoover3_database::charybdis::types::BigInt,
         ),
         Self,
         charybdis::query::ModelStream,
     > {
         <SimpleModel as charybdis::operations::Find>::find(
-            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ?",
-            (id, another_field),
+            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ?",
+            (id, other_field),
         )
     }
-    pub fn find_first_by_id_and_another_field<'a>(
+    pub fn find_first_by_id_and_other_field<'a>(
         id: ::hoover3_database::charybdis::types::Text,
-        another_field: ::hoover3_database::charybdis::types::Int,
-    ) -> charybdis::query::CharybdisQuery<
-        'a,
-        (
-            ::hoover3_database::charybdis::types::Text,
-            ::hoover3_database::charybdis::types::Int,
-        ),
-        Self,
-        charybdis::query::ModelRow,
-    > {
-        <SimpleModel as charybdis::operations::Find>::find_first(
-            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ? LIMIT 1",
-            (id, another_field),
-        )
-    }
-    pub fn maybe_find_first_by_id_and_another_field<'a>(
-        id: ::hoover3_database::charybdis::types::Text,
-        another_field: ::hoover3_database::charybdis::types::Int,
-    ) -> charybdis::query::CharybdisQuery<
-        'a,
-        (
-            ::hoover3_database::charybdis::types::Text,
-            ::hoover3_database::charybdis::types::Int,
-        ),
-        Self,
-        charybdis::query::OptionalModelRow,
-    > {
-        <SimpleModel as charybdis::operations::Find>::maybe_find_first(
-            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ? LIMIT 1",
-            (id, another_field),
-        )
-    }
-    pub fn find_by_id_and_another_field_and_other_field<'a>(
-        id: ::hoover3_database::charybdis::types::Text,
-        another_field: ::hoover3_database::charybdis::types::Int,
         other_field: ::hoover3_database::charybdis::types::BigInt,
     ) -> charybdis::query::CharybdisQuery<
         'a,
         (
             ::hoover3_database::charybdis::types::Text,
-            ::hoover3_database::charybdis::types::Int,
             ::hoover3_database::charybdis::types::BigInt,
         ),
         Self,
         charybdis::query::ModelRow,
     > {
         <SimpleModel as charybdis::operations::Find>::find_first(
-            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ? AND other_field = ?",
-            (id, another_field, other_field),
+            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ? LIMIT 1",
+            (id, other_field),
         )
     }
-    pub fn find_first_by_id_and_another_field_and_other_field<'a>(
+    pub fn maybe_find_first_by_id_and_other_field<'a>(
         id: ::hoover3_database::charybdis::types::Text,
-        another_field: ::hoover3_database::charybdis::types::Int,
         other_field: ::hoover3_database::charybdis::types::BigInt,
     ) -> charybdis::query::CharybdisQuery<
         'a,
         (
             ::hoover3_database::charybdis::types::Text,
-            ::hoover3_database::charybdis::types::Int,
-            ::hoover3_database::charybdis::types::BigInt,
-        ),
-        Self,
-        charybdis::query::ModelRow,
-    > {
-        <SimpleModel as charybdis::operations::Find>::find_first(
-            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ? AND other_field = ? LIMIT 1",
-            (id, another_field, other_field),
-        )
-    }
-    pub fn maybe_find_first_by_id_and_another_field_and_other_field<'a>(
-        id: ::hoover3_database::charybdis::types::Text,
-        another_field: ::hoover3_database::charybdis::types::Int,
-        other_field: ::hoover3_database::charybdis::types::BigInt,
-    ) -> charybdis::query::CharybdisQuery<
-        'a,
-        (
-            ::hoover3_database::charybdis::types::Text,
-            ::hoover3_database::charybdis::types::Int,
             ::hoover3_database::charybdis::types::BigInt,
         ),
         Self,
         charybdis::query::OptionalModelRow,
     > {
         <SimpleModel as charybdis::operations::Find>::maybe_find_first(
-            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ? AND other_field = ? LIMIT 1",
-            (id, another_field, other_field),
+            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ? LIMIT 1",
+            (id, other_field),
         )
     }
-    pub fn delete_by_id_and_another_field<'a>(
+    pub fn find_by_id_and_other_field_and_another_field<'a>(
         id: ::hoover3_database::charybdis::types::Text,
+        other_field: ::hoover3_database::charybdis::types::BigInt,
         another_field: ::hoover3_database::charybdis::types::Int,
     ) -> charybdis::query::CharybdisQuery<
         'a,
         (
             ::hoover3_database::charybdis::types::Text,
+            ::hoover3_database::charybdis::types::BigInt,
             ::hoover3_database::charybdis::types::Int,
         ),
         Self,
-        charybdis::query::ModelMutation,
+        charybdis::query::ModelRow,
     > {
-        charybdis::query::CharybdisQuery::new(
-            "DELETE FROM simple_model WHERE id = ? AND another_field = ?",
-            charybdis::query::QueryValue::Owned((id, another_field)),
+        <SimpleModel as charybdis::operations::Find>::find_first(
+            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ? AND another_field = ?",
+            (id, other_field, another_field),
         )
     }
-    pub fn delete_by_id_and_another_field_and_other_field<'a>(
+    pub fn find_first_by_id_and_other_field_and_another_field<'a>(
         id: ::hoover3_database::charybdis::types::Text,
+        other_field: ::hoover3_database::charybdis::types::BigInt,
         another_field: ::hoover3_database::charybdis::types::Int,
+    ) -> charybdis::query::CharybdisQuery<
+        'a,
+        (
+            ::hoover3_database::charybdis::types::Text,
+            ::hoover3_database::charybdis::types::BigInt,
+            ::hoover3_database::charybdis::types::Int,
+        ),
+        Self,
+        charybdis::query::ModelRow,
+    > {
+        <SimpleModel as charybdis::operations::Find>::find_first(
+            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ? AND another_field = ? LIMIT 1",
+            (id, other_field, another_field),
+        )
+    }
+    pub fn maybe_find_first_by_id_and_other_field_and_another_field<'a>(
+        id: ::hoover3_database::charybdis::types::Text,
+        other_field: ::hoover3_database::charybdis::types::BigInt,
+        another_field: ::hoover3_database::charybdis::types::Int,
+    ) -> charybdis::query::CharybdisQuery<
+        'a,
+        (
+            ::hoover3_database::charybdis::types::Text,
+            ::hoover3_database::charybdis::types::BigInt,
+            ::hoover3_database::charybdis::types::Int,
+        ),
+        Self,
+        charybdis::query::OptionalModelRow,
+    > {
+        <SimpleModel as charybdis::operations::Find>::maybe_find_first(
+            "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ? AND another_field = ? LIMIT 1",
+            (id, other_field, another_field),
+        )
+    }
+    pub fn delete_by_id_and_other_field<'a>(
+        id: ::hoover3_database::charybdis::types::Text,
         other_field: ::hoover3_database::charybdis::types::BigInt,
     ) -> charybdis::query::CharybdisQuery<
         'a,
         (
             ::hoover3_database::charybdis::types::Text,
-            ::hoover3_database::charybdis::types::Int,
             ::hoover3_database::charybdis::types::BigInt,
         ),
         Self,
         charybdis::query::ModelMutation,
     > {
         charybdis::query::CharybdisQuery::new(
-            "DELETE FROM simple_model WHERE id = ? AND another_field = ? AND other_field = ?",
-            charybdis::query::QueryValue::Owned((id, another_field, other_field)),
+            "DELETE FROM simple_model WHERE id = ? AND other_field = ?",
+            charybdis::query::QueryValue::Owned((id, other_field)),
+        )
+    }
+    pub fn delete_by_id_and_other_field_and_another_field<'a>(
+        id: ::hoover3_database::charybdis::types::Text,
+        other_field: ::hoover3_database::charybdis::types::BigInt,
+        another_field: ::hoover3_database::charybdis::types::Int,
+    ) -> charybdis::query::CharybdisQuery<
+        'a,
+        (
+            ::hoover3_database::charybdis::types::Text,
+            ::hoover3_database::charybdis::types::BigInt,
+            ::hoover3_database::charybdis::types::Int,
+        ),
+        Self,
+        charybdis::query::ModelMutation,
+    > {
+        charybdis::query::CharybdisQuery::new(
+            "DELETE FROM simple_model WHERE id = ? AND other_field = ? AND another_field = ?",
+            charybdis::query::QueryValue::Owned((id, other_field, another_field)),
         )
     }
 }
 impl charybdis::model::BaseModel for SimpleModel {
     type PrimaryKey = (
         ::hoover3_database::charybdis::types::Text,
-        ::hoover3_database::charybdis::types::Int,
         ::hoover3_database::charybdis::types::BigInt,
+        ::hoover3_database::charybdis::types::Int,
     );
     type PartitionKey = (
         ::hoover3_database::charybdis::types::Text,
-        ::hoover3_database::charybdis::types::Int,
+        ::hoover3_database::charybdis::types::BigInt,
     );
     const DB_MODEL_NAME: &'static str = "simple_model";
     const FIND_ALL_QUERY: &'static str = "SELECT id, other_field, another_field, created_at FROM simple_model";
-    const FIND_BY_PRIMARY_KEY_QUERY: &'static str = "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ? AND other_field = ?";
-    const FIND_BY_PARTITION_KEY_QUERY: &'static str = "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ?";
-    const FIND_FIRST_BY_PARTITION_KEY_QUERY: &'static str = "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND another_field = ? LIMIT 1";
+    const FIND_BY_PRIMARY_KEY_QUERY: &'static str = "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ? AND another_field = ?";
+    const FIND_BY_PARTITION_KEY_QUERY: &'static str = "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ?";
+    const FIND_FIRST_BY_PARTITION_KEY_QUERY: &'static str = "SELECT id, other_field, another_field, created_at FROM simple_model WHERE id = ? AND other_field = ? LIMIT 1";
     fn primary_key_values(&self) -> Self::PrimaryKey {
-        return (self.id.clone(), self.another_field.clone(), self.other_field.clone());
+        return (self.id.clone(), self.other_field.clone(), self.another_field.clone());
     }
     fn partition_key_values(&self) -> Self::PartitionKey {
-        return (self.id.clone(), self.another_field.clone());
+        return (self.id.clone(), self.other_field.clone());
     }
 }
 impl charybdis::model::Model for SimpleModel {
     const INSERT_QUERY: &'static str = "INSERT INTO simple_model (id, other_field, another_field, created_at) VALUES (:id, :other_field, :another_field, :created_at)";
     const INSERT_IF_NOT_EXIST_QUERY: &'static str = "INSERT INTO simple_model (id, other_field, another_field, created_at) VALUES (:id, :other_field, :another_field, :created_at) IF NOT EXISTS";
-    const UPDATE_QUERY: &'static str = "UPDATE simple_model SET created_at = :created_at WHERE id = :id AND another_field = :another_field AND other_field = :other_field";
-    const DELETE_QUERY: &'static str = "DELETE FROM simple_model WHERE id = ? AND another_field = ? AND other_field = ?";
-    const DELETE_BY_PARTITION_KEY_QUERY: &'static str = "DELETE FROM simple_model WHERE id = ? AND another_field = ?";
+    const UPDATE_QUERY: &'static str = "UPDATE simple_model SET created_at = :created_at WHERE id = :id AND other_field = :other_field AND another_field = :another_field";
+    const DELETE_QUERY: &'static str = "DELETE FROM simple_model WHERE id = ? AND other_field = ? AND another_field = ?";
+    const DELETE_BY_PARTITION_KEY_QUERY: &'static str = "DELETE FROM simple_model WHERE id = ? AND other_field = ?";
 }
 pub(crate) use find_simple_model_query;
 pub(crate) use find_simple_model;
@@ -1217,7 +1217,7 @@ const _: () = {
                 table_name: "simple_model",
                 model_name: "SimpleModel",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id,\n    another_field],\n    clustering_keys = [other_field],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub other_field: ::hoover3_database::charybdis::types::BigInt,\n    /// Another field\n    pub another_field: ::hoover3_database::charybdis::types::Int,\n    /// Timestamp field\n    pub created_at: ::hoover3_database::charybdis::types::Timestamp,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id,\n    other_field],\n    clustering_keys = [another_field],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub other_field: ::hoover3_database::charybdis::types::BigInt,\n    /// Another field\n    pub another_field: ::hoover3_database::charybdis::types::Int,\n    /// Timestamp field\n    pub created_at: ::hoover3_database::charybdis::types::Timestamp,\n}\n",
                 fields: &[
                     ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",
@@ -1235,8 +1235,8 @@ const _: () = {
                         name: "other_field",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::Int64,
                         docstring: "Other Field",
-                        clustering_key: true,
-                        partition_key: false,
+                        clustering_key: false,
+                        partition_key: true,
                         search_store: false,
                         search_index: false,
                         search_facet: false,
@@ -1247,8 +1247,8 @@ const _: () = {
                         name: "another_field",
                         field_type: ::hoover3_types::db_schema::DatabaseColumnType::Int32,
                         docstring: "Another field",
-                        clustering_key: false,
-                        partition_key: true,
+                        clustering_key: true,
+                        partition_key: false,
                         search_store: false,
                         search_index: false,
                         search_facet: false,
