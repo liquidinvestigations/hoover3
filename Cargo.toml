@@ -73,6 +73,14 @@ charybdis_macros = {git = "https://github.com/nodecosmos/charybdis", rev="f32238
 charybdis-migrate = {git = "https://github.com/nodecosmos/charybdis", rev="f32238371ebb531cc77c0b75d9339e0249786989"}
 charybdis_parser = {git = "https://github.com/nodecosmos/charybdis", rev="f32238371ebb531cc77c0b75d9339e0249786989"}
 
+opentelemetry = { version = "0.24.0", features = ["trace", "metrics"] }
+open-telemetry-sdk = { version = "0.24.1", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.17.0", features = ["trace", "metrics"] }
+opentelemetry-semantic-conventions = { version = "0.10.0"}
+opentelemetry-proto = { version = "0.7.0"}
+tonic = { version = "0.12.3", features = ["tls-roots"] }
+
+
 [workspace.lints.rust]
 missing_docs = "warn"
 # unused_crate_dependencies = "warn"

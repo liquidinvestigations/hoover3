@@ -35,7 +35,7 @@ pub struct TestModelB {
 declare_graph_edge!(TestModelEdge, "test_model_edge", TestModelA, TestModelB);
 
 async fn create_test_collection(name: &str) -> Result<CollectionId, anyhow::Error> {
-    init_tracing();
+    let _ = init_tracing();
     migrate_common().await?;
     let collection_id = CollectionId::new(name)?;
     drop_collection(collection_id.clone()).await?;

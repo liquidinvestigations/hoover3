@@ -44,6 +44,12 @@ futures-util.workspace = true
 async-std = {workspace = true, features=["unstable", "default"]}
 # regex = "1.11.1"
 web-sys = { version = "0.3.77", features = ["Element", "Window", "PopStateEvent"] }
+opentelemetry.workspace = true
+opentelemetry-otlp.workspace = true
+tonic.workspace = true
+opentelemetry-proto.workspace = true
+opentelemetry-semantic-conventions.workspace = true
+getrandom = { version = "0.2", features = ["js"] }
 
 [features]
 default = []

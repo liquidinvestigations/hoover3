@@ -393,7 +393,7 @@ mod tests {
     use hoover3_types::identifier::CollectionId;
 
     async fn create_test_collection(name: &str) -> Result<CollectionId, anyhow::Error> {
-        init_tracing();
+        let _ = init_tracing();
         migrate_common().await?;
         let collection_id = CollectionId::new(name)?;
         drop_collection(collection_id.clone()).await?;
