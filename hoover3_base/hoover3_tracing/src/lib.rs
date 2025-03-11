@@ -10,3 +10,5 @@ pub use memory_limit::*;
 #[global_allocator]
 pub static ALLOCATOR: cap::Cap<std::alloc::System> =
     cap::Cap::new(std::alloc::System, 2 * 1024 * 1024 * 1024);
+
+pub use tracing;

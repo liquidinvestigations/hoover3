@@ -47,6 +47,13 @@ const _: () = {
     #[link_section = ".init_array"]
     static __CTOR: unsafe extern "C" fn() = __ctor;
 };
+/// Doc
+async fn test_macro_workflow(
+    _ctx: hoover3_taskdef::WfContext,
+    x: u32,
+) -> hoover3_taskdef::WorkflowResult<u32> {
+    Ok(hoover3_taskdef::WfExitValue::Normal(x))
+}
 #[allow(non_camel_case_types)]
 ///Macro-generated unit struct that holds our
 ///test_macro_workflow
@@ -101,9 +108,3 @@ const _: () = {
     #[link_section = ".init_array"]
     static __CTOR: unsafe extern "C" fn() = __ctor;
 };
-async fn test_macro_workflow(
-    _ctx: hoover3_taskdef::WfContext,
-    x: u32,
-) -> hoover3_taskdef::WorkflowResult<u32> {
-    Ok(hoover3_taskdef::WfExitValue::Normal(x))
-}

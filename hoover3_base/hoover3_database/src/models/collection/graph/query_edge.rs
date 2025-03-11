@@ -9,7 +9,7 @@ use crate::{
 use async_stream::try_stream;
 use charybdis::model::BaseModel;
 use charybdis::operations::Find;
-use futures::{pin_mut, stream::Stream, StreamExt};
+use futures::{pin_mut, stream::Stream, StreamExt, TryStreamExt};
 use hoover3_types::{db_schema::GraphEdgeId, identifier::CollectionId};
 use std::pin::Pin;
 
@@ -150,6 +150,28 @@ async fn list_edge_targets(
             }
         }
     };
+
+    Ok(Box::pin(stream))
+}
+
+pub async fn pull_full_models<T: BaseModel + Find + Send + Sync + 'static>(
+    collection_id: &CollectionId,
+    stream: ResultStream<<T as BaseModel>::PrimaryKey>,
+) -> anyhow::Result<ResultStream<T>> {
+    let query_concurrency = 8;
+
+    let collection_id = collection_id.clone();
+    let stream = stream.map_ok(move |pk| {
+        let collection_id = collection_id.clone();
+        async move {
+            let session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
+            let f = <T as Find>::find_by_primary_key_value(pk)
+                .execute(&session)
+                .await?;
+            anyhow::Ok(f)
+        }
+    });
+    let stream = stream.try_buffer_unordered(query_concurrency);
 
     Ok(Box::pin(stream))
 }

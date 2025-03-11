@@ -37,9 +37,9 @@ pub struct FsDirectoryUiRow {
     /// Creation timestamp
     pub created: Option<DateTime<Utc>>,
     /// Scan results for immediate children
-    pub scan_children: FsScanDatasourceResult,
+    pub scan_children: FsScanDatasourceDirsResult,
     /// Scan results for all descendants
-    pub scan_total: FsScanDatasourceResult,
+    pub scan_total: FsScanDatasourceDirsResult,
 }
 
 /// UI representation of a file entry
@@ -59,7 +59,7 @@ pub struct FsFileUiRow {
 
 /// Results from scanning a datasource
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq)]
-pub struct FsScanDatasourceResult {
+pub struct FsScanDatasourceDirsResult {
     /// Number of files found
     pub file_count: u64,
     /// Number of directories found
@@ -70,11 +70,11 @@ pub struct FsScanDatasourceResult {
     pub errors: u64,
 }
 
-impl std::ops::Add<FsScanDatasourceResult> for FsScanDatasourceResult {
-    type Output = FsScanDatasourceResult;
+impl std::ops::Add<FsScanDatasourceDirsResult> for FsScanDatasourceDirsResult {
+    type Output = FsScanDatasourceDirsResult;
     /// Adds two scan results together
-    fn add(self, rhs: FsScanDatasourceResult) -> Self::Output {
-        FsScanDatasourceResult {
+    fn add(self, rhs: FsScanDatasourceDirsResult) -> Self::Output {
+        FsScanDatasourceDirsResult {
             file_count: self.file_count + rhs.file_count,
             dir_count: self.dir_count + rhs.dir_count,
             file_size_bytes: self.file_size_bytes + rhs.file_size_bytes,
@@ -83,11 +83,47 @@ impl std::ops::Add<FsScanDatasourceResult> for FsScanDatasourceResult {
     }
 }
 
-impl std::ops::AddAssign<FsScanDatasourceResult> for FsScanDatasourceResult {
+impl std::ops::AddAssign<FsScanDatasourceDirsResult> for FsScanDatasourceDirsResult {
     /// Adds another scan result to this one in place
-    fn add_assign(&mut self, rhs: FsScanDatasourceResult) {
+    fn add_assign(&mut self, rhs: FsScanDatasourceDirsResult) {
         *self = *self + rhs;
     }
+}
+
+/// Results from counting distinct hashes
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct FsScanHashesResult {
+    /// Number of files found
+    pub file_count: u64,
+    /// Number of distinct hashes found
+    pub hash_count: u64,
+}
+
+impl std::ops::Add<FsScanHashesResult> for FsScanHashesResult {
+    type Output = FsScanHashesResult;
+    /// Adds two scan results together
+    fn add(self, rhs: FsScanHashesResult) -> Self::Output {
+        FsScanHashesResult {
+            file_count: self.file_count + rhs.file_count,
+            hash_count: self.hash_count + rhs.hash_count,
+        }
+    }
+}
+
+impl std::ops::AddAssign<FsScanHashesResult> for FsScanHashesResult {
+    /// Adds another scan result to this one in place
+    fn add_assign(&mut self, rhs: FsScanHashesResult) {
+        *self = *self + rhs;
+    }
+}
+
+/// Results from all scanning tasks
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct FsScanResult {
+    /// Number of files found
+    pub dir_scan_result: FsScanDatasourceDirsResult,
+    /// Number of distinct hashes found
+    pub hash_scan_result: FsScanHashesResult,
 }
 
 // This does not work on

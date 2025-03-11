@@ -57,8 +57,8 @@ where
 /// A batch for inserting edges into the graph.
 pub struct EdgeBatchOperation<E: GraphEdge> {
     collection_id: CollectionId,
-    _ph: std::marker::PhantomData<E>,
     edges: Vec<(String, String)>,
+    _ph: std::marker::PhantomData<E>,
 }
 
 impl<E: GraphEdge> EdgeBatchOperation<E> {

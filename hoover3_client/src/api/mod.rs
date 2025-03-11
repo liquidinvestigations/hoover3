@@ -13,7 +13,7 @@ use hoover3_types::db_schema::DatabaseServiceType;
 use hoover3_types::db_schema::DynamicQueryResponse;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadataBasic;
-use hoover3_types::filesystem::FsScanDatasourceResult;
+use hoover3_types::filesystem::FsScanResult;
 use hoover3_types::identifier::*;
 use hoover3_types::tasks::*;
 
@@ -256,7 +256,7 @@ server_wrapper!(
     hoover3_server::hoover3_filesystem_scanner::api,
     wait_for_scan_results,
     (CollectionId, DatabaseIdentifier),
-    FsScanDatasourceResult
+    FsScanResult
 );
 
 server_wrapper!(

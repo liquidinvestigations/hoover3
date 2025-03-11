@@ -42,6 +42,8 @@ hoover3_database_operations = {path = "hoover3_plugins/database_operations"}
 seekstorm_client = {path = "packages/seekstorm-client"}
 
 
+# OTHER COMMON DEPENDENCIES
+async-stream = "0.3.6"
 dioxus = { version = "0.6.3" }
 dioxus-logger = "0.6.2"
 tokio = { version = "1.43.0", features = ["full"] }

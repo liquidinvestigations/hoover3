@@ -47,6 +47,10 @@ const _: () = {
     #[link_section = ".init_array"]
     static __CTOR: unsafe extern "C" fn() = __ctor;
 };
+/// Doc
+fn test_macro_activity(x: u32) -> anyhow::Result<u32> {
+    Ok(x)
+}
 ///Macro-generated unit struct that holds our
 ///test_macro_activity
 /// activity name, input/output types, and worker registration.
@@ -96,6 +100,3 @@ const _: () = {
     #[link_section = ".init_array"]
     static __CTOR: unsafe extern "C" fn() = __ctor;
 };
-fn test_macro_activity(x: u32) -> anyhow::Result<u32> {
-    Ok(x)
-}

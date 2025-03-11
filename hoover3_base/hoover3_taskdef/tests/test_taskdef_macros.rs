@@ -7,18 +7,21 @@ use hoover3_taskdef::*;
 
 declare_task_queue!(TestQueue2, "taskdef_test_external_task_queue", 2, 4, 256);
 
+/// Test activity
 #[activity(TestQueue2)]
 async fn test_function_async2(_payload: u32) -> anyhow::Result<u32> {
     println!("test_function_async T={:?}", std::thread::current().id());
     Ok(_payload)
 }
 
+/// Test activity
 #[activity(TestQueue2)]
 fn test_function_sync2(_payload: u32) -> anyhow::Result<u32> {
     println!("test_function_sync T={:?}", std::thread::current().id());
     Ok(_payload)
 }
 
+/// Test workflow
 #[workflow(TestQueue2)]
 async fn sample_workflow3(ctx: WfContext, arg: u32) -> WorkflowResult<u32> {
     println!("sample_workflow 1 T={:?}", std::thread::current().id());

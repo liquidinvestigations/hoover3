@@ -3231,6 +3231,8 @@ name = "hoover3_filesystem_scanner"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-stream",
+ "bincode",
  "charybdis",
  "futures",
  "hoover3_data_access",

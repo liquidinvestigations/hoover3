@@ -72,6 +72,15 @@ pub fn activity(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let f_async = &f.sig.asyncness;
     let f_name = &f.sig.ident;
     let f_body = &f.block;
+    let f_doc = &f
+        .attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("doc"))
+        .next()
+        .expect(&format!(
+            "missing activity docstring for function {}",
+            f_name
+        ));
 
     let macro_name = if f_async.is_some() {
         "make_activity"
@@ -82,8 +91,8 @@ pub fn activity(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let macro_name: syn::Path = syn::parse_str(&macro_name).expect("parse macro name");
 
     let result = quote! {
+        #f_doc #f_vis #f_async fn #f_name(#f_args) #f_out #f_body
         #macro_name!(#queue_name, #f_name, #macro_arg_type, #macro_ret_type);
-        #f_vis #f_async fn #f_name(#f_args) #f_out #f_body
     };
 
     result
@@ -160,13 +169,22 @@ pub fn workflow(attrs: TokenStream, item: TokenStream) -> TokenStream {
     assert!(f_async.is_some(), "workflow must be async");
     let f_name = &f.sig.ident;
     let f_body = &f.block;
+    let f_doc = &f
+        .attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident("doc"))
+        .next()
+        .expect(&format!(
+            "missing workflow docstring for function {}",
+            f_name
+        ));
 
     let macro_name = "::hoover3_taskdef::make_workflow";
     let macro_name: syn::Path = syn::parse_str(macro_name).expect("parse workflow macro name");
 
     let result = quote! {
+        #f_doc #f_vis #f_async fn #f_name(#f_args) #f_out #f_body
         #macro_name!(#queue_name, #f_name, #macro_arg_type, #macro_ret_type);
-        #f_vis #f_async fn #f_name(#f_args) #f_out #f_body
     };
 
     result
@@ -175,47 +193,51 @@ pub fn workflow(attrs: TokenStream, item: TokenStream) -> TokenStream {
 #[test]
 fn test_activity_sync() {
     let item = quote! {
+        /// Doc
         fn foo(x: u64) -> Result<u64> {
             x + 1
         }
     };
     let args = quote! { "task_queue" };
     let act = activity(args, item);
-    assert_eq!(format!("{}", act), ":: hoover3_taskdef :: make_activity_sync ! (\"task_queue\" , foo , u64 , u64) ; fn foo (x : u64) -> Result < u64 > { x + 1 }");
+    assert_eq!(format!("{}", act), "# [doc = r\" Doc\"] fn foo (x : u64) -> Result < u64 > { x + 1 } :: hoover3_taskdef :: make_activity_sync ! (\"task_queue\" , foo , u64 , u64) ;");
 }
 
 #[test]
 fn test_activity_async() {
     let item = quote! {
+        /// Doc
         pub async fn foo(x: u64) -> Result<u64> {
             x + 1
         }
     };
     let args = quote! { "task_queue" };
     let act = activity(args, item);
-    assert_eq!(format!("{}", act), ":: hoover3_taskdef :: make_activity ! (\"task_queue\" , foo , u64 , u64) ; pub async fn foo (x : u64) -> Result < u64 > { x + 1 }");
+    assert_eq!(format!("{}", act), "# [doc = r\" Doc\"] pub async fn foo (x : u64) -> Result < u64 > { x + 1 } :: hoover3_taskdef :: make_activity ! (\"task_queue\" , foo , u64 , u64) ;");
 }
 
 #[test]
 fn test_activity_async_with_tuple() {
     let item = quote! {
+        /// Doc
         pub async fn foo((x, y): (u64, u64)) -> Result<u64> {
             x + 1
         }
     };
     let args = quote! { "task_queue" };
     let act = activity(args, item);
-    assert_eq!(format!("{}", act), ":: hoover3_taskdef :: make_activity ! (\"task_queue\" , foo , (u64 , u64) , u64) ; pub async fn foo ((x , y) : (u64 , u64)) -> Result < u64 > { x + 1 }");
+    assert_eq!(format!("{}", act), "# [doc = r\" Doc\"] pub async fn foo ((x , y) : (u64 , u64)) -> Result < u64 > { x + 1 } :: hoover3_taskdef :: make_activity ! (\"task_queue\" , foo , (u64 , u64) , u64) ;");
 }
 
 #[test]
 fn test_workflow() {
     let item = quote! {
+        /// Doc
         async fn foo(ctx: WfContext, x: u64) -> WorkflowResult<u64> {
             Ok(WfExitValue::Normal(x + 1))
         }
     };
     let args = quote! { "task_queue" };
     let wf = workflow(args, item);
-    assert_eq!(format!("{}", wf), ":: hoover3_taskdef :: make_workflow ! (\"task_queue\" , foo , u64 , u64) ; async fn foo (ctx : WfContext , x : u64) -> WorkflowResult < u64 > { Ok (WfExitValue :: Normal (x + 1)) }");
+    assert_eq!(format!("{}", wf), "# [doc = r\" Doc\"] async fn foo (ctx : WfContext , x : u64) -> WorkflowResult < u64 > { Ok (WfExitValue :: Normal (x + 1)) } :: hoover3_taskdef :: make_workflow ! (\"task_queue\" , foo , u64 , u64) ;");
 }

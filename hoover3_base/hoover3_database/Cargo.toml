@@ -78,8 +78,10 @@ rslock = { version = "0.6.0", features = ["tokio-comp"], default-features = fals
 ########### SEEKSTORM ############
 ##############################
 seekstorm_client.workspace = true
-async-stream = "0.3.6"
 
+########### OTHERS ############
+##############################
+async-stream.workspace = true
 
 [dev-dependencies]
 hoover3_tracing.workspace = true

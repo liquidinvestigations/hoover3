@@ -3,21 +3,32 @@
 //! Also run libmagic on the files to get mime type.
 //! Save the results to the database in [FsBlobHashesDbRow].
 
-use charybdis::batch::ModelBatch;
+use charybdis::{batch::ModelBatch, model::BaseModel};
 use futures::{pin_mut, StreamExt};
 use hoover3_database::{
     client_query::list_disk::read_file_to_stream,
     db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle},
-    models::collection::DatabaseExtraCallbacks,
+    models::collection::{DatabaseExtraCallbacks, GraphEdgeInsert},
 };
-use hoover3_macro::activity;
-use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
+use hoover3_macro::{activity, workflow};
+use hoover3_taskdef::{
+    TemporalioActivityDescriptor, TemporalioWorkflowDescriptor, WfContext, WfExitValue,
+    WorkflowResult,
+};
+use hoover3_types::{
+    datasource::DatasourceSettings,
+    filesystem::FsScanHashesResult,
+    identifier::{CollectionId, DatabaseIdentifier},
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 
-use super::FilesystemScannerQueue;
-use crate::models::FsBlobHashesDbRow;
+use super::{
+    hash_files_plan::{compute_file_hash_plan_activity, FileHashPlanChunk},
+    FilesystemScannerQueue,
+};
+use crate::models::{FsBlobHashesDbRow, FsFileHashPlanDbRow, FsFileToHashes};
 
 /// Argument for hashing a file
 #[derive(Clone, Serialize, Deserialize)]
@@ -26,8 +37,8 @@ pub struct HashFileArgs {
     pub collection_id: CollectionId,
     /// Datasource to hash the file from
     pub datasource_id: DatabaseIdentifier,
-    /// File paths
-    pub file_paths: Vec<PathBuf>,
+    /// Plan chunk id
+    pub plan_chunk_id: i32,
 }
 
 trait HashFunction {
@@ -132,11 +143,50 @@ mod md5_impl {
 /// The files are hashed by this function one after the other, so it should receive
 /// batches of similar size (in file byte total)
 #[activity(FilesystemScannerQueue)]
-async fn hash_files(scan_file_args: HashFileArgs) -> anyhow::Result<()> {
+async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResult> {
     let mut new_hashes = vec![];
 
-    for file_path in scan_file_args.file_paths {
+    let session = ScyllaDatabaseHandle::collection_session(&args.collection_id).await?;
+    let plan_chunk = FsFileHashPlanDbRow::find_by_datasource_id_and_plan_chunk_id(
+        args.datasource_id.to_string(),
+        args.plan_chunk_id,
+    )
+    .execute(&session)
+    .await?;
+    // get plan data
+    let plan_chunk_data = serde_json::from_str::<FileHashPlanChunk>(&plan_chunk.plan_data)?;
+    let scan_file_args = plan_chunk_data
+        .dirs
+        .iter()
+        .map(|(dir, files)| {
+            files
+                .iter()
+                .map(|(file_name, file_size)| (dir.clone(), file_name.clone(), *file_size))
+                .collect::<Vec<_>>()
+        })
+        .flatten()
+        .collect::<Vec<_>>();
+    let file_count = scan_file_args.len() as u64;
+
+    // get datasource dir
+    let ds_row = hoover3_data_access::api::get_datasource((
+        args.collection_id.clone(),
+        args.datasource_id.clone(),
+    ))
+    .await?;
+
+    let DatasourceSettings::LocalDisk { path: root_path } = &ds_row.datasource_settings else {
+        anyhow::bail!("Datasource is not a local disk");
+    };
+    let root_path = root_path.to_path_buf();
+    drop(session);
+
+    let mut edge_batch = FsFileToHashes::edge_batch(&args.collection_id);
+
+    for (dir, file_name, plan_file_size) in scan_file_args {
+        let file_path = root_path.join(&dir).join(&file_name);
         let (file_size, chunks) = read_file_to_stream(file_path).await?;
+        assert_eq!(file_size as i64, plan_file_size);
         pin_mut!(chunks);
         let mut hash_functions: Vec<Arc<Mutex<dyn HashFunction + Send>>> = vec![
             Arc::new(Mutex::new(sha3_impl::sha3_256_new())),
@@ -157,22 +207,85 @@ async fn hash_files(scan_file_args: HashFileArgs) -> anyhow::Result<()> {
             let k = l.h_type();
             finished_hashes.insert(k, v);
         }
-        new_hashes.push(FsBlobHashesDbRow {
+        let hashes_row = FsBlobHashesDbRow {
             blob_sha3_256: finished_hashes[&HashType::Sha3_256].clone(),
             blob_sha256: finished_hashes[&HashType::Sha256].clone(),
             blob_md5: finished_hashes[&HashType::Md5].clone(),
             blob_sha1: finished_hashes[&HashType::Sha1].clone(),
             size_bytes: file_size as i64,
-        });
+        };
+        new_hashes.push(hashes_row.clone());
+        edge_batch.add_edge_from_pk(
+            &(args.datasource_id.to_string(), dir, file_name),
+            &hashes_row.primary_key_values(),
+        );
     }
+    edge_batch.execute().await?;
+    let session = ScyllaDatabaseHandle::collection_session(&args.collection_id).await?;
     let mut batch = FsBlobHashesDbRow::batch();
     batch.append_inserts(&new_hashes);
-    let session = ScyllaDatabaseHandle::collection_session(&scan_file_args.collection_id).await?;
     batch.execute(&session).await?;
-    DatabaseExtraCallbacks::new(&scan_file_args.collection_id)
+    DatabaseExtraCallbacks::new(&args.collection_id)
         .await?
         .insert(&new_hashes)
         .await?;
 
-    Ok(())
+    Ok(FsScanHashesResult {
+        file_count,
+        hash_count: new_hashes.len() as u64,
+    })
+}
+
+/// Execute one hash file chunk.
+#[workflow(FilesystemScannerQueue)]
+async fn hash_files_one(ctx: WfContext, args: HashFileArgs) -> WorkflowResult<FsScanHashesResult> {
+    Ok(WfExitValue::Normal(
+        fs_do_hash_files_activity::run(&ctx, args).await?,
+    ))
+}
+
+/// Hash a group of plan chunks in parallel in parallel.
+#[workflow(FilesystemScannerQueue)]
+async fn hash_files_group(
+    ctx: WfContext,
+    (collection_id, datasource_id, plan_chunk_ids): (CollectionId, DatabaseIdentifier, Vec<i32>),
+) -> WorkflowResult<FsScanHashesResult> {
+    let mut total = FsScanHashesResult::default();
+    let args = plan_chunk_ids
+        .into_iter()
+        .map(|plan_chunk_id| HashFileArgs {
+            collection_id: collection_id.clone(),
+            datasource_id: datasource_id.clone(),
+            plan_chunk_id,
+        })
+        .collect::<Vec<_>>();
+
+    for (_arg, res) in hash_files_one_workflow::run_parallel(&ctx, args).await? {
+        let res = res?;
+        total += res;
+    }
+    Ok(WfExitValue::Normal(total))
+}
+
+/// Create a file hashing plan and execute it.
+#[workflow(FilesystemScannerQueue)]
+async fn hash_files_root(
+    ctx: WfContext,
+    (collection_id, datasource_id): (CollectionId, DatabaseIdentifier),
+) -> WorkflowResult<FsScanHashesResult> {
+    let plan =
+        compute_file_hash_plan_activity::run(&ctx, (collection_id.clone(), datasource_id.clone()))
+            .await?;
+    let chunks = plan
+        .chunks(300)
+        .into_iter()
+        .map(|v| (collection_id.clone(), datasource_id.clone(), v.to_vec()))
+        .collect::<Vec<_>>();
+    let mut total = FsScanHashesResult::default();
+    for (_arg, _res) in hash_files_group_workflow::run_parallel(&ctx, chunks).await? {
+        let _res = _res?;
+        total += _res;
+    }
+
+    Ok(WfExitValue::Normal(total))
 }

@@ -10,7 +10,7 @@ use hoover3_database::declare_stored_graph_edge;
 use hoover3_macro::model;
 use hoover3_macro::udt_model;
 use hoover3_taskdef::anyhow;
-use hoover3_types::filesystem::FsScanDatasourceResult;
+use hoover3_types::filesystem::FsScanDatasourceDirsResult;
 use hoover3_types::filesystem::{FsDirectoryUiRow, FsFileUiRow, FsMetadataBasic};
 use hoover3_types::identifier::DatabaseIdentifier;
 
@@ -39,8 +39,8 @@ impl Default for fs_directory_scan_result {
     }
 }
 
-impl From<FsScanDatasourceResult> for fs_directory_scan_result {
-    fn from(value: FsScanDatasourceResult) -> Self {
+impl From<FsScanDatasourceDirsResult> for fs_directory_scan_result {
+    fn from(value: FsScanDatasourceDirsResult) -> Self {
         Self {
             file_count: value.file_count as i32,
             dir_count: value.dir_count as i32,
@@ -50,7 +50,7 @@ impl From<FsScanDatasourceResult> for fs_directory_scan_result {
     }
 }
 
-impl From<fs_directory_scan_result> for FsScanDatasourceResult {
+impl From<fs_directory_scan_result> for FsScanDatasourceDirsResult {
     fn from(value: fs_directory_scan_result) -> Self {
         Self {
             file_count: value.file_count as u64,
@@ -170,7 +170,7 @@ declare_implicit_graph_edge!(
     FsFileDbRow
 );
 
-/// Database representation of a unique document and its hashes.
+/// Model for storing the different types of hashes for a blob.
 #[model]
 pub struct FsBlobHashesDbRow {
     /// The SHA3-256 hash of the blob.
@@ -189,3 +189,49 @@ pub struct FsBlobHashesDbRow {
     /// The size of the blob in bytes.
     pub size_bytes: i64,
 }
+
+declare_stored_graph_edge!(
+    FsFileToHashes,
+    "fs_file_hashes",
+    FsFileDbRow,
+    FsBlobHashesDbRow
+);
+
+/// Model for storing the pages for the plans for hashing files.
+/// Actual plan data is stored in the `FsFileHashPlanDbRow` model.
+#[model]
+pub struct FsFileHashPlanPageDbRow {
+    /// The unique identifier for the datasource
+    #[model(primary(partition))]
+    pub datasource_id: String,
+    /// The unique identifier for the plan chunk
+    #[model(primary(clustering))]
+    pub plan_chunk_id: i32,
+}
+
+/// Model for storing the plan for hashing a single chunk of files.
+#[model]
+pub struct FsFileHashPlanDbRow {
+    /// The unique identifier for the datasource
+    #[model(primary(partition))]
+    pub datasource_id: String,
+    /// The unique identifier for the plan chunk
+    #[model(primary(partition))]
+    pub plan_chunk_id: i32,
+    /// The actual plan data, json encoded
+    pub plan_data: String,
+}
+
+declare_implicit_graph_edge!(
+    FsDatasourceToFileHashPlanPages,
+    "fs_datasource_to_file_hash_plan_pages",
+    DatasourceDbRow,
+    FsFileHashPlanPageDbRow
+);
+
+declare_implicit_graph_edge!(
+    FsFileHashPlanPageToPlans,
+    "fs_file_hash_page_to_plans",
+    FsFileHashPlanPageDbRow,
+    FsFileHashPlanDbRow
+);

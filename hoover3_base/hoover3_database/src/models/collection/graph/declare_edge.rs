@@ -1,9 +1,15 @@
 //! This module contains the definitions for all the graph edges.
 //! Unit structs are used to identify edges, and are converted to `GraphEdgeType`s for use at runtime.
 
+use async_stream::try_stream;
+use futures::pin_mut;
+use futures::FutureExt;
 use futures::StreamExt;
 use futures::TryStreamExt;
+use hoover3_types::identifier::DatabaseIdentifier;
 use std::future::Future;
+use std::pin::Pin;
+use std::sync::Arc;
 
 use charybdis::{model::BaseModel, operations::Find};
 use hoover3_types::{db_schema::GraphEdgeId, identifier::CollectionId};
@@ -33,8 +39,6 @@ where
     <Self as BaseModel>::PrimaryKey: PKValue,
     <Self as BaseModel>::PartitionKey: PKValue,
 {
-    // type PrimaryKey: PKValue;
-    // type PartitionKey: PKValue;
     fn primary_to_partition(primary: &Self::PrimaryKey) -> Self::PartitionKey;
 }
 
@@ -67,7 +71,7 @@ where
 
 /// Trait for unit structs that can be used to identify a graph edge.
 /// These structs are to be used in code as a type safe identifier for an edge.
-pub trait GraphEdge: Sized
+pub trait GraphEdge: Send + Sync + 'static
 where
     <Self::SourceType as BaseModel>::PrimaryKey: PKValue,
     <Self::DestType as BaseModel>::PrimaryKey: PKValue,
@@ -75,7 +79,9 @@ where
     <Self::DestType as BaseModel>::PartitionKey: PKValue,
 {
     /// Get the name of the edge type.
-    fn edge_type() -> GraphEdgeId;
+    fn edge_type() -> GraphEdgeId
+    where
+        Self: Sized;
     type SourceType: BaseModel2;
     type DestType: BaseModel2;
 }
@@ -84,23 +90,27 @@ where
 pub trait GraphEdgeQuery: GraphEdge {
     /// Go over edge in the forward direction
     /// from a source node, and return a stream of all the target node PKs.
-    fn list_target_pks(
+    fn list_target(
+        &self,
         collection_id: &CollectionId,
         source: &<Self::SourceType as BaseModel>::PrimaryKey,
-    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::DestType as BaseModel>::PrimaryKey>>>;
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::DestType>>> + Send>>;
 
     /// Go over edge in the reverse direction
     /// from a target node, and return a stream of all the source node PKs.
-    fn list_source_pks(
+    fn list_source(
+        &self,
         collection_id: &CollectionId,
         target: &<Self::DestType as BaseModel>::PrimaryKey,
-    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::SourceType as BaseModel>::PrimaryKey>>>;
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::SourceType>>> + Send>>;
 }
 
 /// Trait for graph edges that can be inserted into the database.
 pub trait GraphEdgeInsert: GraphEdge {
     /// Get a batch for inserting into this edge type.
-    fn edge_batch(collection_id: &CollectionId) -> EdgeBatchOperation<Self>;
+    fn edge_batch(collection_id: &CollectionId) -> EdgeBatchOperation<Self>
+    where
+        Self: Sized;
 }
 
 // https://docs.rs/type-equals/latest/src/type_equals/lib.rs.html#99-101
@@ -121,12 +131,16 @@ pub trait ParentChildRelationship: GraphEdge {
     ) -> <Self::DestType as BaseModel>::PartitionKey;
 }
 
-impl<T: ParentChildRelationship> GraphEdgeQuery for T {
-    fn list_target_pks(
+impl<T> GraphEdgeQuery for T
+where
+    T: ParentChildRelationship,
+    T: GraphEdge,
+{
+    fn list_target(
+        &self,
         collection_id: &CollectionId,
         source: &<Self::SourceType as BaseModel>::PrimaryKey,
-    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::DestType as BaseModel>::PrimaryKey>>>
-    {
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::DestType>>> + Send>> {
         let target_partition = T::parent_primary_to_child_partition(source);
         let collection_id = collection_id.clone();
         async move {
@@ -135,28 +149,30 @@ impl<T: ParentChildRelationship> GraphEdgeQuery for T {
                 <<T as GraphEdge>::DestType as Find>::find_by_partition_key_value(target_partition)
                     .execute(&session)
                     .await?;
-            let stream = stream
-                .map_ok(move |row| row.primary_key_values().clone())
-                .map_err(|e| anyhow::anyhow!(format!("Error listing target pks: {:?}", e)));
+            let stream =
+                stream.map_err(|e| anyhow::anyhow!(format!("Error listing target pks: {:?}", e)));
             anyhow::Ok(stream.boxed())
         }
+        .boxed()
     }
 
-    fn list_source_pks(
+    fn list_source(
+        &self,
         collection_id: &CollectionId,
         target: &<Self::DestType as BaseModel>::PrimaryKey,
-    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::SourceType as BaseModel>::PrimaryKey>>>
-    {
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::SourceType>>> + Send>> {
         let child_partition = <Self::DestType as BaseModel2>::primary_to_partition(target);
+        let collection_id = collection_id.clone();
         let parent_primary = T::child_partition_to_parent_primary(&child_partition);
         async move {
             let session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
             let row = <T::SourceType as Find>::find_by_primary_key_value(parent_primary)
                 .execute(&session)
                 .await?;
-            let stream = futures::stream::once(async move { Ok(row.primary_key_values().clone()) });
+            let stream = futures::stream::once(async move { Ok(row) });
             anyhow::Ok(stream.boxed())
         }
+        .boxed()
     }
 }
 
@@ -197,6 +213,7 @@ macro_rules! declare_stored_graph_edge {
         $crate::paste::paste! {
 
             /// Unit struct to identify a stored graph edge `$id``.
+            #[derive(Debug, Clone, Copy)]
             pub struct $struct_name;
 
             $crate::inventory::submit!($crate::models::collection::GraphEdgeTypeStatic {
@@ -226,28 +243,53 @@ macro_rules! declare_stored_graph_edge {
                 use $crate::models::collection::ResultStream;
                 use $crate::models::collection::edge_list_targets_pk;
                 use $crate::models::collection::edge_list_source_pk;
-
+                use $crate::models::collection::pull_full_models;
+                use std::pin::Pin;
+                use futures::FutureExt;
                 impl GraphEdgeInsert for super::$struct_name {
-                    fn edge_batch(collection_id: &CollectionId) -> EdgeBatchOperation<Self> {
-                        EdgeBatchOperation::<Self>::new(collection_id.clone())
+                    fn edge_batch( collection_id: &CollectionId) -> EdgeBatchOperation<Self> {
+                        EdgeBatchOperation::new(collection_id.clone())
                     }
                 }
 
                 impl GraphEdgeQuery for super::$struct_name {
-                    fn list_target_pks(
+                    fn list_target(
+                        &self,
                         collection_id: &CollectionId,
                         source: &<Self::SourceType as BaseModel>::PrimaryKey,
-                    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::DestType as BaseModel>::PrimaryKey>>>
+                    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::DestType>>>+Send>>
                     {
-                        edge_list_targets_pk::<Self>(collection_id, source)
+                        let collection_id = collection_id.clone();
+                        let source = source.clone();
+                        async move {
+
+                            Ok(pull_full_models(
+                                &collection_id,
+                                edge_list_targets_pk::<Self>(
+                                    &collection_id,
+                                    &source
+                                ).await?
+                            ).await?)
+                        }.boxed()
                     }
 
-                    fn list_source_pks(
+                    fn list_source(
+                        &self,
                         collection_id: &CollectionId,
                         target: &<Self::DestType as BaseModel>::PrimaryKey,
-                    ) -> impl Future<Output = anyhow::Result<ResultStream<<Self::SourceType as BaseModel>::PrimaryKey>>>
+                    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::SourceType>>>+Send>>
                     {
-                        edge_list_source_pk::<Self>(collection_id, target)
+                        let collection_id = collection_id.clone();
+                        let target = target.clone();
+                        async move {
+                            Ok(pull_full_models(
+                                &collection_id,
+                                edge_list_source_pk::<Self>(
+                                    &collection_id,
+                                    &target
+                                ).await?
+                            ).await?)
+                        }.boxed()
                     }
 
                 }
@@ -284,6 +326,112 @@ macro_rules! declare_implicit_graph_edge {
             impl $crate::models::collection::GraphEdgeImplicit for $struct_name {}
         }
     };
+}
+
+#[derive(Clone)]
+pub struct GraphEdgeChainQuery<E1, E2>
+where
+    E1: GraphEdgeQuery,
+    E2: GraphEdgeQuery,
+    E1::DestType: TypeEquals<Other = E2::SourceType>,
+{
+    e1: Arc<dyn GraphEdgeQuery<SourceType = E1::SourceType, DestType = E1::DestType>>,
+    e2: Arc<dyn GraphEdgeQuery<SourceType = E2::SourceType, DestType = E2::DestType>>,
+}
+pub fn chain_edges<E1, E2>(e1: E1, e2: E2) -> GraphEdgeChainQuery<E1, E2>
+where
+    E1: GraphEdgeQuery,
+    E2: GraphEdgeQuery,
+    E1::DestType: TypeEquals<Other = E2::SourceType>,
+{
+    GraphEdgeChainQuery {
+        e1: Arc::new(e1),
+        e2: Arc::new(e2),
+    }
+}
+impl<E1, E2> GraphEdge for GraphEdgeChainQuery<E1, E2>
+where
+    E1: GraphEdgeQuery,
+    E2: GraphEdgeQuery,
+    E1::DestType: TypeEquals<Other = E2::SourceType>,
+{
+    type SourceType = E1::SourceType;
+    type DestType = E2::DestType;
+    fn edge_type() -> GraphEdgeId {
+        GraphEdgeId(
+            DatabaseIdentifier::new(format!("{}__{}", E1::edge_type(), E2::edge_type())).unwrap(),
+        )
+    }
+}
+impl<E1, E2> GraphEdgeQuery for GraphEdgeChainQuery<E1, E2>
+where
+    E1: GraphEdgeQuery,
+    E2: GraphEdgeQuery,
+    E1::DestType: TypeEquals<Other = E2::SourceType>,
+{
+    fn list_target(
+        &self,
+        collection_id: &CollectionId,
+        source: &<Self::SourceType as BaseModel>::PrimaryKey,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::DestType>>> + Send>> {
+        let e1 = self.e1.clone();
+        let e2 = self.e2.clone();
+        let source = source.clone();
+        let collection_id = collection_id.clone();
+        async move {
+            let stream = try_stream! {
+                let mid_stream = e1.list_target(&collection_id, &source).await?;
+                pin_mut!(mid_stream);
+                while let Some(item) = mid_stream.next().await {
+                    let item = item?;
+                    let v = item.primary_key_values();
+                    let v = &v as &dyn std::any::Any;
+                    let v = v.downcast_ref::<<E2::SourceType as BaseModel>::PrimaryKey>().unwrap();
+                    let dest_stream = e2.list_target(&collection_id, v).await?;
+                    pin_mut!(dest_stream);
+                    while let Some(dest_item) = dest_stream.next().await {
+                        let dest_item = dest_item?;
+                        yield dest_item;
+                    }
+                }
+            };
+
+            anyhow::Ok(stream.boxed())
+        }
+        .boxed()
+    }
+
+    fn list_source(
+        &self,
+        collection_id: &CollectionId,
+        target: &<Self::DestType as BaseModel>::PrimaryKey,
+    ) -> Pin<Box<dyn Future<Output = anyhow::Result<ResultStream<Self::SourceType>>> + Send>> {
+        let e1 = self.e1.clone();
+        let e2 = self.e2.clone();
+        let target = target.clone();
+        let collection_id = collection_id.clone();
+        async move {
+            let stream = try_stream! {
+                let mid_stream = e2.list_source(&collection_id, &target).await?;
+                pin_mut!(mid_stream);
+                while let Some(item) = mid_stream.next().await {
+                    let item = item?;
+                    let v = item.primary_key_values();
+                    let v = &v as &dyn std::any::Any;
+                    let v = v.downcast_ref::<<E1::DestType as BaseModel>::PrimaryKey>().unwrap();
+                    let dest_stream = e1.list_source(&collection_id, v).await?;
+                    pin_mut!(dest_stream);
+                    while let Some(dest_item) = dest_stream.next().await {
+                        let dest_item = dest_item?;
+                        yield dest_item;
+                    }
+                }
+            };
+
+            anyhow::Ok(stream.boxed())
+        }
+        .boxed()
+    }
 }
 
 #[cfg(test)]
@@ -347,6 +495,34 @@ mod test {
             &TestModel {
                 id: "test_dest".into(),
             },
+        );
+        let _chain = chain_edges(TestImplicitEdge, TestImplicitEdge2);
+        // don't actually await the future, we don't have a collection here - just drop it
+        let _ = _chain.list_target(
+            &CollectionId::new("dummy").unwrap(),
+            &("dummy".to_string(),),
+        );
+        let _ = _chain.list_source(
+            &CollectionId::new("dummy").unwrap(),
+            &(
+                "dummy".to_string(),
+                "dummy".to_string(),
+                "dummy".to_string(),
+            ),
+        );
+
+        let _chain = chain_edges(TestEdge, _chain);
+        let _ = _chain.list_target(
+            &CollectionId::new("dummy").unwrap(),
+            &("dummy".to_string(),),
+        );
+        let _ = _chain.list_source(
+            &CollectionId::new("dummy").unwrap(),
+            &(
+                "dummy".to_string(),
+                "dummy".to_string(),
+                "dummy".to_string(),
+            ),
         );
     }
 }

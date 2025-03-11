@@ -2,20 +2,19 @@
 //! Scan results (files and directories) are saved to the database.
 
 use charybdis::batch::ModelBatch;
-use charybdis::model::BaseModel;
 use charybdis::operations::Find;
 use charybdis::operations::UpdateWithCallbacks;
 use hoover3_database::client_query::list_disk::list_directory;
 use hoover3_database::db_management::DatabaseSpaceManager;
 use hoover3_database::db_management::ScyllaDatabaseHandle;
-use hoover3_database::models::collection::GraphEdgeInsert;
 use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_taskdef::{
     activity, anyhow, workflow, TemporalioActivityDescriptor, WfContext, WfExitValue,
     WorkflowResult,
 };
 use hoover3_types::datasource::DatasourceSettings;
-use hoover3_types::filesystem::FsScanDatasourceResult;
+use hoover3_types::filesystem::FsScanDatasourceDirsResult;
+use hoover3_types::filesystem::FsScanResult;
 use hoover3_types::identifier::CollectionId;
 use hoover3_types::identifier::DatabaseIdentifier;
 use serde::{Deserialize, Serialize};
@@ -24,6 +23,7 @@ use std::path::PathBuf;
 use crate::models::FsDirectoryDbRow;
 use crate::models::FsFileDbRow;
 
+use super::hash_files::hash_files_root_workflow;
 use super::FilesystemScannerQueue;
 
 /// Arguments for filesystem datasource scanning
@@ -37,12 +37,41 @@ pub struct ScanDatasourceArgs {
     pub path: Option<PathBuf>,
 }
 
-/// Workflow for scanning a filesystem datasource
+/// Workflow for scanning a filesystem datasource. Calls child workflows that:
+/// - Scan the root directory of datasource
+/// - Hash the files in the datasource
 #[workflow(FilesystemScannerQueue)]
 async fn fs_scan_datasource(
     wf_ctx: WfContext,
+    (collection_id, datasource_id): (CollectionId, DatabaseIdentifier),
+) -> WorkflowResult<FsScanResult> {
+    let _scan_dir = fs_scan_datasource_dir_workflow::run_as_child(
+        &wf_ctx,
+        ScanDatasourceArgs {
+            collection_id: collection_id.clone(),
+            datasource_id: datasource_id.clone(),
+            path: None,
+        },
+    )
+    .await?;
+
+    let _hash_files = hash_files_root_workflow::run_as_child(
+        &wf_ctx,
+        (collection_id.clone(), datasource_id.clone()),
+    )
+    .await?;
+
+    Ok(WfExitValue::Normal(FsScanResult {
+        dir_scan_result: _scan_dir,
+        hash_scan_result: _hash_files,
+    }))
+}
+/// Workflow for scanning a filesystem datasource
+#[workflow(FilesystemScannerQueue)]
+async fn fs_scan_datasource_dir(
+    wf_ctx: WfContext,
     args: ScanDatasourceArgs,
-) -> WorkflowResult<FsScanDatasourceResult> {
+) -> WorkflowResult<FsScanDatasourceDirsResult> {
     let (mut scan_result, next_paths) =
         fs_do_scan_datasource_activity::run(&wf_ctx, args.clone()).await?;
 
@@ -56,7 +85,7 @@ async fn fs_scan_datasource(
         .collect::<Vec<_>>();
 
     let results = if next_args.len() < 10 {
-        fs_scan_datasource_workflow::run_parallel(&wf_ctx, next_args)
+        fs_scan_datasource_dir_workflow::run_parallel(&wf_ctx, next_args)
             .await?
             .into_iter()
             .map(|r| r.1)
@@ -68,7 +97,7 @@ async fn fs_scan_datasource(
             .chunks(chunk_size)
             .map(|c| c.to_vec())
             .collect::<Vec<_>>();
-        fs_scan_datasource_group_workflow::run_parallel(&wf_ctx, groups)
+        fs_scan_datasource_dir_group_workflow::run_parallel(&wf_ctx, groups)
             .await?
             .into_iter()
             .map(|r| r.1)
@@ -90,7 +119,7 @@ async fn fs_scan_datasource(
 /// Activity for saving directory scan results
 #[activity(FilesystemScannerQueue)]
 async fn fs_save_dir_scan_total_result(
-    (args, scan_result): (Vec<ScanDatasourceArgs>, FsScanDatasourceResult),
+    (args, scan_result): (Vec<ScanDatasourceArgs>, FsScanDatasourceDirsResult),
 ) -> anyhow::Result<()> {
     if args.is_empty() {
         return Ok(());
@@ -128,12 +157,12 @@ async fn fs_save_dir_scan_total_result(
 
 /// Workflow for processing groups of filesystem scans, used to avoid large workflow history
 #[workflow(FilesystemScannerQueue)]
-async fn fs_scan_datasource_group(
+async fn fs_scan_datasource_dir_group(
     wf_ctx: WfContext,
     args: Vec<ScanDatasourceArgs>,
-) -> WorkflowResult<FsScanDatasourceResult> {
-    let results = fs_scan_datasource_workflow::run_parallel(&wf_ctx, args).await?;
-    let mut scan_result = FsScanDatasourceResult::default();
+) -> WorkflowResult<FsScanDatasourceDirsResult> {
+    let results = fs_scan_datasource_dir_workflow::run_parallel(&wf_ctx, args).await?;
+    let mut scan_result = FsScanDatasourceDirsResult::default();
     for (_, r) in results {
         if let Ok(r) = r {
             scan_result += r;
@@ -148,7 +177,7 @@ async fn fs_scan_datasource_group(
 #[activity(FilesystemScannerQueue)]
 async fn fs_do_scan_datasource(
     arg: ScanDatasourceArgs,
-) -> anyhow::Result<(FsScanDatasourceResult, Vec<PathBuf>)> {
+) -> anyhow::Result<(FsScanDatasourceDirsResult, Vec<PathBuf>)> {
     let mut file_count = 0;
     let mut dir_count = 0;
     let mut file_size_bytes = 0;
@@ -168,7 +197,6 @@ async fn fs_do_scan_datasource(
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];
-    let ds_pk = (arg.datasource_id.to_string(),);
 
     let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
     let mut parent_pk = if arg.path.is_some() {
@@ -233,7 +261,7 @@ async fn fs_do_scan_datasource(
     }
 
     Ok((
-        FsScanDatasourceResult {
+        FsScanDatasourceDirsResult {
             file_count,
             dir_count,
             file_size_bytes,
