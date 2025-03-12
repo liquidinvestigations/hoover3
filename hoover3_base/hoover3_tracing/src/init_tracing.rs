@@ -3,36 +3,36 @@
 use dioxus_logger::tracing;
 use tracing::Level;
 
-use opentelemetry::sdk::Resource;
-use opentelemetry::trace::TraceError;
-use opentelemetry::{sdk::trace as sdktrace, KeyValue};
-use opentelemetry_otlp::WithExportConfig;
-use tonic::metadata::MetadataMap;
+use opentelemetry::global;
+use opentelemetry::trace::TracerProvider;
+use opentelemetry_sdk::runtime::Tokio;
+use opentelemetry_sdk::trace::Config;
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::Registry;
 
 /// Initialize tracing and log crates, using `dioxus_logger`
 /// TODO: distributed tracing (SigNoz).
-pub fn init_tracing() -> Result<sdktrace::Tracer, TraceError> {
+pub fn init_tracing() {
     init_logging();
 
     tracing::info!("tracing init.");
     log::info!("log init.");
-    let metadata = MetadataMap::new();
 
-    opentelemetry_otlp::new_pipeline()
+    let provider = opentelemetry_otlp::new_pipeline()
         .tracing()
-        .with_exporter(
-            opentelemetry_otlp::new_exporter()
-                .tonic()
-                .with_metadata(metadata)
-                .with_endpoint("http://localhost:4317"),
-        )
-        .with_trace_config(
-            sdktrace::config().with_resource(Resource::new(vec![KeyValue::new(
-                opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-                "hoover3",
-            )])),
-        )
-        .install_batch(opentelemetry::runtime::Tokio)
+        .with_exporter(opentelemetry_otlp::new_exporter().tonic())
+        .with_trace_config(Config::default())
+        .install_batch(Tokio)
+        .expect("failed to install opentelemetry");
+
+    let tracer = provider.tracer_builder("opentelemetry-otlp").build();
+    global::set_tracer_provider(provider.clone());
+    let telemetry = OpenTelemetryLayer::new(tracer.clone());
+
+    let subscriber = Registry::default().with(telemetry);
+
+    tracing::subscriber::set_global_default(subscriber).expect("setting global default failed");
 }
 
 fn init_logging() {
