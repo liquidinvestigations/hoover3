@@ -21,7 +21,7 @@ use hoover3_types::{
     identifier::{CollectionId, DatabaseIdentifier},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
 use super::{
