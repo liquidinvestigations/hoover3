@@ -4,6 +4,15 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 mkdir -p data
 
-cd docker
-bash wipe.sh
-bash up.sh
+(
+    cd docker
+    bash wipe.sh
+)
+
+(
+    ./start_docker.sh
+)
+
+(
+    ./migrate.sh
+)
