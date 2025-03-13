@@ -43,7 +43,7 @@ pub struct HashFileArgs {
 
 trait HashFunction {
     fn h_update(&mut self, data: &[u8]);
-    fn h_finalize(&self) -> String;
+    fn h_finalize(&self) -> Vec<u8>;
     fn h_type(&self) -> HashType;
 }
 
@@ -70,8 +70,8 @@ mod sha3_impl {
         fn h_update(&mut self, data: &[u8]) {
             self.update(data);
         }
-        fn h_finalize(&self) -> String {
-            to_hex(&(self.clone()).finalize())
+        fn h_finalize(&self) -> Vec<u8> {
+            (self.clone()).finalize().to_vec()
         }
         fn h_type(&self) -> HashType {
             HashType::Sha3_256
@@ -89,8 +89,8 @@ mod sha1_impl {
         fn h_update(&mut self, data: &[u8]) {
             self.update(data);
         }
-        fn h_finalize(&self) -> String {
-            to_hex(&(self.clone()).finalize())
+        fn h_finalize(&self) -> Vec<u8> {
+            (self.clone()).finalize().to_vec()
         }
         fn h_type(&self) -> HashType {
             HashType::Sha1
@@ -108,8 +108,8 @@ mod sha256_impl {
         fn h_update(&mut self, data: &[u8]) {
             self.update(data);
         }
-        fn h_finalize(&self) -> String {
-            to_hex(&(self.clone()).finalize())
+        fn h_finalize(&self) -> Vec<u8> {
+            (self.clone()).finalize().to_vec()
         }
         fn h_type(&self) -> HashType {
             HashType::Sha256
@@ -127,8 +127,8 @@ mod md5_impl {
         fn h_update(&mut self, data: &[u8]) {
             self.consume(data);
         }
-        fn h_finalize(&self) -> String {
-            to_hex(&(self.clone()).compute().0)
+        fn h_finalize(&self) -> Vec<u8> {
+            (self.clone()).compute().0.to_vec()
         }
         fn h_type(&self) -> HashType {
             HashType::Md5
@@ -208,10 +208,10 @@ async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResu
             finished_hashes.insert(k, v);
         }
         let hashes_row = FsBlobHashesDbRow {
-            blob_sha3_256: finished_hashes[&HashType::Sha3_256].clone(),
-            blob_sha256: finished_hashes[&HashType::Sha256].clone(),
-            blob_md5: finished_hashes[&HashType::Md5].clone(),
-            blob_sha1: finished_hashes[&HashType::Sha1].clone(),
+            blob_sha3_256: to_hex(&finished_hashes[&HashType::Sha3_256]),
+            blob_sha256: to_hex(&finished_hashes[&HashType::Sha256]),
+            blob_md5: to_hex(&finished_hashes[&HashType::Md5]),
+            blob_sha1: to_hex(&finished_hashes[&HashType::Sha1]),
             size_bytes: file_size as i64,
         };
         new_hashes.push(hashes_row.clone());

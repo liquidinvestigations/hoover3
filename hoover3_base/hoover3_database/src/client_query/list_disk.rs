@@ -92,7 +92,6 @@ pub async fn read_file_to_stream(
     const CHUNK_SIZE: usize = 4 * 1024 * 1024; // 4MB chunks
 
     let path = get_data_root().join(relative_path);
-    info!("read_file_to_stream: {:?}", path);
 
     let file = tokio::fs::File::open(&path)
         .await

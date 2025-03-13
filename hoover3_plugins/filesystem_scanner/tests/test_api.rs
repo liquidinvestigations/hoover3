@@ -18,11 +18,11 @@ use hoover3_types::tasks::UiWorkflowStatusCode;
 #[tokio::test]
 async fn test_fs_do_scan_datasource_small() -> anyhow::Result<()> {
     migrate_common().await?;
-    let collection_id = CollectionId::new("test_fs_do_scan_datasource")?;
+    let collection_id = CollectionId::new("test_fs_do_scan_datasource_small")?;
     drop_collection(collection_id.clone()).await?;
     create_new_collection(collection_id.clone()).await?;
     assert!(get_all_datasources(collection_id.clone()).await?.is_empty());
-    let datasource_id = DatabaseIdentifier::new("test_fs_do_scan_datasource_collection")?;
+    let datasource_id = DatabaseIdentifier::new("test_fs_do_scan_datasource_small")?;
     let settings = DatasourceSettings::LocalDisk {
         path: PathBuf::from("hoover-testdata/data/disk-files/long-filenames"),
     };
@@ -36,8 +36,8 @@ async fn test_fs_do_scan_datasource_small() -> anyhow::Result<()> {
     assert_eq!(status.dir_scan_result.dir_count, 0);
     assert_eq!(status.dir_scan_result.file_size_bytes, 308482);
     assert_eq!(status.dir_scan_result.errors, 0);
-    // assert_eq!(status.hash_scan_result.file_count, 3);
-    // assert_eq!(status.hash_scan_result.hash_count, 3);
+    assert_eq!(status.hash_scan_result.file_count, 3);
+    assert_eq!(status.hash_scan_result.hash_count, 3);
     let status = get_scan_status((collection_id.clone(), datasource_id.clone())).await?;
     assert_eq!(status.task_status, UiWorkflowStatusCode::Completed);
     drop_collection(collection_id.clone()).await?;

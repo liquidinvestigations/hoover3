@@ -282,7 +282,8 @@ pub trait TemporalioWorkflowDescriptor:
                     Self::name().to_owned(),       // workflow type
                     None,
                     WorkflowOptions {
-                        id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
+                        // id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
+                        id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicate,
                         id_conflict_policy: WorkflowIdConflictPolicy::UseExisting,
                         ..Default::default()
                     },
@@ -379,7 +380,8 @@ pub trait TemporalioWorkflowDescriptor:
                 task_queue: None, // inherit
                 input,
                 options: WorkflowOptions {
-                    id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
+                    // id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
+                    id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicate,
                     id_conflict_policy: WorkflowIdConflictPolicy::UseExisting,
                     ..Default::default()
                 },

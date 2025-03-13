@@ -3,7 +3,9 @@
 
 use charybdis::batch::ModelBatch;
 use charybdis::operations::Find;
+use charybdis::operations::InsertWithCallbacks;
 use charybdis::operations::UpdateWithCallbacks;
+use hoover3_database::client_query::list_disk::get_path_metadata;
 use hoover3_database::client_query::list_disk::list_directory;
 use hoover3_database::db_management::DatabaseSpaceManager;
 use hoover3_database::db_management::ScyllaDatabaseHandle;
@@ -66,6 +68,7 @@ async fn fs_scan_datasource(
         hash_scan_result: _hash_files,
     }))
 }
+
 /// Workflow for scanning a filesystem datasource
 #[workflow(FilesystemScannerQueue)]
 async fn fs_scan_datasource_dir(
@@ -193,30 +196,38 @@ async fn fs_do_scan_datasource(
     let dir_path = root_path
         .to_path_buf()
         .join(arg.path.clone().unwrap_or(PathBuf::from("")));
-    let children = list_directory(dir_path).await?;
+
+    let children = list_directory(dir_path.clone()).await?;
     let mut files = vec![];
     let mut dirs = vec![];
     let mut next_paths = vec![];
 
     let scylla_session = ScyllaDatabaseHandle::collection_session(&arg.collection_id).await?;
-    let mut parent_pk = if arg.path.is_some() {
-        let p = arg.path.unwrap();
-        Some(
+
+    let db_extra = hoover3_database::models::collection::DatabaseExtraCallbacks::new(
+        &arg.collection_id.clone(),
+    )
+    .await?;
+
+    let mut parent_pk = match arg.path {
+        Some(p) => {
             FsDirectoryDbRow::find_by_primary_key_value((
                 arg.datasource_id.to_string(),
                 p.to_str().unwrap().into(),
             ))
             .execute(&scylla_session)
-            .await?,
-        )
-    } else {
-        None
+            .await?
+        }
+        None => {
+            let root_meta = get_path_metadata(PathBuf::from("")).await?;
+            let mut dir = FsDirectoryDbRow::from_basic_meta(&arg.datasource_id, &root_meta);
+            FsDirectoryDbRow::insert_cb(&mut dir, &db_extra)
+                .execute(&scylla_session)
+                .await?;
+            dir
+        }
     };
-    // let parent_pk = arg.path.map(|p| FsDirectoryDbRow {
-    //     datasource_id: arg.datasource_id.to_string(),
-    //     path: p.to_str().unwrap().into(),
-    //     ..Default::default()
-    // });
+
     children.into_iter().for_each(|mut c| {
         c.path = c.path.strip_prefix(root_path).unwrap().to_path_buf();
         if c.is_file {
@@ -241,24 +252,18 @@ async fn fs_do_scan_datasource(
         .chunked_insert(&scylla_session, &dirs, 1024)
         .await?;
 
-    let db_extra = hoover3_database::models::collection::DatabaseExtraCallbacks::new(
-        &arg.collection_id.clone(),
-    )
-    .await?;
     db_extra.insert(&files).await?;
     db_extra.insert(&dirs).await?;
 
     next_paths.sort();
     next_paths.dedup();
-    if let Some(parent_pk) = &mut parent_pk {
-        parent_pk.scan_children.file_count = file_count as i32;
-        parent_pk.scan_children.dir_count = dir_count as i32;
-        parent_pk.scan_children.file_size_bytes = file_size_bytes as i64;
-        parent_pk.scan_children.errors = 0_i32;
-        FsDirectoryDbRow::update_cb(parent_pk, &db_extra)
-            .execute(&scylla_session)
-            .await?;
-    }
+    parent_pk.scan_children.file_count = file_count as i32;
+    parent_pk.scan_children.dir_count = dir_count as i32;
+    parent_pk.scan_children.file_size_bytes = file_size_bytes as i64;
+    parent_pk.scan_children.errors = 0_i32;
+    FsDirectoryDbRow::update_cb(&mut parent_pk, &db_extra)
+        .execute(&scylla_session)
+        .await?;
 
     Ok((
         FsScanDatasourceDirsResult {

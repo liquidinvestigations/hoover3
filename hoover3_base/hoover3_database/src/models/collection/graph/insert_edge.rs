@@ -368,12 +368,6 @@ async fn skip_existing_edges(
         }
     }
 
-    tracing::info!(
-        "skip_existing_edges: filtered {}/{} edges",
-        already_exists.len(),
-        edges.len(),
-    );
-
     Ok(edges
         .into_iter()
         .filter(|(source, target)| !already_exists.contains(&(source.clone(), target.clone())))
