@@ -51,5 +51,7 @@ async fn test_task_client_and_worker_integration() -> anyhow::Result<()> {
     assert!(rv2 == x + x);
 
     sample_workflow3_workflow::client_start(&x).await?;
+    let rv2 = sample_workflow3_workflow::client_wait_for_completion(&x).await?;
+    assert!(rv2 == x + x);
     Ok(())
 }

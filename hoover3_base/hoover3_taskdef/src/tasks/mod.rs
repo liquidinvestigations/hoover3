@@ -626,6 +626,8 @@ pub mod test {
         assert!(rv2 == x + x);
 
         sample_workflow2_workflow::client_start(&x).await?;
+        let rv2 = sample_workflow2_workflow::client_wait_for_completion(&x).await?;
+        assert!(rv2 == x + x);
         Ok(())
     }
 }
