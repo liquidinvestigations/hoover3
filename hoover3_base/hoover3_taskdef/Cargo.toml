@@ -24,7 +24,7 @@ paste.workspace = true
 hoover3_types.workspace = true
 hoover3_macro.workspace = true
 hoover3_database.workspace = true
-hoover3_tracing.workspace = true
+hoover3_tracing = { workspace = true, features = ["telemetry"] }
 inventory.workspace = true
 buildid = "1.0.3"
 # temporal

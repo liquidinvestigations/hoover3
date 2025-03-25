@@ -84,5 +84,5 @@ seekstorm_client.workspace = true
 async-stream.workspace = true
 
 [dev-dependencies]
-hoover3_tracing.workspace = true
+hoover3_tracing = { workspace = true, features = ["telemetry"] }
 hoover3_macro.workspace = true

@@ -12,3 +12,6 @@ pub static ALLOCATOR: cap::Cap<std::alloc::System> =
     cap::Cap::new(std::alloc::System, 2 * 1024 * 1024 * 1024);
 
 pub use tracing;
+
+#[cfg(feature = "telemetry")]
+pub mod telemetry;

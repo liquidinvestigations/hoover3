@@ -9,3 +9,6 @@ channel = "stable"
 [target.x86_64-unknown-linux-gnu]
 # linker = "clang"
 # rustflags = ["-C", "link-arg=-fuse-ld=/usr/bin/mold"]
+
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]

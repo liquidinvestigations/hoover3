@@ -10,6 +10,9 @@ pub fn init_tracing() {
 
     tracing::info!("tracing init.");
     log::info!("log init.");
+
+    #[cfg(feature = "telemetry")]
+    crate::telemetry::init_telemetry();
 }
 
 fn init_logging() {

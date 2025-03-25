@@ -57,4 +57,5 @@ server = [
     "dep:axum",
     "dep:hoover3_taskdef",
     "dep:hoover3_server",
+    "hoover3_tracing/telemetry",
     ]
