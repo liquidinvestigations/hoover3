@@ -1,25 +1,25 @@
 //! The Hoover3 client - the website frontend entrypoint.
 
-use opentelemetry::global::shutdown_tracer_provider;
-use opentelemetry::global;
-use opentelemetry::trace::Tracer;
-use opentelemetry::{trace::TraceContextExt, Context, Key};
+//use opentelemetry::global::shutdown_tracer_provider;
+//use opentelemetry::global;
+//use opentelemetry::trace::Tracer;
+//use opentelemetry::{trace::TraceContextExt, Context, Key};
 
 /// Main dioxus Entrypoint. Sets up launch configurations for Dioxus, as well as server backend main function.
 pub fn main() {
     hoover3_tracing::init_tracing();
-    let tracer = global::tracer("global_tracer");
-    let _cx = Context::new();
+    //let tracer = global::tracer("global_tracer");
+    //let _cx = Context::new();
 
-    tracer.in_span("operation", |cx| {
-        let span = cx.span();
-        span.set_attribute(Key::new("KEY").string("value"));
+    //tracer.in_span("operation", |cx| {
+    //    let span = cx.span();
+    //    span.set_attribute(Key::new("KEY").string("value"));
 
-        span.add_event(
-            format!("Operations"),
-            vec![Key::new("SigNoz is").string("Awesome")],
-        );
-    });
+    //    span.add_event(
+    //        format!("Operations"),
+    //        vec![Key::new("SigNoz is").string("Awesome")],
+    //    );
+    //});
 
     #[cfg(feature = "web")]
     {
@@ -68,5 +68,5 @@ pub fn main() {
 
     // dioxus::launch(App);
     // info!("dioxus main() exit.");
-    shutdown_tracer_provider();
+    //shutdown_tracer_provider();
 }
