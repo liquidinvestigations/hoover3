@@ -1,3 +1,5 @@
+//! Telemetry initialization and reporting.
+
 pub use opentelemetry;
 pub use opentelemetry_sdk;
 
