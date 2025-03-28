@@ -213,6 +213,7 @@ async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResu
             blob_md5: to_hex(&finished_hashes[&HashType::Md5]),
             blob_sha1: to_hex(&finished_hashes[&HashType::Sha1]),
             size_bytes: file_size as i64,
+            plan_page: None,
         };
         new_hashes.push(hashes_row.clone());
         edge_batch.add_edge_from_pk(

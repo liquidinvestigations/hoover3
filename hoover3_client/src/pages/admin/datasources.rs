@@ -7,6 +7,7 @@ use dioxus_logger::tracing;
 use dioxus_logger::tracing::info;
 use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::identifier::{CollectionId, DatabaseIdentifier};
+use hoover3_types::tasks::TemporalioWorkflowStatusTree;
 use hoover3_types::tasks::UiWorkflowStatus;
 use hoover3_types::tasks::UiWorkflowStatusCode;
 use std::collections::BTreeMap;
@@ -186,6 +187,7 @@ pub fn WorkflowStatusDisplay(
                 "{workflow_id_str}"
             }
             WorkflowDisplayProgressBar {counts: tree_counts}
+            WorkflowDisplayProgressTree {status_tree}
             {children}
         }
     }
@@ -265,5 +267,69 @@ fn WorkflowDisplayProgressBar(
             ""
         }
 
+    }
+}
+
+
+#[component]
+fn WorkflowDisplayProgressTree(status_tree: ReadOnlySignal<Option<TemporalioWorkflowStatusTree>>) -> Element {
+    let Some(status_tree_root) = status_tree.read().as_ref().map(|t| t.root_workflow_id.clone()) else {
+        return rsx! {}
+    };
+    rsx! {
+        details {
+            "name": "workflow_tree",
+            class: "secondary outline",
+            style: "border: 1px solid #ccc; border-radius: 4px; padding: 4px;",
+            summary {
+                "Workflow Details"
+            }
+            WorkflowDisplayProgressTreeNode {
+                status_tree: status_tree,
+                current_node: status_tree_root,
+            }
+        }
+    }
+}
+
+#[component]
+fn WorkflowDisplayProgressTreeNode(status_tree: ReadOnlySignal<Option<TemporalioWorkflowStatusTree>>, current_node: String) -> Element {
+
+    let tree = status_tree.read();
+    let Some(Some(current_status)) = tree.as_ref().map(|t| t.nodes.get(&current_node).clone()) else {
+        return rsx! {};
+    };
+    let current_status = current_status.clone();
+    let children = tree.as_ref().map(|t| t.children.get(&current_node).cloned()).flatten().unwrap_or(vec![]);
+    rsx! {
+        // div {
+            a {
+                href: r#"http://localhost:8081/namespaces/default/workflows?query=WorkflowId%3D%22{current_node}%22"#,
+                "{current_node}"
+            }
+            b {
+                style: "float: right;",
+                " - {current_status}"
+            }
+            ul {
+                style: "
+                    padding-top: 0px; margin-top: 0px;
+                    padding-bottom: 0px; margin-bottom: 0px;
+                ",
+                for child in children {
+                    li {
+                        key: "{child}",
+                        style: "
+                            margin-bottom: 0; margin-top: 0;
+                            padding-bottom: 0; padding-top: 0;
+                        ",
+                        WorkflowDisplayProgressTreeNode {
+                            status_tree: status_tree.clone(),
+                            current_node: child.clone(),
+                        }
+                    }
+                }
+            }
+        // }
     }
 }

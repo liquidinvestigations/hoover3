@@ -124,7 +124,22 @@ pub struct FsScanResult {
     pub dir_scan_result: FsScanDatasourceDirsResult,
     /// Number of distinct hashes found
     pub hash_scan_result: FsScanHashesResult,
+    /// Number of processing plan pages created for the blobs
+    pub processing_plan_result: ProcessingPlanResult,
 }
+
+/// Results from chunking the unique blobs into processing plan pages
+#[derive(Debug, Default, Clone, Copy, Serialize, Deserialize, PartialEq)]
+pub struct ProcessingPlanResult {
+    /// Total number of processing plan pages created
+    pub new_page_count: u32,
+    /// Total number of blobs in the processing plan
+    pub total_blob_count: u32,
+    /// Total size of the blobs in the processing plan
+    pub total_blob_size_bytes: u64,
+}
+
+
 
 // This does not work on
 // mod serialize_path {

@@ -12,7 +12,7 @@ title = "hoover3_client"
 [web.resource]
 
 # Additional CSS style files
-style = ["/assets/libs/pico.min.css", "/assets/main.css"]
+# style = ["/assets/libs/pico.min.css", "/assets/main.css"]
 
 # Additional JavaScript files
 script = []

@@ -58,6 +58,8 @@ pub fn Navbar() -> Element {
     }
 }
 
+const LOADING_GIF: Asset = asset!("/assets/img/loading.gif");
+
 #[component]
 fn LoadingBoxGif() -> Element {
     let ServerCallHistory {
@@ -68,7 +70,7 @@ fn LoadingBoxGif() -> Element {
     rsx! {
         div { class: "loading_box",
             if *show_pic.read() {
-                img { src: "/assets/img/loading.gif" }
+                img { src: LOADING_GIF }
                 div { class: "loading_count", "{loading_count}" }
             }
         }

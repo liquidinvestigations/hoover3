@@ -26,6 +26,7 @@ use crate::models::FsDirectoryDbRow;
 use crate::models::FsFileDbRow;
 
 use super::hash_files::hash_files_root_workflow;
+use super::process_plan::compute_blob_processing_plan_workflow;
 use super::FilesystemScannerQueue;
 
 /// Arguments for filesystem datasource scanning
@@ -63,9 +64,16 @@ async fn fs_scan_datasource(
     )
     .await?;
 
+    let _process_plan = compute_blob_processing_plan_workflow::run_as_child(
+        &wf_ctx,
+        collection_id.clone(),
+    )
+    .await?;
+
     Ok(WfExitValue::Normal(FsScanResult {
         dir_scan_result: _scan_dir,
         hash_scan_result: _hash_files,
+        processing_plan_result: _process_plan,
     }))
 }
 

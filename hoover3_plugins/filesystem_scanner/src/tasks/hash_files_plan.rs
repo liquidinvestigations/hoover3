@@ -102,7 +102,7 @@ async fn stream_file_hashing_plan(
 
 /// Chunk a stream of items by arbitrary item size.
 /// Returns a stream of chunks, each containing a vector of items.
-fn chunk_by_size<T: Send + Sync + 'static>(
+pub(crate) fn chunk_by_size<T: Send + Sync + 'static>(
     stream: ResultStream<T>,
     min_read_size: i64,
     max_chunk_size: i64,

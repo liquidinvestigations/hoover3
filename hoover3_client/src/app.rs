@@ -9,8 +9,8 @@ use dioxus::prelude::*;
 use dioxus_logger::tracing::info;
 
 const FAVICON: Asset = asset!("/assets/favicon.ico");
-// const PICO_CSS: Asset = asset!("/assets/libs/pico.min.css");
-// const MAIN_CSS: Asset = asset!("/assets/main.css");
+const PICO_CSS: Asset = asset!("/assets/libs/pico.min.css");
+const MAIN_CSS: Asset = asset!("/assets/main.css");
 
 /// The main app component that loads extra CSS and the router.
 #[component]
@@ -57,14 +57,18 @@ pub fn App() -> Element {
     use_init_server_call_history();
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
-        document::Link {
-            rel: "preload",
-            href: "/assets/libs/pico.min.css",
-            r#as: "style",
-        }
-        document::Link { rel: "preload", href: "/assets/main.css", r#as: "style" }
-        // document::Stylesheet { href: "/assets/libs/pico.min.css"  }
-        // document::Stylesheet { href: "/assets/main.css"  }
+        // document::Link {
+        //     rel: "preload",
+        //     href: PICO_CSS,
+        //     r#as: "style",
+        // }
+        // document::Link {
+        //     rel: "preload",
+        //     href: MAIN_CSS,
+        //     r#as: "style",
+        // }
+        document::Stylesheet { href: PICO_CSS }
+        document::Stylesheet { href: MAIN_CSS }
         Router::<Route> {
             config: move || RouterConfig::default().on_update(move |state|{
                 let current_url: Route = state.current();
