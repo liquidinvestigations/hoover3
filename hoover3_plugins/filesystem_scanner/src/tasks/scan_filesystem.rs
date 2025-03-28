@@ -64,11 +64,8 @@ async fn fs_scan_datasource(
     )
     .await?;
 
-    let _process_plan = compute_blob_processing_plan_workflow::run_as_child(
-        &wf_ctx,
-        collection_id.clone(),
-    )
-    .await?;
+    let _process_plan =
+        compute_blob_processing_plan_workflow::run_as_child(&wf_ctx, collection_id.clone()).await?;
 
     Ok(WfExitValue::Normal(FsScanResult {
         dir_scan_result: _scan_dir,

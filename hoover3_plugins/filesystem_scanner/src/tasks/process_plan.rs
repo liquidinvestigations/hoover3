@@ -1,7 +1,6 @@
 //! Plan for processing blobs that have been hashed.
 //! Splits the work into chunks of similar file size.
 
-
 use crate::models::{
     BlobProcessingPlan, BlobProcessingPlanPage, FsBlobHashesDbRow, PartialUpdateFsBlobHashesDbRow,
 };
@@ -11,18 +10,15 @@ use charybdis::batch::ModelBatch;
 use charybdis::operations::{Find, InsertWithCallbacks};
 use futures::{pin_mut, StreamExt, TryStreamExt};
 use hoover3_database::db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle};
-use hoover3_database::models::collection::{
-    DatabaseExtraCallbacks, ResultStream,
-};
+use hoover3_database::models::collection::{DatabaseExtraCallbacks, ResultStream};
 use hoover3_macro::{activity, workflow};
 use hoover3_taskdef::{TemporalioActivityDescriptor, WfContext, WfExitValue, WorkflowResult};
 use hoover3_tracing::tracing::info;
 use hoover3_types::filesystem::ProcessingPlanResult;
 use hoover3_types::identifier::CollectionId;
 
-use super::FilesystemScannerQueue;
 use super::hash_files_plan::chunk_by_size;
-
+use super::FilesystemScannerQueue;
 
 /// Workflow for computing the processing plan for all blobs.
 #[workflow(FilesystemScannerQueue)]
@@ -33,7 +29,6 @@ async fn compute_blob_processing_plan(
     let plan_page_ids = do_compute_blob_processing_plan_activity::run(&ctx, collection_id).await?;
     Ok(WfExitValue::Normal(plan_page_ids))
 }
-
 
 /// Compute the plan for processing all blobs. Write plan chunks to database.
 /// Returns a list of plan page ids.
@@ -83,14 +78,22 @@ pub async fn do_compute_blob_processing_plan(
                 plan_page: Some(plan_page_id),
             });
         }
-        BlobProcessingPlanPage::batch().append_inserts(&plan_pages).execute(&db_session).await?;
-        PartialUpdateFsBlobHashesDbRow::batch().append_inserts(&partial_updates).execute(&db_session).await?;
+        BlobProcessingPlanPage::batch()
+            .append_inserts(&plan_pages)
+            .execute(&db_session)
+            .await?;
+        PartialUpdateFsBlobHashesDbRow::batch()
+            .append_inserts(&partial_updates)
+            .execute(&db_session)
+            .await?;
         db_extra.insert(&plan_pages).await?;
 
         new_page_count += 1;
         info!(
             "BLOB PROCESSING PLAN PAGE {}: {} blobs, {} bytes",
-            plan_page_id, chunk.blob_hashes.len(), chunk.chunk_size
+            plan_page_id,
+            chunk.blob_hashes.len(),
+            chunk.chunk_size
         );
         plan_page_id += 1;
     }
@@ -137,9 +140,7 @@ async fn stream_blob_processing_plan(
 
     // Query all blob hashes
     let db_session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
-    let stream = FsBlobHashesDbRow::find_all()
-        .execute(&db_session)
-        .await?;
+    let stream = FsBlobHashesDbRow::find_all().execute(&db_session).await?;
 
     let stream = async_stream::try_stream! {
         for await r in stream {
@@ -161,9 +162,12 @@ async fn stream_blob_processing_plan(
     let stream = reorder_stream(stream, |blob: &FsBlobHashesDbRow| blob.size_bytes, 1000);
 
     // Chunk by size
-    let stream = chunk_by_size(stream, min_read_size, max_chunk_size, |blob: &FsBlobHashesDbRow| {
-        blob.size_bytes
-    })?;
+    let stream = chunk_by_size(
+        stream,
+        min_read_size,
+        max_chunk_size,
+        |blob: &FsBlobHashesDbRow| blob.size_bytes,
+    )?;
 
     // Transform into plan chunks
     let stream = stream.map_ok(|chunk| {
@@ -188,8 +192,6 @@ struct BlobProcessingPlanChunk {
     blob_hashes: Vec<String>,
     chunk_size: i64,
 }
-
-
 
 fn reorder_stream<Value, SortKey>(
     stream: ResultStream<Value>,

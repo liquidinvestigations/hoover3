@@ -270,11 +270,16 @@ fn WorkflowDisplayProgressBar(
     }
 }
 
-
 #[component]
-fn WorkflowDisplayProgressTree(status_tree: ReadOnlySignal<Option<TemporalioWorkflowStatusTree>>) -> Element {
-    let Some(status_tree_root) = status_tree.read().as_ref().map(|t| t.root_workflow_id.clone()) else {
-        return rsx! {}
+fn WorkflowDisplayProgressTree(
+    status_tree: ReadOnlySignal<Option<TemporalioWorkflowStatusTree>>,
+) -> Element {
+    let Some(status_tree_root) = status_tree
+        .read()
+        .as_ref()
+        .map(|t| t.root_workflow_id.clone())
+    else {
+        return rsx! {};
     };
     rsx! {
         details {
@@ -293,14 +298,21 @@ fn WorkflowDisplayProgressTree(status_tree: ReadOnlySignal<Option<TemporalioWork
 }
 
 #[component]
-fn WorkflowDisplayProgressTreeNode(status_tree: ReadOnlySignal<Option<TemporalioWorkflowStatusTree>>, current_node: String) -> Element {
-
+fn WorkflowDisplayProgressTreeNode(
+    status_tree: ReadOnlySignal<Option<TemporalioWorkflowStatusTree>>,
+    current_node: String,
+) -> Element {
     let tree = status_tree.read();
-    let Some(Some(current_status)) = tree.as_ref().map(|t| t.nodes.get(&current_node).clone()) else {
+    let Some(Some(current_status)) = tree.as_ref().map(|t| t.nodes.get(&current_node).clone())
+    else {
         return rsx! {};
     };
     let current_status = current_status.clone();
-    let children = tree.as_ref().map(|t| t.children.get(&current_node).cloned()).flatten().unwrap_or(vec![]);
+    let children = tree
+        .as_ref()
+        .map(|t| t.children.get(&current_node).cloned())
+        .flatten()
+        .unwrap_or(vec![]);
     rsx! {
         // div {
             a {

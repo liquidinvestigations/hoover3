@@ -196,7 +196,6 @@ pub struct FsBlobHashesDbRow {
 
 partial_fs_blob_hashes_db_row!(PartialUpdateFsBlobHashesDbRow, blob_sha3_256, plan_page);
 
-
 declare_stored_graph_edge!(
     FsFileToHashes,
     "fs_file_hashes",
@@ -274,6 +273,3 @@ declare_implicit_graph_edge!(
     FsFileHashPlanPageDbRow,
     FsFileHashPlanDbRow
 );
-
-
-

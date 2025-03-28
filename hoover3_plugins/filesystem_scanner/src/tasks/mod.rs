@@ -13,5 +13,5 @@ declare_task_queue!(
 
 pub mod hash_files;
 pub mod hash_files_plan;
-pub mod scan_filesystem;
 pub mod process_plan;
+pub mod scan_filesystem;
