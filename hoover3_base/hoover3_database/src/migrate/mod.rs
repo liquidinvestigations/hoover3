@@ -21,6 +21,7 @@ use hoover3_types::identifier::DEFAULT_KEYSPACE_NAME;
 use super::db_management::redis::with_redis_lock;
 
 /// Load and check all database schemas. This call will panic if the schema is not valid.
+#[tracing::instrument]
 pub fn check_code_schema() {
     let scylla_schema = get_scylla_schema_from_inventory();
     info!("scylla schema ok: {} tables", scylla_schema.tables.len());
@@ -32,6 +33,7 @@ pub fn check_code_schema() {
 }
 
 /// Migrate all databases for all collections.
+#[tracing::instrument]
 pub async fn migrate_all() -> Result<()> {
     info!("migrate_all()");
     check_code_schema();

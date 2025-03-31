@@ -9,6 +9,7 @@ use crate::task_inventory::list_task_register_fns_for_queue;
 use crate::task_inventory::TaskQueue;
 pub use anyhow;
 pub use futures::Future;
+use hoover3_database::charybdis::scylla::frame::response::result;
 use hoover3_types::tasks::UiWorkflowStatus;
 pub use prost_wkt_types::Duration as ProstDuration;
 pub use serde;
@@ -563,8 +564,20 @@ pub fn run_worker<T: TaskQueue>(t: T) -> anyhow::Result<()> {
         .thread_name("hoover3_worker")
         .build()
         .unwrap();
+
+    rt.block_on(async move {
+    });
     hoover3_tracing::set_process_memory_limit(t.max_memory_mb())?;
-    rt.block_on(async move { run_worker_async::<T>(t).await })
+    rt.block_on(async move { 
+        let providers = hoover3_tracing::init_tracing().await;
+        let task_result = run_worker_async::<T>(t).await;
+        info!("worker done, shutting down");
+        if let Some((log_provider, trace_provider)) = providers {
+            let _ = log_provider.shutdown();
+            let _ = trace_provider.shutdown();
+        };
+        task_result
+    })
 }
 
 /// Runs a worker on the current thread until completion. Cannot be used with `tokio::task::spawn`

@@ -26,6 +26,8 @@ opentelemetry_sdk = { version = "0.29.0", features = ["rt-tokio", "trace"], opti
 opentelemetry-otlp = { version = "0.29.0", features = ["grpc-tonic", "trace", "logs"], optional = true }
 opentelemetry-semantic-conventions = { version = "0.29.0", optional = true }
 opentelemetry-appender-log = { version = "0.29.0", optional = true }
+opentelemetry-appender-tracing = { version = "0.29.0", optional = true }
+opentelemetry-http = {version = "0.29.0", optional = true }
 tracing-opentelemetry = { version = "0.30.0", optional = true }
 tonic = { version = "0.12.3", features = ["tls-roots"], optional = true }
 
@@ -38,4 +40,6 @@ telemetry = [
     "dep:opentelemetry-semantic-conventions",
     "dep:opentelemetry-appender-log",
     "dep:tracing-opentelemetry",
+    "dep:opentelemetry-http",
+    "dep:opentelemetry-appender-tracing",
 ]

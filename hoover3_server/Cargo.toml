@@ -37,6 +37,7 @@ hoover3_database_operations.workspace = true
 # ===================
 tokio.workspace = true
 anyhow.workspace = true
+tracing.workspace = true
 
 [lints]
 workspace = true

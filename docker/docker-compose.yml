@@ -726,6 +726,20 @@ services:
     tty: true
 
 
+# ====================
+#   SIGNOZ-LOGSPOUT
+# ====================
+  logspout-signoz:
+    image: pavanputhra/logspout-signoz
+    container_name: logspout
+    restart: unless-stopped
+    environment:
+      - SIGNOZ_LOG_ENDPOINT=http://172.17.0.1:8182
+      - ENV=dev
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: "signoz://localhost:8182"
+
 
 # ====================
 # NETWORKS, VOLUMES

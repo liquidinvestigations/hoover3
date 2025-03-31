@@ -14,5 +14,13 @@ if ! [[ -d data/hoover-testdata ]]; then
     git clone https://github.com/liquidinvestigations/hoover-testdata data/hoover-testdata
 fi
 
+if ! [[ -d docker/signoz ]]; then
+    echo "Downloading signoz"
+    git clone https://github.com/SigNoz/signoz.git docker/signoz
+fi
+
+( cd docker/signoz && git checkout v0.73.0 && cd deploy/docker && docker compose up -d --remove-orphans)
+
+
 cd docker
 bash up.sh
