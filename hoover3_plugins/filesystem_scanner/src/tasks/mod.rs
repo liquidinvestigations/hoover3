@@ -8,7 +8,7 @@ declare_task_queue!(
     "filesystem_scanner",
     8,    // 8 concurrent workflows
     64,   // 64 max i/o threads
-    2048  // 2048 MB ram
+    2048  // 2048 MB ram worker total
 );
 
 pub mod hash_files;

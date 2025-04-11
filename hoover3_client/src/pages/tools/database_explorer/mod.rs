@@ -11,8 +11,8 @@ use hoover3_types::{
 };
 
 use crate::{
-    api::{get_all_collections, get_collection_schema, scylla_row_count},
-    components::make_page_title,
+    api::{get_all_collections, query_collection_schema, scylla_row_count},
+    components::page_titles::make_page_title,
     errors::AnyhowErrorDioxusExt,
     routes::{Route, UrlParam},
 };
@@ -167,7 +167,7 @@ fn CollectionStatsInfoCard(collection_id: CollectionId) -> Element {
     let c2 = collection_id.clone();
     let schema_res = use_resource(move || {
         let c2 = c2.clone();
-        async move { get_collection_schema(c2).await }
+        async move { query_collection_schema(c2).await }
     });
     let schema = use_memo(move || {
         if let Some(Ok(schema)) = schema_res.read().as_ref() {
@@ -220,7 +220,7 @@ fn DatabaseExplorerCollectionPage(collection_id: String) -> Element {
     let collection_id = use_signal(move || c);
     let schema_res = use_resource(move || {
         let collection_id = collection_id.read().clone();
-        async move { get_collection_schema(collection_id).await }
+        async move { query_collection_schema(collection_id).await }
     });
     let schema = use_memo(move || {
         if let Some(Ok(schema)) = schema_res.read().as_ref() {

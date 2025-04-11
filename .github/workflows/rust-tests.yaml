@@ -32,6 +32,7 @@ jobs:
           cargo binstall --no-confirm dioxus-cli@0.6.2
           cargo binstall --no-confirm cargo-nextest
           cargo binstall --no-confirm cargo-expand
+          sudo apt-get update -y && sudo apt-get install -y libmagic1 libmagic-dev
 
       - name: Start Docker services
         shell: bash

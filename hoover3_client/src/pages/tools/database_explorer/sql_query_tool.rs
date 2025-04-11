@@ -1,8 +1,9 @@
 use std::time::Duration;
 
 use crate::{
-    api::{db_explorer_run_query, get_collection_schema},
-    components::{make_page_title, DynamicTable},
+    api::{db_explorer_run_query, query_collection_schema},
+    components::page_titles::make_page_title,
+    components::table::DynamicTable,
     pages::DatabaseExplorerRoute,
     routes::Route,
 };
@@ -139,7 +140,7 @@ fn SqlQueryToolJumpLinks(
 ) -> Element {
     let schema_res = use_resource(move || {
         let collection_id = collection_id.read().clone();
-        async move { get_collection_schema(collection_id).await }
+        async move { query_collection_schema(collection_id).await }
     });
     let schema = use_memo(move || {
         schema_res

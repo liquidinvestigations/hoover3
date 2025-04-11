@@ -1,9 +1,11 @@
+//! Front-end component for displaying page titles.
+
 use dioxus::prelude::*;
 
 /// Component that displays a page title. Level is 0 for no wrapper, 1 for h1, 2 for h2, etc.
 /// Subtitle is rendered as a small gray text to the left of the title.
 #[component]
-pub fn PageTitle(level: u8, subtitle: String, title: String) -> Element {
+fn PageTitle(level: u8, subtitle: String, title: String) -> Element {
     let spans = rsx! {
         span { style: "font-size:50%; color:gray; margin-right:10px; ", {subtitle} }
         span { {title} }

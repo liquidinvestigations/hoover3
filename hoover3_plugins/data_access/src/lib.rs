@@ -2,4 +2,5 @@
 //! that are scanned by the system.
 
 pub mod api;
+pub mod list_disk;
 pub mod models;

@@ -1,7 +1,7 @@
 use crate::api::create_datasource;
 use crate::api::list_directory;
-use crate::components::DataRowDisplay;
-use crate::components::HtmlTable;
+use crate::components::table::DataRowDisplay;
+use crate::components::table::HtmlTable;
 use crate::routes::Route;
 use crate::routes::UrlParam;
 use chrono::{DateTime, Utc};
@@ -130,7 +130,7 @@ fn _NewDatasourceFormPage(
                             spawn(async move {
                                 if let Ok(d) = DatabaseIdentifier::new(&name) {
                                     if let Ok(r) = create_datasource((collection_id2.clone(), d.clone(), settings.clone())).await {
-                                        if crate::api::start_scan((collection_id2.clone(), d.clone())).await.is_ok() {
+                                        if crate::api::start_processing((collection_id2.clone(), d.clone())).await.is_ok() {
                                             navigator().push(Route::DatasourceAdminDetailsPage {
                                                 collection_id: collection_id2.clone(),
                                                 datasource_id: r.datasource_id.clone()

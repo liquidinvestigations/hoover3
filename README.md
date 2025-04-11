@@ -5,7 +5,7 @@
 - use linux
 - put `fs.aio-max-nr = 1048576` in `/etc/sysctl.conf` and run `sysctl -p`
 - install rustup and rust stable (1.81)
-- sudo apt-get install mold clang
+- sudo apt-get install mold clang libmagic1 libmagic-dev
 - install docker
 - run ./start_docker.sh
 - cargo install cargo-binstall

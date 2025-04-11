@@ -13,8 +13,8 @@ use hoover3_types::db_schema::DatabaseServiceType;
 use hoover3_types::db_schema::DynamicQueryResponse;
 use hoover3_types::docker_health::*;
 use hoover3_types::filesystem::FsMetadataBasic;
-use hoover3_types::filesystem::FsScanResult;
 use hoover3_types::identifier::*;
+use hoover3_types::processing::ProcessDatasourceTaskResult;
 use hoover3_types::tasks::*;
 
 /// Struct records previous server calls, their timing and results.
@@ -232,15 +232,15 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_server::hoover3_filesystem_scanner::api,
-    start_scan,
+    hoover3_server::api,
+    start_processing,
     (CollectionId, DatabaseIdentifier),
     String
 );
 
 server_wrapper!(
-    hoover3_server::hoover3_filesystem_scanner::api,
-    get_scan_status,
+    hoover3_server::api,
+    get_processing_status,
     (CollectionId, DatabaseIdentifier),
     UiWorkflowStatus
 );
@@ -253,15 +253,15 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_server::hoover3_filesystem_scanner::api,
-    wait_for_scan_results,
+    hoover3_server::api,
+    wait_for_processing_results,
     (CollectionId, DatabaseIdentifier),
-    FsScanResult
+    ProcessDatasourceTaskResult
 );
 
 server_wrapper!(
     hoover3_database::migrate,
-    get_collection_schema,
+    query_collection_schema,
     CollectionId,
     CollectionSchemaDynamic
 );

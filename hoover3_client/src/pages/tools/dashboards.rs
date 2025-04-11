@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::NavbarDropdown;
+use crate::components::navbar::NavbarDropdown;
 use crate::routes::Route;
 
 fn get_dash_links() -> Vec<(String, String)> {

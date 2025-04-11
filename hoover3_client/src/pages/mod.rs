@@ -9,3 +9,6 @@ pub use tools::*;
 
 mod admin;
 pub use admin::*;
+
+mod search;
+pub use search::*;

@@ -12,3 +12,6 @@ pub use client::*;
 pub use tasks::*;
 
 pub use hoover3_macro::{activity, workflow};
+
+/// Environment variable for the worker tempdir.
+pub const WORKER_TEMPDIR_ENV_VAR: &str = "HOOVER3_WORKER_TEMPDIR";

@@ -5,6 +5,7 @@ use crate::api::status::query_workflow_execution_result;
 use crate::api::status::query_workflow_execution_status;
 use crate::client::get_client;
 pub use crate::client::TemporalioClient;
+pub use crate::task_inventory::list_task_queues;
 use crate::task_inventory::list_task_register_fns_for_queue;
 use crate::task_inventory::TaskQueue;
 pub use anyhow;
@@ -377,7 +378,7 @@ pub trait TemporalioWorkflowDescriptor:
             let child_wf = wf_ctx.child_workflow(ChildWorkflowOptions {
                 workflow_id: workflow_id.to_string(),
                 workflow_type: Self::name().to_string(),
-                task_queue: None, // inherit
+                task_queue: Some(Self::queue_name().to_string()),
                 input,
                 options: WorkflowOptions {
                     // id_reuse_policy: WorkflowIdReusePolicy::AllowDuplicateFailedOnly,
@@ -556,6 +557,7 @@ pub fn spawn_worker_on_thread<T: TaskQueue>(t: T) -> std::thread::JoinHandle<()>
 /// Create tokio runtime and run a worker on it on the current thread.
 pub fn run_worker<T: TaskQueue>(t: T) -> anyhow::Result<()> {
     use tokio::runtime::Builder;
+    hoover3_tracing::set_process_memory_limit(t.max_memory_mb())?;
     let rt = Builder::new_multi_thread()
         .enable_all()
         .worker_threads(t.max_concurrency() as usize)
@@ -563,7 +565,6 @@ pub fn run_worker<T: TaskQueue>(t: T) -> anyhow::Result<()> {
         .thread_name("hoover3_worker")
         .build()
         .unwrap();
-    hoover3_tracing::set_process_memory_limit(t.max_memory_mb())?;
     rt.block_on(async move { run_worker_async::<T>(t).await })
 }
 

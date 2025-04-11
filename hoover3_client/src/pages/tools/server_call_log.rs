@@ -2,7 +2,7 @@ use crate::time::current_time;
 use crate::{
     api::ServerCallEvent,
     app::read_server_call_history,
-    components::{DataRowDisplay, HtmlTable},
+    components::table::{DataRowDisplay, HtmlTable},
 };
 use dioxus::prelude::*;
 

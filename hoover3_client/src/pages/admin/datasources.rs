@@ -1,7 +1,7 @@
-use crate::api::get_scan_status;
+use crate::api::get_processing_status;
 use crate::api::get_workflow_status_tree;
-use crate::components::make_page_title;
-use crate::components::InfoCard;
+use crate::components::page_titles::make_page_title;
+use crate::components::table::InfoCard;
 use dioxus::prelude::*;
 use dioxus_logger::tracing;
 use dioxus_logger::tracing::info;
@@ -23,7 +23,7 @@ pub fn DatasourceAdminDetailsPage(
     let mut scan_status_res = use_resource(move || {
         let c = c.clone();
         let d = d.clone();
-        async move { get_scan_status((c, d)).await }
+        async move { get_processing_status((c, d)).await }
     });
     let mut scan_status = use_signal(|| None);
     use_effect(move || {
@@ -40,12 +40,12 @@ pub fn DatasourceAdminDetailsPage(
     let mut scan_result_res = use_resource(move || {
         let c = c.clone();
         let d = d.clone();
-        async move { crate::api::wait_for_scan_results((c, d)).await }
+        async move { crate::api::wait_for_processing_results((c, d)).await }
     });
     let mut scan_result = use_signal(|| None);
     use_effect(move || {
         if let Some(Ok(result)) = scan_result_res.read().as_ref() {
-            scan_result.set(Some(*result));
+            scan_result.set(Some(result.clone()));
         }
     });
 

@@ -1,6 +1,6 @@
 use crate::{
     api::get_container_status,
-    components::{DataRowDisplay, HtmlTable},
+    components::table::{DataRowDisplay, HtmlTable},
 };
 use dioxus::prelude::*;
 use hoover3_types::docker_health::ContainerHealthUi;

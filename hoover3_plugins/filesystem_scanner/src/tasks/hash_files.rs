@@ -3,10 +3,11 @@
 //! Also run libmagic on the files to get mime type.
 //! Save the results to the database in [FsBlobHashesDbRow].
 
+use anyhow::Context;
 use charybdis::{batch::ModelBatch, model::BaseModel};
 use futures::{pin_mut, StreamExt};
+use hoover3_data_access::list_disk::read_file_to_stream;
 use hoover3_database::{
-    client_query::list_disk::read_file_to_stream,
     db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle},
     models::collection::{DatabaseExtraCallbacks, GraphEdgeInsert},
 };
@@ -16,19 +17,23 @@ use hoover3_taskdef::{
     WorkflowResult,
 };
 use hoover3_types::{
-    datasource::DatasourceSettings,
     filesystem::FsScanHashesResult,
     identifier::{CollectionId, DatabaseIdentifier},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{BTreeMap, BTreeSet, HashMap},
+    sync::Arc,
+};
 use tokio::sync::Mutex;
 
 use super::{
     hash_files_plan::{compute_file_hash_plan_activity, FileHashPlanChunk},
     FilesystemScannerQueue,
 };
-use crate::models::{FsBlobHashesDbRow, FsFileHashPlanDbRow, FsFileToHashes};
+use crate::models::{
+    find_fs_blob_hashes_db_row, FsBlobHashesDbRow, FsFileHashPlanDbRow, FsFileToHashes,
+};
 
 /// Argument for hashing a file
 #[derive(Clone, Serialize, Deserialize)]
@@ -139,6 +144,38 @@ mod md5_impl {
     }
 }
 
+async fn filter_out_existing_hashes(
+    session: &ScyllaDatabaseHandle,
+    rows: Vec<FsBlobHashesDbRow>,
+) -> anyhow::Result<Vec<FsBlobHashesDbRow>> {
+    // de-duplicate rows by blob_sha3_256
+    let rows = rows
+        .iter()
+        .map(|r| (r.blob_sha3_256.clone(), r.clone()))
+        .collect::<BTreeMap<_, _>>();
+    let rows = rows.values().cloned().collect::<Vec<_>>();
+    let mut existing_hashes = BTreeSet::new();
+
+    for chunk in rows.chunks(100) {
+        let chunk = chunk
+            .iter()
+            .map(|r| r.blob_sha3_256.clone())
+            .collect::<Vec<_>>();
+        let existing_stream = find_fs_blob_hashes_db_row!("blob_sha3_256 IN ?", (chunk,))
+            .execute(&session)
+            .await?;
+        pin_mut!(existing_stream);
+        while let Some(Ok(existing)) = existing_stream.next().await {
+            existing_hashes.insert(existing.blob_sha3_256);
+        }
+    }
+
+    Ok(rows
+        .into_iter()
+        .filter(|r| !existing_hashes.contains(&r.blob_sha3_256))
+        .collect())
+}
+
 /// Hash some fiels and save the results to the database in [FsBlobHashesDbRow].
 /// The files are hashed by this function one after the other, so it should receive
 /// batches of similar size (in file byte total)
@@ -167,26 +204,21 @@ async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResu
         .flatten()
         .collect::<Vec<_>>();
     let file_count = scan_file_args.len() as u64;
-
-    // get datasource dir
-    let ds_row = hoover3_data_access::api::get_datasource((
-        args.collection_id.clone(),
-        args.datasource_id.clone(),
-    ))
-    .await?;
-
-    let DatasourceSettings::LocalDisk { path: root_path } = &ds_row.datasource_settings else {
-        anyhow::bail!("Datasource is not a local disk");
-    };
-    let root_path = root_path.to_path_buf();
     drop(session);
 
     let mut edge_batch = FsFileToHashes::edge_batch(&args.collection_id);
 
     for (dir, file_name, plan_file_size) in scan_file_args {
-        let file_path = root_path.join(&dir).join(&file_name);
-        let (file_size, chunks) = read_file_to_stream(file_path).await?;
-        assert_eq!(file_size as i64, plan_file_size);
+        let (file_size, chunks) = read_file_to_stream(
+            args.collection_id.clone(),
+            args.datasource_id.clone(),
+            dir.clone(),
+            file_name.clone(),
+        )
+        .await?;
+        if file_size as i64 != plan_file_size {
+            anyhow::bail!("File size mismatch for file: {:?}", file_name);
+        }
         pin_mut!(chunks);
         let mut hash_functions: Vec<Arc<Mutex<dyn HashFunction + Send>>> = vec![
             Arc::new(Mutex::new(sha3_impl::sha3_256_new())),
@@ -214,6 +246,10 @@ async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResu
             blob_sha1: to_hex(&finished_hashes[&HashType::Sha1]),
             size_bytes: file_size as i64,
             plan_page: None,
+            datasource_id: args.datasource_id.to_string(),
+            parent_dir_path: dir.clone(),
+            file_name: file_name.clone(),
+            mime_type: "".to_string(),
         };
         new_hashes.push(hashes_row.clone());
         edge_batch.add_edge_from_pk(
@@ -221,19 +257,29 @@ async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResu
             &hashes_row.primary_key_values(),
         );
     }
-    edge_batch.execute().await?;
+    let hash_count = new_hashes.len() as u64;
+
     let session = ScyllaDatabaseHandle::collection_session(&args.collection_id).await?;
-    let mut batch = FsBlobHashesDbRow::batch();
-    batch.append_inserts(&new_hashes);
-    batch.execute(&session).await?;
-    DatabaseExtraCallbacks::new(&args.collection_id)
-        .await?
-        .insert(&new_hashes)
-        .await?;
+    let new_hashes: Vec<FsBlobHashesDbRow> = filter_out_existing_hashes(&session, new_hashes)
+        .await
+        .context("filter_out_existing_hashes")?;
+    if !new_hashes.is_empty() {
+        for new_hashes in new_hashes.chunks(100) {
+            let mut batch = FsBlobHashesDbRow::batch();
+            batch.append_inserts(&new_hashes);
+            batch.execute(&session).await.context("batch execute")?;
+            DatabaseExtraCallbacks::new(&args.collection_id)
+                .await?
+                .insert(&new_hashes)
+                .await?;
+        }
+    }
+
+    edge_batch.execute().await.context("edge batch execute")?;
 
     Ok(FsScanHashesResult {
         file_count,
-        hash_count: new_hashes.len() as u64,
+        hash_count: hash_count,
     })
 }
 

@@ -121,6 +121,7 @@ async fn _query_scylla_schema(c: CollectionId) -> Result<ScyllaDatabaseSchema> {
                                             .ok()?,
                                         primary: table.partition_key.contains(column_name_str)
                                             || table.clustering_key.contains(column_name_str),
+                                        field_definition: None,
                                     })
                                 } else {
                                     None

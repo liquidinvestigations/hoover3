@@ -10,7 +10,7 @@ use std::path::PathBuf;
 
 use dioxus::prelude::*;
 
-use crate::components::Navbar;
+use crate::components::navbar::Navbar;
 use crate::pages::*;
 
 /// The enum of all the routes for the Hoover3 client.
@@ -25,6 +25,12 @@ pub enum Route {
     /// Route to home page.
     #[route("/")]
     HomePage {},
+
+    #[nest("/search")]
+        /// Route to Search Home Page
+        #[route("/")]
+        SearchHomePage {},
+    #[end_nest] // search
 
     #[nest("/tools")]
         /// Tools home page - lists all the sub-pages
@@ -51,7 +57,7 @@ pub enum Route {
             /// Route to Database Explorer
             #[route("/:explorer_route")]
             DatabaseExplorerPage {explorer_route: UrlParam<DatabaseExplorerRoute>},
-        #[end_nest]
+        #[end_nest] // database-explorer
 
         #[nest("/dashboards")]
             /// Route to Dashboard Home Page
@@ -60,8 +66,8 @@ pub enum Route {
             /// Route to specific Dashboard Iframe
             #[route("/:id")]
             DashboardIframePage{id:u8},
-        #[end_nest]
-    #[end_nest]
+        #[end_nest] // dashboards
+    #[end_nest] // tools
 
     #[nest("/admin")]
         /// Route to Admin Home Page
@@ -84,8 +90,8 @@ pub enum Route {
             /// Route to Datasource Admin Details
             #[route("/:collection_id/datasource/:datasource_id")]
             DatasourceAdminDetailsPage {collection_id: CollectionId, datasource_id: DatabaseIdentifier},
-        #[end_nest]
-    #[end_nest]
+        #[end_nest] // collections
+    #[end_nest] // admin
 
     /// Route to Page Not Found 404 error
     #[route("/:..route")]

@@ -1,0 +1,29 @@
+[package]
+name = "hoover3_processing"
+repository.workspace = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "hoover3_processing"
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+
+[dependencies]
+hoover3_taskdef.workspace = true
+hoover3_database.workspace = true
+hoover3_tracing.workspace = true
+hoover3_filesystem_scanner.workspace = true
+hoover3_types.workspace = true
+serde.workspace = true
+futures.workspace = true
+tokio.workspace = true
+hoover3_data_access.workspace = true
+
+magic = "0.16.2"

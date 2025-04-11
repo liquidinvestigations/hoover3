@@ -37,6 +37,7 @@ hoover3_server = {path = "hoover3_server"}
 hoover3_data_access = {path = "hoover3_plugins/data_access"}
 hoover3_filesystem_scanner = {path = "hoover3_plugins/filesystem_scanner"}
 hoover3_database_operations = {path = "hoover3_plugins/database_operations"}
+hoover3_processing = {path = "hoover3_plugins/processing"}
 
 # EXTERNAL PACKAGES
 seekstorm_client = {path = "packages/seekstorm-client"}

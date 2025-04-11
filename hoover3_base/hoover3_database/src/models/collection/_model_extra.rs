@@ -1,7 +1,7 @@
 //! This module implements the `impl_model_callbacks` macro, which is used to add Charybdis callbacks to model structs.
 //! These callbacks are used to insert/update/delete rows in the secondary databases, Nebula and Meilisearch.
 
-use crate::db_management::meilisearch_wait_for_task;
+use crate::db_management::search_index_include_table;
 use crate::db_management::DatabaseSpaceManager;
 use crate::db_management::MeilisearchDatabaseHandle;
 use crate::models::collection::graph::graph_add_nodes;
@@ -199,25 +199,24 @@ impl DatabaseExtraCallbacks {
             return Ok(());
         }
         let _table_id = DatabaseIdentifier::new(T::DB_MODEL_NAME)?;
-        let mut search_data = vec![];
-        for d in data.iter() {
-            search_data.push(get_search_index_json(d)?);
-        }
+
         use tokio::time::Duration;
 
-        let _search_result = tokio::time::timeout(
-            Duration::from_secs(30),
-            self.search_index.add_documents(&search_data, Some("id")),
-        )
-        .await??;
+        if search_index_include_table(T::DB_MODEL_NAME)? {
+            let mut search_data = vec![];
+            for d in data.iter() {
+                search_data.push(get_search_index_json(d)?);
+            }
+            let _search_result = tokio::time::timeout(
+                Duration::from_secs(30),
+                self.search_index.add_documents(&search_data, Some("id")),
+            )
+            .await??;
+            // takes too much time
+            // meilisearch_wait_for_task(_search_result).await?;
+        }
 
-        // let nebula_insert_query =
-        // nebula_sql_insert_vertex(&table_id, self.nebula_schema.clone(), nebula_data)?;
-        // nebula_execute_retry::<()>(&self.collection_id, &nebula_insert_query).await?;
         graph_add_nodes(&self.collection_id, data).await?;
-
-        // takes too much time
-        // meilisearch_wait_for_task(_search_result).await?;
 
         Ok(())
     }
@@ -238,10 +237,11 @@ impl DatabaseExtraCallbacks {
             .map(|d| row_pk_hash::<T>(&d.primary_key_values()))
             .collect::<Vec<String>>();
 
-        let _search_result = self.search_index.delete_documents(&pks).await?;
-
-        // takes too much time
-        meilisearch_wait_for_task(_search_result).await?;
+        if search_index_include_table(T::DB_MODEL_NAME)? {
+            let _search_result = self.search_index.delete_documents(&pks).await?;
+            // maybe takes too much time?
+            // meilisearch_wait_for_task(_search_result).await?;
+        }
 
         Ok(())
     }

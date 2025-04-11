@@ -1,3 +1,5 @@
+//! Front-end components for the navbar, loading icon, and memory usage display.
+
 use dioxus::prelude::*;
 use dioxus_logger::tracing::{info, warn};
 
@@ -58,7 +60,7 @@ pub fn Navbar() -> Element {
     }
 }
 
-const LOADING_GIF: Asset = asset!("/assets/img/loading.gif");
+// const LOADING_GIF: Asset = asset!("/assets/img/loading.gif");
 
 #[component]
 fn LoadingBoxGif() -> Element {
@@ -70,8 +72,8 @@ fn LoadingBoxGif() -> Element {
     rsx! {
         div { class: "loading_box",
             if *show_pic.read() {
-                img { src: LOADING_GIF }
-                div { class: "loading_count", "{loading_count}" }
+                // img { src: LOADING_GIF }
+                div { "aria-busy": "true", class: "loading_count", "{loading_count}" }
             }
         }
     }

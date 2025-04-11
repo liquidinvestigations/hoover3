@@ -1,3 +1,4 @@
+//! Front-end component for displaying tables of data.
 use std::collections::BTreeMap;
 
 use dioxus::prelude::*;

@@ -6,7 +6,8 @@ use hoover3_types::datasource::DatasourceUiRow;
 use hoover3_types::{collection::CollectionUiRow, identifier::CollectionId};
 
 use crate::api::*;
-use crate::components::{make_page_title, DataRowDisplay, HtmlTable, InfoCard};
+use crate::components::page_titles::make_page_title;
+use crate::components::table::{DataRowDisplay, HtmlTable, InfoCard};
 use crate::errors::AnyhowErrorDioxusExt;
 use crate::routes::Route;
 use crate::routes::UrlParam;

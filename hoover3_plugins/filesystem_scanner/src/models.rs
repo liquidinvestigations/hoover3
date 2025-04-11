@@ -66,19 +66,32 @@ impl From<fs_directory_scan_result> for FsScanDatasourceDirsResult {
 pub struct FsDirectoryDbRow {
     /// Unique identifier for the datasource
     #[model(primary(partition))]
+    #[model(search(facet))]
     pub datasource_id: String,
+
     /// Path to the directory
     #[model(primary(clustering))]
+    #[model(search(index))]
     pub path: String,
+
     /// Size of the directory in bytes
+    #[model(search(facet))]
     pub size_bytes: i64,
+
     /// Timestamp of the most recent modification to the directory
+    #[model(search(facet))]
     pub fs_modified: Option<Timestamp>,
+
     /// Timestamp of the directory's creation
+    #[model(search(facet))]
     pub fs_created: Option<Timestamp>,
+
     /// Scan results for the directory's direct children
+    #[model(search(facet))]
     pub scan_children: fs_directory_scan_result,
+
     /// Scan results for the directory's total contents, including all descendants
+    #[model(search(facet))]
     pub scan_total: fs_directory_scan_result,
 }
 
@@ -116,18 +129,29 @@ impl FsDirectoryDbRow {
 pub struct FsFileDbRow {
     /// Unique identifier for the datasource
     #[model(primary(partition))]
+    #[model(search(facet))]
     pub datasource_id: String,
+
     /// Path to the file
     #[model(primary(partition))]
+    #[model(search(index))]
     pub parent_dir_path: String,
+
     /// Name of the file
     #[model(primary(clustering))]
+    #[model(search(index))]
     pub file_name: String,
+
     /// Size of the file in bytes
+    #[model(search(facet))]
     pub size_bytes: i64,
+
     /// Timestamp of the file's last modification
+    #[model(search(facet))]
     pub fs_modified: Option<Timestamp>,
+
     /// Timestamp of the file's creation
+    #[model(search(facet))]
     pub fs_created: Option<Timestamp>,
 }
 
@@ -176,25 +200,47 @@ declare_implicit_graph_edge!(
 pub struct FsBlobHashesDbRow {
     /// The SHA3-256 hash of the blob.
     #[model(primary(partition))]
+    #[model(search(index))]
     pub blob_sha3_256: String,
 
     /// The SHA256 hash of the blob.
+    #[model(search(index))]
     pub blob_sha256: String,
 
     /// The md5 hash of the blob.
+    #[model(search(index))]
     pub blob_md5: String,
 
     /// The sha1 hash of the blob.
+    #[model(search(index))]
     pub blob_sha1: String,
 
     /// The size of the blob in bytes.
+    #[model(search(facet))]
     pub size_bytes: i64,
 
     /// The plan page where this model will be stored.
     pub plan_page: Option<i32>,
+
+    /// Unique identifier for the datasource where this was first found
+    pub datasource_id: String,
+
+    /// Path to the file where this was first found
+    pub parent_dir_path: String,
+
+    /// Name of the file where this was first found
+    pub file_name: String,
+
+    /// The mime type information extracted from libmagic
+    pub mime_type: String,
 }
 
 partial_fs_blob_hashes_db_row!(PartialUpdateFsBlobHashesDbRow, blob_sha3_256, plan_page);
+partial_fs_blob_hashes_db_row!(
+    PartialUpdateFsBlobHashesMimeTypeDbRow,
+    blob_sha3_256,
+    mime_type
+);
 
 declare_stored_graph_edge!(
     FsFileToHashes,

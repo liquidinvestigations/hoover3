@@ -244,7 +244,7 @@ async fn test_create_drop_collection() {
 }
 
 /// API Client method to read the schema information from the database for a specific collection..
-pub async fn get_collection_schema(c: CollectionId) -> Result<CollectionSchemaDynamic> {
+pub async fn query_collection_schema(c: CollectionId) -> Result<CollectionSchemaDynamic> {
     tracing::info!("get_collection_schema {}", c.to_string());
     Ok(CollectionSchemaDynamic {
         collection_id: c.clone(),

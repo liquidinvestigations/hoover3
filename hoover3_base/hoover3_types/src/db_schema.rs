@@ -52,6 +52,9 @@ pub struct DatabaseColumn {
     pub _type: DatabaseColumnType,
     /// Indicates if this column is part of the primary key
     pub primary: bool,
+
+    /// Field definition for the column, if it is part of a model
+    pub field_definition: Option<ModelFieldDefinition>,
 }
 
 /// Represents an edge type in a graph database

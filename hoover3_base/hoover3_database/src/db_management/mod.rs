@@ -10,6 +10,7 @@ pub use clickhouse::ClickhouseDatabaseHandle;
 mod meilisearch;
 pub use meilisearch::meilisearch_wait_for_task;
 pub use meilisearch::query_meilisearch_schema;
+pub use meilisearch::search_index_include_table;
 pub use meilisearch::MeilisearchDatabaseHandle;
 
 mod scylla;

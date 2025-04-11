@@ -23,7 +23,6 @@ hoover3_macro.workspace = true
 hoover3_macro2.workspace = true
 hoover3_taskdef.workspace = true
 hoover3_database.workspace = true
-
 # ===================
 # ===== PLUGINS =====
 # ===================
@@ -31,12 +30,13 @@ hoover3_database.workspace = true
 hoover3_data_access.workspace = true
 hoover3_filesystem_scanner.workspace = true
 hoover3_database_operations.workspace = true
-
+hoover3_processing.workspace = true
 # ===================
 # ===== EXTRA =======
 # ===================
 tokio.workspace = true
 anyhow.workspace = true
+ctrlc = "3.4.6"
 
 [lints]
 workspace = true

@@ -65,7 +65,12 @@ impl ::core::cmp::PartialOrd for SimpleModel {
     }
 }
 #[doc(hidden)]
-#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+#[allow(
+    non_upper_case_globals,
+    unused_attributes,
+    unused_qualifications,
+    clippy::absolute_paths,
+)]
 const _: () = {
     #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;
@@ -98,7 +103,12 @@ const _: () = {
     }
 };
 #[doc(hidden)]
-#[allow(non_upper_case_globals, unused_attributes, unused_qualifications)]
+#[allow(
+    non_upper_case_globals,
+    unused_attributes,
+    unused_qualifications,
+    clippy::absolute_paths,
+)]
 const _: () = {
     #[allow(unused_extern_crates, clippy::useless_attribute)]
     extern crate serde as _serde;

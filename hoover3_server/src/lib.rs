@@ -12,6 +12,8 @@ pub use init::init_server_plugins;
 
 pub mod api;
 
+pub mod tasks;
+
 // ===================
 // ===== PLUGINS =====
 // ===================
@@ -24,3 +26,6 @@ pub use hoover3_data_access;
 
 /// Re-export the database operations plugin;
 pub use hoover3_database_operations;
+
+/// Re-export the processing plugin;
+pub use hoover3_processing;

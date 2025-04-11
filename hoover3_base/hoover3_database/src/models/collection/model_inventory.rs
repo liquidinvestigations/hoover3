@@ -160,6 +160,7 @@ fn read_scylla_schema_from_inventory() -> std::sync::Arc<ScyllaDatabaseSchema> {
                 name: DatabaseIdentifier::new(field.name).unwrap(),
                 _type: resolve_field_type(&field, &udts),
                 primary: field.partition_key || field.clustering_key,
+                field_definition: Some(field.to_owned()),
             });
         }
         tables.insert(table_name, table);

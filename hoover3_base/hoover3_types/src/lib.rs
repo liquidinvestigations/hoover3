@@ -6,5 +6,6 @@ pub mod db_schema;
 pub mod docker_health;
 pub mod filesystem;
 pub mod identifier;
+pub mod processing;
 pub mod stable_hash;
 pub mod tasks;

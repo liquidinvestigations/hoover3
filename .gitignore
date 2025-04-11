@@ -15,3 +15,4 @@ _rust_analyzer_
 /data
 /docker/data
 /docker/signoz
+/.worker_temp

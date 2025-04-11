@@ -2,10 +2,10 @@
 use std::path::PathBuf;
 
 use hoover3_database::migrate::migrate_common;
-use hoover3_filesystem_scanner::{
-    api::{get_scan_status, start_scan, wait_for_scan_results},
-    tasks::FilesystemScannerQueue,
+use hoover3_filesystem_scanner::tasks::{
+    scan_filesystem::fs_scan_datasource_workflow, FilesystemScannerQueue,
 };
+use hoover3_taskdef::TemporalioWorkflowDescriptor;
 use hoover3_types::{
     datasource::DatasourceSettings,
     identifier::{CollectionId, DatabaseIdentifier},
@@ -30,15 +30,24 @@ async fn test_fs_do_scan_datasource_small() -> anyhow::Result<()> {
 
     hoover3_taskdef::spawn_worker_on_thread(FilesystemScannerQueue);
 
-    start_scan((collection_id.clone(), datasource_id.clone())).await?;
-    let status = wait_for_scan_results((collection_id.clone(), datasource_id.clone())).await?;
+    fs_scan_datasource_workflow::client_start(&(collection_id.clone(), datasource_id.clone()))
+        .await?;
+    let status = fs_scan_datasource_workflow::client_wait_for_completion(&(
+        collection_id.clone(),
+        datasource_id.clone(),
+    ))
+    .await?;
     assert_eq!(status.dir_scan_result.file_count, 3);
     assert_eq!(status.dir_scan_result.dir_count, 0);
     assert_eq!(status.dir_scan_result.file_size_bytes, 308482);
     assert_eq!(status.dir_scan_result.errors, 0);
     assert_eq!(status.hash_scan_result.file_count, 3);
     assert_eq!(status.hash_scan_result.hash_count, 3);
-    let status = get_scan_status((collection_id.clone(), datasource_id.clone())).await?;
+    let status = fs_scan_datasource_workflow::client_get_status(&(
+        collection_id.clone(),
+        datasource_id.clone(),
+    ))
+    .await?;
     assert_eq!(status.task_status, UiWorkflowStatusCode::Completed);
     drop_collection(collection_id.clone()).await?;
     Ok(())

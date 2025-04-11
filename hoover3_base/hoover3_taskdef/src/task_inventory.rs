@@ -43,7 +43,7 @@ pub trait TaskQueueConst {
     const QUEUE_NAME: &'static str;
 }
 
-impl TaskQueue for TaskQueueStatic {
+impl TaskQueue for &'static TaskQueueStatic {
     fn queue_name(&self) -> &'static str {
         self.queue_name
     }
@@ -59,6 +59,11 @@ impl TaskQueue for TaskQueueStatic {
     fn max_memory_mb(&self) -> u32 {
         self.max_memory_mb
     }
+}
+
+/// List all task queues compiled into this binary.
+pub fn list_task_queues() -> impl Iterator<Item = &'static TaskQueueStatic> {
+    inventory::iter::<TaskQueueStatic>()
 }
 
 /// Declare a task queue in the inventory.

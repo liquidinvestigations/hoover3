@@ -1357,6 +1357,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctrlc"
+version = "3.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "697b5419f348fd5ae2478e8018cb016c00a5881c7f46c717de98ffd135a5651c"
+dependencies = [
+ "nix",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "darling"
 version = "0.20.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3281,16 +3291,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "hoover3_processing"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "hoover3_data_access",
+ "hoover3_database",
+ "hoover3_filesystem_scanner",
+ "hoover3_taskdef",
+ "hoover3_tracing",
+ "hoover3_types",
+ "magic",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "hoover3_server"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "ctrlc",
  "hoover3_data_access",
  "hoover3_database",
  "hoover3_database_operations",
  "hoover3_filesystem_scanner",
  "hoover3_macro",
  "hoover3_macro2",
+ "hoover3_processing",
  "hoover3_taskdef",
  "hoover3_tracing",
  "hoover3_types",
@@ -4132,6 +4160,28 @@ dependencies = [
  "serde_json",
  "syn 2.0.100",
  "toml_edit 0.22.24",
+]
+
+[[package]]
+name = "magic"
+version = "0.16.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a200ae03df8c3dce7a963f6eeaac8feb41bf9001cb7e5ab22e3205aec2f0373d"
+dependencies = [
+ "bitflags 2.9.0",
+ "libc",
+ "magic-sys",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "magic-sys"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eff86ae08895140d628119d407d568f3b657145ee8c265878064f717534bb3bc"
+dependencies = [
+ "libc",
+ "vcpkg",
 ]
 
 [[package]]

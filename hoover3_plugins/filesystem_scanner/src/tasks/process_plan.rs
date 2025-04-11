@@ -65,28 +65,31 @@ pub async fn do_compute_blob_processing_plan(
             .execute(&db_session)
             .await?;
 
-        let mut plan_pages = Vec::new();
-        let mut partial_updates = Vec::new();
-
-        for item in &chunk.blob_hashes {
-            plan_pages.push(BlobProcessingPlanPage {
-                plan_page_id,
-                blob_sha3_256: item.clone(),
-            });
-            partial_updates.push(PartialUpdateFsBlobHashesDbRow {
-                blob_sha3_256: item.clone(),
-                plan_page: Some(plan_page_id),
-            });
+        if chunk.blob_hashes.len() > 0 {
+            for chunk in chunk.blob_hashes.chunks(100) {
+                let mut plan_pages = Vec::new();
+                let mut partial_updates = Vec::new();
+                for item in chunk {
+                    plan_pages.push(BlobProcessingPlanPage {
+                        plan_page_id,
+                        blob_sha3_256: item.clone(),
+                    });
+                    partial_updates.push(PartialUpdateFsBlobHashesDbRow {
+                        blob_sha3_256: item.clone(),
+                        plan_page: Some(plan_page_id),
+                    });
+                    BlobProcessingPlanPage::batch()
+                        .append_inserts(&plan_pages)
+                        .execute(&db_session)
+                        .await?;
+                    PartialUpdateFsBlobHashesDbRow::batch()
+                        .append_inserts(&partial_updates)
+                        .execute(&db_session)
+                        .await?;
+                    db_extra.insert(&plan_pages).await?;
+                }
+            }
         }
-        BlobProcessingPlanPage::batch()
-            .append_inserts(&plan_pages)
-            .execute(&db_session)
-            .await?;
-        PartialUpdateFsBlobHashesDbRow::batch()
-            .append_inserts(&partial_updates)
-            .execute(&db_session)
-            .await?;
-        db_extra.insert(&plan_pages).await?;
 
         new_page_count += 1;
         info!(
