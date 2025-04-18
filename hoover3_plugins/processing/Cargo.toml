@@ -14,6 +14,8 @@ crate-type = ["cdylib", "rlib"]
 [lints]
 workspace = true
 
+[dev-dependencies]
+tempfile = "3.8"
 
 [dependencies]
 hoover3_taskdef.workspace = true
@@ -21,9 +23,26 @@ hoover3_database.workspace = true
 hoover3_tracing.workspace = true
 hoover3_filesystem_scanner.workspace = true
 hoover3_types.workspace = true
+hoover3_macro.workspace = true
 serde.workspace = true
 futures.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["fs"] }
+charybdis.workspace = true
 hoover3_data_access.workspace = true
+scylla.workspace = true
+serde_json.workspace = true
+async-stream.workspace = true
 
 magic = "0.16.2"
+extractous = "0.3.0"
+# https://github.com/yobix-ai/extractous/issues/56
+# extractous = {git = "https://github.com/titusz/extractous.git", rev = "abf07ebe3de32598af6831b7de6538f6bac79445"}
+# extractous = {git = "https://gitee.com/mrlijing/extractous", rev = "822286cb730207397fb1d06ec26d585fe5f3a2dc"}
+anyhow.workspace = true
+
+async-utf8-decoder = "1.0.0"
+tokio-util = { version = "0.7.14", features = ["compat"] }
+text-splitter = "0.25.1"
+
+lazy_static = "1.4.0"
+tracing.workspace = true

@@ -2,9 +2,9 @@
 
 use std::path::PathBuf;
 
-use hoover3_database::system_paths::get_workspace_root;
-use hoover3_taskdef::task_inventory::TaskQueue;
-use hoover3_taskdef::WORKER_TEMPDIR_ENV_VAR;
+use hoover3_taskdef::{
+    task_inventory::TaskQueue, WORKER_TEMPDIR_ENV_VAR_BIG, WORKER_TEMPDIR_ENV_VAR_SMALL,
+};
 use hoover3_tracing::tracing::{error, info, warn};
 
 fn main() -> anyhow::Result<()> {
@@ -22,21 +22,7 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn get_worker_tempdir() -> anyhow::Result<PathBuf> {
-    let tempdir = get_workspace_root().join(".worker_temp");
-    if tempdir.exists() {
-        info!("Removing existing tempdir: {}", tempdir.display());
-        std::fs::remove_dir_all(&tempdir)?;
-    }
-    let tempdir = tempdir.join(std::process::id().to_string());
-    info!("Creating tempdir: {}", tempdir.display());
-    std::fs::create_dir_all(&tempdir)?;
-    Ok(tempdir)
-}
-
 fn main_run_all_workers() -> anyhow::Result<()> {
-    let tempdir = get_worker_tempdir()?;
-
     let (quit_tx, quit_rx) = std::sync::mpsc::channel();
 
     ctrlc::set_handler(move || {
@@ -53,12 +39,7 @@ fn main_run_all_workers() -> anyhow::Result<()> {
     );
     let mut children = Vec::new();
     for q in queues {
-        let workdir_path = tempdir.join(&q);
-        std::fs::create_dir_all(&workdir_path)?;
-        children.push((
-            q.clone(),
-            run_worker_in_subprocess(q, workdir_path.canonicalize()?)?,
-        ));
+        children.push((q.clone(), run_worker_in_subprocess(q)?));
     }
 
     // wait until one exits
@@ -85,8 +66,8 @@ fn main_run_all_workers() -> anyhow::Result<()> {
         }
     }
     warn!("All workers killed.");
-    info!("Removing tempdir: {}", tempdir.display());
-    std::fs::remove_dir_all(&tempdir)?;
+    warn!("Removing temporary dirs...");
+    rm_temp_dirs();
 
     if let Some(queue) = dead_queue {
         error!("Worker {} exited with status {:?}", queue, exit_status);
@@ -97,32 +78,40 @@ fn main_run_all_workers() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn run_worker_in_subprocess(
-    queue: String,
-    tempdir: PathBuf,
-) -> anyhow::Result<std::process::Child> {
+fn rm_temp_dirs() {
+    let big_tmp = std::env::var(WORKER_TEMPDIR_ENV_VAR_BIG).ok();
+    let small_tmp = std::env::var(WORKER_TEMPDIR_ENV_VAR_SMALL).ok();
+    for item in vec![big_tmp, small_tmp].iter().flatten() {
+        if std::fs::exists(item).unwrap_or(false) {
+            let _ = remove_tmp_dir(item);
+        }
+    }
+}
+
+fn remove_tmp_dir(item: &str) -> anyhow::Result<()> {
+    let path = PathBuf::from(item).canonicalize()?;
+    for item in std::fs::read_dir(path)? {
+        let item = item?;
+        let path = item.path();
+        if path.is_dir() {
+            info!("Removing tempdir: {}", path.display());
+            std::fs::remove_dir_all(path)?;
+        } else if path.is_file() {
+            info!("Removing tempfile: {}", path.display());
+            std::fs::remove_file(path)?;
+        } else {
+            warn!("Tempdir: Unknown file type: {}", path.display());
+        }
+    }
+    Ok(())
+}
+fn run_worker_in_subprocess(queue: String) -> anyhow::Result<std::process::Child> {
     let exe = std::env::current_exe()?;
-    let tmp = tempdir.to_str().expect("path is not valid string");
-    let subprocess = std::process::Command::new(exe)
-        .arg(queue)
-        .env(WORKER_TEMPDIR_ENV_VAR, tmp)
-        .env("TEMP", tmp)
-        .env("TMP", tmp)
-        .spawn()?;
+    let subprocess = std::process::Command::new(exe).arg(queue).spawn()?;
     Ok(subprocess)
 }
 
 fn run_worker_directly(arg: String) -> anyhow::Result<()> {
-    let tempdir = PathBuf::from(std::env::var(WORKER_TEMPDIR_ENV_VAR)?).canonicalize()?;
-    info!("Tempdir: {}", tempdir.display());
-    if !tempdir.exists() {
-        return Err(anyhow::anyhow!(
-            "Tempdir {} does not exist",
-            tempdir.display()
-        ));
-    }
-    let pidfile = tempdir.join("worker_pid.txt");
-    std::fs::write(pidfile, std::process::id().to_string())?;
     let matching_queues = hoover3_taskdef::tasks::list_task_queues()
         .filter(|q| q.queue_name() == arg)
         .collect::<Vec<_>>();

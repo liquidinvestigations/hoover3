@@ -26,8 +26,9 @@ async fn get_plan_page_ids(collection_id: CollectionId) -> anyhow::Result<(Vec<i
     pin_mut!(page_stream);
     let mut small_pages = vec![];
     let mut large_pages = vec![];
-    while let Some(Ok(page)) = page_stream.next().await {
-        if page.is_finished {
+    while let Some(page) = page_stream.next().await {
+        let page = page?;
+        if page.is_started {
             continue;
         }
         if page.size_bytes < SMALL_THRESHOLD {

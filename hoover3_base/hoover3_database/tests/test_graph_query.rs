@@ -138,8 +138,8 @@ async fn test_graph_query() -> Result<(), anyhow::Error> {
         .await?;
     let targets = targets.collect::<Vec<_>>().await;
     assert_eq!(targets.len(), 1);
-    let t0 = targets[0].as_ref().unwrap();
-    assert_eq!(t0, &test_model_b);
+    let target0 = targets[0].as_ref().unwrap();
+    assert_eq!(target0, &test_model_b);
 
     let sources = TestModelEdge
         .list_source(&c, &test_model_b.primary_key_values())

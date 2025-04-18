@@ -1,14 +1,18 @@
 //! Plan for processing blobs that have been hashed.
 //! Splits the work into chunks of similar file size.
 
+use std::collections::HashSet;
+
 use crate::models::{
-    BlobProcessingPlan, BlobProcessingPlanPage, FsBlobHashesDbRow, PartialUpdateFsBlobHashesDbRow,
+    find_fs_blob_plan_page_db_row, BlobProcessingPlan, BlobProcessingPlanPageBlobs,
+    FsBlobHashesDbRow, FsBlobPlanPageDbRow,
 };
 use anyhow::Context;
 use async_stream::try_stream;
 use charybdis::batch::ModelBatch;
 use charybdis::operations::{Find, InsertWithCallbacks};
 use futures::{pin_mut, StreamExt, TryStreamExt};
+use hoover3_database::constants::CQL_SELECT_BATCH_SIZE;
 use hoover3_database::db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle};
 use hoover3_database::models::collection::{DatabaseExtraCallbacks, ResultStream};
 use hoover3_macro::{activity, workflow};
@@ -16,6 +20,7 @@ use hoover3_taskdef::{TemporalioActivityDescriptor, WfContext, WfExitValue, Work
 use hoover3_tracing::tracing::info;
 use hoover3_types::filesystem::ProcessingPlanResult;
 use hoover3_types::identifier::CollectionId;
+use tokio::time::Instant;
 
 use super::hash_files_plan::chunk_by_size;
 use super::FilesystemScannerQueue;
@@ -36,6 +41,7 @@ async fn compute_blob_processing_plan(
 pub async fn do_compute_blob_processing_plan(
     collection_id: CollectionId,
 ) -> anyhow::Result<ProcessingPlanResult> {
+    info!("do_compute_blob_processing_plan: {}", collection_id);
     let mut stream = stream_blob_processing_plan(collection_id.clone()).await?;
     let mut plan_page_id = get_max_plan_page_id(&collection_id).await? + 1;
     let mut new_page_count = 0;
@@ -55,7 +61,7 @@ pub async fn do_compute_blob_processing_plan(
             plan_page_id,
             file_count: chunk.blob_hashes.len() as i32,
             size_bytes: chunk.chunk_size,
-            is_finished: false,
+            is_started: false,
         };
         total_blob_size_bytes += chunk.chunk_size as u64;
         total_blob_count += chunk.blob_hashes.len() as u32;
@@ -66,28 +72,28 @@ pub async fn do_compute_blob_processing_plan(
             .await?;
 
         if chunk.blob_hashes.len() > 0 {
-            for chunk in chunk.blob_hashes.chunks(100) {
+            for chunk in chunk.blob_hashes.chunks(1000) {
                 let mut plan_pages = Vec::new();
                 let mut partial_updates = Vec::new();
                 for item in chunk {
-                    plan_pages.push(BlobProcessingPlanPage {
+                    plan_pages.push(BlobProcessingPlanPageBlobs {
                         plan_page_id,
                         blob_sha3_256: item.clone(),
                     });
-                    partial_updates.push(PartialUpdateFsBlobHashesDbRow {
+                    partial_updates.push(FsBlobPlanPageDbRow {
                         blob_sha3_256: item.clone(),
-                        plan_page: Some(plan_page_id),
+                        plan_page_id,
                     });
-                    BlobProcessingPlanPage::batch()
-                        .append_inserts(&plan_pages)
-                        .execute(&db_session)
-                        .await?;
-                    PartialUpdateFsBlobHashesDbRow::batch()
-                        .append_inserts(&partial_updates)
-                        .execute(&db_session)
-                        .await?;
-                    db_extra.insert(&plan_pages).await?;
                 }
+
+                BlobProcessingPlanPageBlobs::batch()
+                    .append_inserts(&plan_pages)
+                    .execute(&db_session)
+                    .await?;
+                FsBlobPlanPageDbRow::batch()
+                    .append_inserts(&partial_updates)
+                    .execute(&db_session)
+                    .await?;
             }
         }
 
@@ -96,7 +102,7 @@ pub async fn do_compute_blob_processing_plan(
             "BLOB PROCESSING PLAN PAGE {}: {} blobs, {} bytes",
             plan_page_id,
             chunk.blob_hashes.len(),
-            chunk.chunk_size
+            chunk.chunk_size,
         );
         plan_page_id += 1;
     }
@@ -111,7 +117,8 @@ pub async fn do_compute_blob_processing_plan(
 /// Get the maximum existing plan page ID from the database.
 /// Returns 0 if no plan pages exist.
 async fn get_max_plan_page_id(collection_id: &CollectionId) -> anyhow::Result<i32> {
-    let db_session = ScyllaDatabaseHandle::collection_session(collection_id).await?;
+    let collection_id = collection_id.clone();
+    let db_session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
 
     let plans = BlobProcessingPlan::find_all().execute(&db_session).await?;
     pin_mut!(plans);
@@ -126,13 +133,13 @@ async fn get_max_plan_page_id(collection_id: &CollectionId) -> anyhow::Result<i3
     Ok(max_id)
 }
 
-fn flatten_result<T, E>(r: Result<Result<T, E>, E>) -> Result<T, E> {
-    match r {
-        Ok(Ok(r)) => Ok(r),
-        Ok(Err(e)) => Err(e),
-        Err(e) => Err(e),
-    }
-}
+// fn flatten_result<T, E>(r: Result<Result<T, E>, E>) -> Result<T, E> {
+//     match r {
+//         Ok(Ok(r)) => Ok(r),
+//         Ok(Err(e)) => Err(e),
+//         Err(e) => Err(e),
+//     }
+// }
 
 /// Stream chunks of work for processing blobs.
 async fn stream_blob_processing_plan(
@@ -144,25 +151,29 @@ async fn stream_blob_processing_plan(
     // Query all blob hashes
     let db_session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
     let stream = FsBlobHashesDbRow::find_all().execute(&db_session).await?;
-
+    let session = ScyllaDatabaseHandle::collection_session(&collection_id).await?;
+    let stream = stream.chunks(CQL_SELECT_BATCH_SIZE).boxed();
     let stream = async_stream::try_stream! {
-        for await r in stream {
-           match r {
-                Ok(r) => {
-                    if r.plan_page.is_none() {
-                        yield Ok(r);
-                    }
-                }
-                Err(e) => {
-                    yield Err(anyhow::anyhow!("Error in stream_blob_processing_plan: {}", e));
+        pin_mut!(stream);
+        while let Some(chunk) = stream.next().await {
+            let chunk = chunk.into_iter().collect::<Result<Vec<_>, _>>()?;
+            let _t0 = Instant::now();
+            let mut pks = chunk.iter().map(|b| b.blob_sha3_256.clone()).collect::<HashSet<_>>();
+            let plans = find_fs_blob_plan_page_db_row!("blob_sha3_256 IN ?", (pks.clone(),)).execute(&session).await?;
+            pin_mut!(plans);
+            while let Some(plan) = plans.next().await {
+                let plan = plan?;
+                pks.remove(&plan.blob_sha3_256);
+            }
+            for pk in chunk {
+                if pks.contains(&pk.blob_sha3_256) {
+                    yield pk;
                 }
             }
         }
-    };
+    }.boxed();
 
-    let stream = stream.map(flatten_result).boxed();
-
-    let stream = reorder_stream(stream, |blob: &FsBlobHashesDbRow| blob.size_bytes, 1000);
+    let stream = reorder_stream(stream, |blob: &FsBlobHashesDbRow| blob.size_bytes, 100);
 
     // Chunk by size
     let stream = chunk_by_size(
@@ -182,6 +193,11 @@ async fn stream_blob_processing_plan(
             chunk_size += blob.size_bytes;
         }
 
+        info!(
+            "stream_blob_processing_plan: {} items = {} bytes",
+            blob_hashes.len(),
+            chunk_size
+        );
         BlobProcessingPlanChunk {
             blob_hashes,
             chunk_size,

@@ -58,7 +58,7 @@ nav {
 }
 .loading_box {
     height: 3rem;
-    width: 15rem;
+    width: 5rem;
     position:relative;
 }
 .loading_box > img {

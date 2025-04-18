@@ -2,6 +2,7 @@
 //! It also hosts a bunch of client methods for interacting with the various databases.
 
 pub mod client_query;
+pub mod constants;
 pub mod db_management;
 pub mod migrate;
 pub mod models;

@@ -13,5 +13,7 @@ pub use tasks::*;
 
 pub use hoover3_macro::{activity, workflow};
 
-/// Environment variable for the worker tempdir.
-pub const WORKER_TEMPDIR_ENV_VAR: &str = "HOOVER3_WORKER_TEMPDIR";
+/// Environment variable for the worker tempdir (big space).
+pub const WORKER_TEMPDIR_ENV_VAR_BIG: &str = "HOOVER3_WORKER_TEMP_DISK_BIG";
+/// Environment variable for the worker tempdir (small space).
+pub const WORKER_TEMPDIR_ENV_VAR_SMALL: &str = "HOOVER3_WORKER_TEMP_RAMDISK_SMALL";

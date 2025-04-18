@@ -8,6 +8,7 @@ use charybdis::{batch::ModelBatch, model::BaseModel};
 use futures::{pin_mut, StreamExt};
 use hoover3_data_access::list_disk::read_file_to_stream;
 use hoover3_database::{
+    constants::CQL_SELECT_BATCH_SIZE,
     db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle},
     models::collection::{DatabaseExtraCallbacks, GraphEdgeInsert},
 };
@@ -156,7 +157,7 @@ async fn filter_out_existing_hashes(
     let rows = rows.values().cloned().collect::<Vec<_>>();
     let mut existing_hashes = BTreeSet::new();
 
-    for chunk in rows.chunks(100) {
+    for chunk in rows.chunks(CQL_SELECT_BATCH_SIZE) {
         let chunk = chunk
             .iter()
             .map(|r| r.blob_sha3_256.clone())
@@ -245,11 +246,9 @@ async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResu
             blob_md5: to_hex(&finished_hashes[&HashType::Md5]),
             blob_sha1: to_hex(&finished_hashes[&HashType::Sha1]),
             size_bytes: file_size as i64,
-            plan_page: None,
             datasource_id: args.datasource_id.to_string(),
             parent_dir_path: dir.clone(),
             file_name: file_name.clone(),
-            mime_type: "".to_string(),
         };
         new_hashes.push(hashes_row.clone());
         edge_batch.add_edge_from_pk(
@@ -264,7 +263,7 @@ async fn fs_do_hash_files(args: HashFileArgs) -> anyhow::Result<FsScanHashesResu
         .await
         .context("filter_out_existing_hashes")?;
     if !new_hashes.is_empty() {
-        for new_hashes in new_hashes.chunks(100) {
+        for new_hashes in new_hashes.chunks(300) {
             let mut batch = FsBlobHashesDbRow::batch();
             batch.append_inserts(&new_hashes);
             batch.execute(&session).await.context("batch execute")?;

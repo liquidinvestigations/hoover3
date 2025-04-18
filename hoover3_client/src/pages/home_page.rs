@@ -12,6 +12,7 @@ pub fn HomePage() -> Element {
             rsx! {"Database Explorer"},
         ),
         (Route::ToolsHomePage {}, rsx! {"Tools"}),
+        (Route::AdminHomePage {}, rsx! {"Admin"}),
     ];
     rsx! {
         FullscreenLinks { links }

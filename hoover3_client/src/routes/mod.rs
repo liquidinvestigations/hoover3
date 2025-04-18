@@ -102,7 +102,7 @@ pub enum Route {
 fn DisplayError(title: String, err: String) -> Element {
     rsx! {
         div {
-            class: "container",
+            class: "container-fluid",
             article {
                 h1 { {title} }
                 pre { color: "red", "{err}" }

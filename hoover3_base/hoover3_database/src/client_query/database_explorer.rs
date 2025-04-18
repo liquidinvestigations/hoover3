@@ -49,7 +49,7 @@ pub async fn scylla_row_count(
 pub async fn db_explorer_run_query(
     (collection_id, db_type, sql_query): (CollectionId, DatabaseServiceType, String),
 ) -> anyhow::Result<DynamicQueryResponse> {
-    let t0 = std::time::Instant::now();
+    let start_time = std::time::Instant::now();
 
     let result = match db_type {
         DatabaseServiceType::Scylla => {
@@ -63,7 +63,7 @@ pub async fn db_explorer_run_query(
     .map_err(|e| format!("{:?} Query Error: {}", db_type, e));
 
     let t1 = std::time::Instant::now();
-    let dt = t1.duration_since(t0).as_secs_f64();
+    let dt = t1.duration_since(start_time).as_secs_f64();
     Ok(DynamicQueryResponse {
         db_type,
         query: sql_query.clone(),

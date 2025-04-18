@@ -3,6 +3,7 @@
 mod get_mime_type;
 mod process_group;
 mod process_page;
+mod tika;
 
 use hoover3_taskdef::{
     declare_task_queue, workflow, TemporalioActivityDescriptor, TemporalioWorkflowDescriptor,
@@ -22,7 +23,7 @@ declare_task_queue!(
 declare_task_queue!(
     ProcessingQueueSmallPage,
     "processing_small",
-    8,    // concurrent workflows
+    16,    // concurrent workflows
     64,   // max i/o threads
     4096  // MB ram worker total
 );

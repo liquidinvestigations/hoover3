@@ -71,7 +71,7 @@ pub fn DatasourceAdminDetailsPage(
 
     rsx! {
         div {
-            class: "container",
+            class: "container-fluid",
             h4 {
                 "Collection {collection_id}"
             }

@@ -196,7 +196,6 @@ declare_implicit_graph_edge!(
 
 /// Model for storing the different types of hashes for a blob.
 #[model]
-#[derive(Default)]
 pub struct FsBlobHashesDbRow {
     /// The SHA3-256 hash of the blob.
     #[model(primary(partition))]
@@ -219,9 +218,6 @@ pub struct FsBlobHashesDbRow {
     #[model(search(facet))]
     pub size_bytes: i64,
 
-    /// The plan page where this model will be stored.
-    pub plan_page: Option<i32>,
-
     /// Unique identifier for the datasource where this was first found
     pub datasource_id: String,
 
@@ -230,17 +226,33 @@ pub struct FsBlobHashesDbRow {
 
     /// Name of the file where this was first found
     pub file_name: String,
-
-    /// The mime type information extracted from libmagic
-    pub mime_type: String,
 }
 
-partial_fs_blob_hashes_db_row!(PartialUpdateFsBlobHashesDbRow, blob_sha3_256, plan_page);
-partial_fs_blob_hashes_db_row!(
-    PartialUpdateFsBlobHashesMimeTypeDbRow,
-    blob_sha3_256,
-    mime_type
-);
+/// Model for storing the different types of hashes for a blob.
+#[model]
+pub struct FsBlobPlanPageDbRow {
+    /// The sha3-256 hash of the blob.
+    #[model(primary(partition))]
+    pub blob_sha3_256: String,
+    /// The plan page id.
+    pub plan_page_id: i32,
+}
+
+/// Model for storing the mime type of a blob.
+#[model]
+pub struct FsBlobMimeTypeDbRow {
+    /// The sha3-256 hash of the blob.
+    #[model(primary(partition))]
+    pub blob_sha3_256: String,
+    /// The mime type of the blob, from libmagic.
+    pub magic_mime: String,
+    /// The mime type of the blob, from tika.
+    pub tika_mime: String,
+    /// Tika metadata extraction was successful.
+    pub tika_metadata_success: bool,
+    /// Tika Content extraction was successful.
+    pub tika_content_success: bool,
+}
 
 declare_stored_graph_edge!(
     FsFileToHashes,
@@ -259,13 +271,13 @@ pub struct BlobProcessingPlan {
     pub file_count: i32,
     /// The number of bytes that will be processed in this plan page.
     pub size_bytes: i64,
-    /// Whether the plan has been finished.
-    pub is_finished: bool,
+    /// Whether the plan has been started.
+    pub is_started: bool,
 }
 
 /// Model for storing a page of processing plans.
 #[model]
-pub struct BlobProcessingPlanPage {
+pub struct BlobProcessingPlanPageBlobs {
     /// Plan page id.
     #[model(primary(partition))]
     pub plan_page_id: i32,
@@ -278,7 +290,7 @@ declare_implicit_graph_edge!(
     BlobProcessingPlanToPage,
     "blob_processing_plan_to_page",
     BlobProcessingPlan,
-    BlobProcessingPlanPage
+    BlobProcessingPlanPageBlobs
 );
 
 /// Model for storing the pages for the plans for hashing files.
@@ -293,6 +305,13 @@ pub struct FsFileHashPlanPageDbRow {
     pub plan_chunk_id: i32,
 }
 
+declare_implicit_graph_edge!(
+    FsDatasourceToFileHashPlanPages,
+    "fs_datasource_to_file_hash_plan_pages",
+    DatasourceDbRow,
+    FsFileHashPlanPageDbRow
+);
+
 /// Model for storing the plan for hashing a single chunk of files.
 #[model]
 pub struct FsFileHashPlanDbRow {
@@ -305,13 +324,6 @@ pub struct FsFileHashPlanDbRow {
     /// The actual plan data, json encoded
     pub plan_data: String,
 }
-
-declare_implicit_graph_edge!(
-    FsDatasourceToFileHashPlanPages,
-    "fs_datasource_to_file_hash_plan_pages",
-    DatasourceDbRow,
-    FsFileHashPlanPageDbRow
-);
 
 declare_implicit_graph_edge!(
     FsFileHashPlanPageToPlans,

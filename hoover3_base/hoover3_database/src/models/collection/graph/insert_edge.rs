@@ -1,6 +1,7 @@
 use super::super::graph_models::*;
 use super::super::row_pk_hash;
 use super::declare_edge::GraphEdge;
+use crate::constants::CQL_SELECT_BATCH_SIZE;
 use crate::db_management::{DatabaseSpaceManager, ScyllaDatabaseHandle};
 use charybdis::{batch::ModelBatch, model::BaseModel};
 use futures::pin_mut;
@@ -17,9 +18,6 @@ use std::collections::HashSet;
 /// The actual scylla limit is 100k, but our counters aren't atomic,
 /// so we want a large margin
 const CQL_TARGET_PARTITION_SIZE: i32 = 10000;
-
-/// The Cql limit for SELECT ... WHERE field IN ? queries.
-const CQL_SELECT_BATCH_SIZE: usize = 100;
 
 /// The number of batches to run in parallel for a single operation.
 const CQL_PARALLEL_BATCHES: usize = 8;

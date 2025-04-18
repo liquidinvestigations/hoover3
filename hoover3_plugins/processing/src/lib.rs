@@ -3,3 +3,4 @@
 
 pub mod models;
 pub mod tasks;
+pub(crate) mod utf8_utils;

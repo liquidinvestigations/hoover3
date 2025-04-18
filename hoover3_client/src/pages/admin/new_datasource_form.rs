@@ -102,7 +102,7 @@ fn _NewDatasourceFormPage(
     });
 
     rsx! {
-        article { class: "container",
+        article { class: "container-fluid",
             h1 { "Create New Datasource for {collection_id.read()}" }
             form {
                 fieldset { role: "group",
@@ -147,7 +147,7 @@ fn _NewDatasourceFormPage(
             }
         }
         div {
-            class: "container",
+            class: "container-fluid",
             DatasourcePathPicker{
                 path: path,
                 child_list: children,
