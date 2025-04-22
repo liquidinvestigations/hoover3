@@ -20,17 +20,31 @@ pub async fn extract_metadata(path: PathBuf, temp_dir: PathBuf) -> anyhow::Resul
     tokio::task::spawn_blocking(move || run_extract_metadata(path, temp_dir)).await?
 }
 
-
 fn run_extract_metadata(path: PathBuf, temp_dir: PathBuf) -> anyhow::Result<TikaResult> {
     let path = path.to_str().context("invalid path")?;
     let extractor = Extractor::new();
     let (content, mut metadata) = extractor.extract_file(&path)?;
-    let content_length = metadata.remove("Content-Length").map(|v| v.first().cloned()).flatten().map(|s| s.parse::<u64>().ok()).flatten();
-    let content_type = metadata.remove("Content-Type").map(|v| v.first().cloned().unwrap_or_default());
+    let content_length = metadata
+        .remove("Content-Length")
+        .map(|v| v.first().cloned())
+        .flatten()
+        .map(|s| s.parse::<u64>().ok())
+        .flatten();
+    let content_type = metadata
+        .remove("Content-Type")
+        .map(|v| v.first().cloned().unwrap_or_default());
 
-    let metadata = metadata.into_iter().map(|(k, vs)| {
-        (k, vs.into_iter().map(|v| truncate_utf8_string(v, 64 * 1024)).collect())
-    }).collect();
+    let metadata = metadata
+        .into_iter()
+        .map(|(k, vs)| {
+            (
+                k,
+                vs.into_iter()
+                    .map(|v| truncate_utf8_string(v, 64 * 1024))
+                    .collect(),
+            )
+        })
+        .collect();
 
     Ok(TikaResult {
         metadata,
@@ -47,7 +61,7 @@ fn truncate_utf8_string(s: String, max_length: usize) -> String {
     let mut chars = s.chars();
     let mut truncated = String::new();
     while let Some(c) = chars.next() {
-        if truncated.len() >= max_length-30 {
+        if truncated.len() >= max_length - 30 {
             truncated.push_str("\n[ ... LONG TEXT TRUNCATED BY HOOVER ...]\n");
             break;
         }
@@ -56,13 +70,9 @@ fn truncate_utf8_string(s: String, max_length: usize) -> String {
     truncated
 }
 
-
-fn download_content(tempdir: PathBuf, mut content: StreamReader)
- -> Result<PathBuf, anyhow::Error>
- {
+fn download_content(tempdir: PathBuf, mut content: StreamReader) -> Result<PathBuf, anyhow::Error> {
     let file_path = tempdir.join("tika_output_content");
     let mut file = std::fs::File::create(&file_path)?;
     std::io::copy(&mut content, &mut file)?;
     Ok(file_path)
 }
-

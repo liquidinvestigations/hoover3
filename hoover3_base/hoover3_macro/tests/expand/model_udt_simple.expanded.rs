@@ -42,16 +42,6 @@ impl ::core::clone::Clone for simple_model_udt {
 }
 #[automatically_derived]
 #[allow(non_camel_case_types)]
-impl ::core::hash::Hash for simple_model_udt {
-    #[inline]
-    fn hash<__H: ::core::hash::Hasher>(&self, state: &mut __H) -> () {
-        ::core::hash::Hash::hash(&self.id, state);
-        ::core::hash::Hash::hash(&self.another_field, state);
-        ::core::hash::Hash::hash(&self.created_at, state)
-    }
-}
-#[automatically_derived]
-#[allow(non_camel_case_types)]
 impl ::core::marker::StructuralPartialEq for simple_model_udt {}
 #[automatically_derived]
 #[allow(non_camel_case_types)]
@@ -935,7 +925,7 @@ const _: () = {
                 udt_name: "simple_model_udt",
                 model_name: "simple_model_udt",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_udt_model(type_name = simple_model_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct simple_model_udt {\n    /// Some Field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<::charybdis::types::Int>,\n    /// Timestamp field\n    pub created_at: ::hoover3_database::charybdis::types::Timestamp,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_udt_model(type_name = simple_model_udt)]\n#[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]\npub struct simple_model_udt {\n    /// Some Field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub another_field: Option<::charybdis::types::Int>,\n    /// Timestamp field\n    pub created_at: ::hoover3_database::charybdis::types::Timestamp,\n}\n",
                 fields: &[
                     ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",

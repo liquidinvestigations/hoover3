@@ -88,7 +88,7 @@ fn generate_new_item_struct(
 
     item_struct.attrs.push(charybdis_attr);
     item_struct.attrs.push(syn::parse_quote! {
-        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        #[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
     });
 
     // Add charybdis column type attributes to fields
@@ -546,7 +546,7 @@ fn test_generate_new_item_struct() {
         #[derive(
             Debug,
             Clone,
-            Hash,
+
             PartialEq,
             PartialOrd,
             ::serde::Serialize,
@@ -676,7 +676,7 @@ fn test_model_macro() {
             local_secondary_indexes = [],
             static_columns = []
         )]
-        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        #[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         struct MyModel {
             /// Doc One
             pub pk: ::hoover3_database::charybdis::types::Text,
@@ -689,7 +689,7 @@ fn test_model_macro() {
                 table_name : "my_model",
                 model_name : "MyModel",
                 docstring : "This is a test model",
-                charybdis_code :  "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::hoover3_database::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                charybdis_code :  "/// This is a test model\n#[::charybdis::macros::charybdis_model(\n    table_name = my_model,\n    partition_keys = [pk],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]\nstruct MyModel {\n    /// Doc One\n    pub pk: ::hoover3_database::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
                 fields : & [
                     ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name : "pk",
@@ -752,7 +752,7 @@ fn test_model_with_custom_type() {
             local_secondary_indexes = [],
             static_columns = []
         )]
-        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        #[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         struct CustomModel {
             /// Primary key field
             pub id: ::hoover3_database::charybdis::types::Text,
@@ -765,7 +765,7 @@ fn test_model_with_custom_type() {
                 table_name: "custom_model",
                 model_name: "CustomModel",
                 docstring: "Test model with custom type",
-                charybdis_code: "/// Test model with custom type\n#[::charybdis::macros::charybdis_model(\n    table_name = custom_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct CustomModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Custom type field\n    pub custom_field: my_crate::CustomType,\n}\n",
+                charybdis_code: "/// Test model with custom type\n#[::charybdis::macros::charybdis_model(\n    table_name = custom_model,\n    partition_keys = [id],\n    clustering_keys = [],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]\nstruct CustomModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Custom type field\n    pub custom_field: my_crate::CustomType,\n}\n",
                 fields: &[
                     ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",
@@ -934,7 +934,7 @@ fn generate_new_udt_item_struct(
 
     item_struct.attrs.push(charybdis_attr);
     item_struct.attrs.push(syn::parse_quote! {
-        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        #[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
     });
 
     // Add charybdis column type attributes to fields
@@ -1130,7 +1130,7 @@ fn test_generate_new_udt_item_struct() {
         #[derive(
             Debug,
             Clone,
-            Hash,
+
             PartialEq,
             PartialOrd,
             ::serde::Serialize,
@@ -1255,7 +1255,7 @@ fn test_udt_model_macro() {
         #[::charybdis::macros::charybdis_udt_model(
             type_name = my_udt
         )]
-        #[derive(Debug, Clone, Hash, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
+        #[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]
         struct my_udt {
             /// Doc One
             pub field1: ::hoover3_database::charybdis::types::Text,
@@ -1269,7 +1269,7 @@ fn test_udt_model_macro() {
                 model_name : "my_udt",
                 docstring : "This is a test UDT",
                 charybdis_code :
-                "/// This is a test UDT\n#[::charybdis::macros::charybdis_udt_model(type_name = my_udt)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\nstruct my_udt {\n    /// Doc One\n    pub field1: ::hoover3_database::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
+                "/// This is a test UDT\n#[::charybdis::macros::charybdis_udt_model(type_name = my_udt)]\n#[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]\nstruct my_udt {\n    /// Doc One\n    pub field1: ::hoover3_database::charybdis::types::Text,\n    /// Doc Two\n    pub created_at: Option<::charybdis::types::Timestamp>,\n}\n",
                 fields : & [
                     ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name : "field1",

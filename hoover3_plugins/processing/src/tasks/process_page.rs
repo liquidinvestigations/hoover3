@@ -19,7 +19,10 @@ use hoover3_types::{
 };
 use tokio::io::AsyncWriteExt;
 
-use crate::{models::{BlobExtractedContentRow, BlobExtractedMetadataRow}, utf8_utils::read_utf8_file_paragraphs};
+use crate::{
+    models::{BlobExtractedContentRow, BlobExtractedMetadataRow},
+    utf8_utils::read_utf8_file_paragraphs,
+};
 
 use super::{
     get_mime_type::magic_get_mime_type, process_group::ProcessPageArgs, ProcessingQueueBigPage,
@@ -67,8 +70,8 @@ async fn process_page(args: ProcessPageArgs) -> anyhow::Result<ProcessPageResult
     let _args = args.clone();
     let _model_reader_task = async move {
         let model_stream = BlobProcessingPlanPageBlobs::find_by_plan_page_id(_args.plan_page_id)
-        .execute(&session)
-        .await?;
+            .execute(&session)
+            .await?;
         pin_mut!(model_stream);
         while let Some(model) = model_stream.next().await {
             let model = model?;
@@ -84,12 +87,12 @@ async fn process_page(args: ProcessPageArgs) -> anyhow::Result<ProcessPageResult
         anyhow::Ok(())
     };
 
-
     let (download_tx, mut download_rx) = tokio::sync::mpsc::channel(2);
     let _args = args.clone();
     let _download_task = async move {
         while let Some((model, tempdir)) = model_rx.recv().await {
-            let filepath = download_item(_args.clone(), model.blob_sha3_256.clone(), tempdir.clone()).await?;
+            let filepath =
+                download_item(_args.clone(), model.blob_sha3_256.clone(), tempdir.clone()).await?;
             download_tx.send((model, tempdir, filepath)).await?;
         }
         drop(download_tx);
@@ -99,7 +102,12 @@ async fn process_page(args: ProcessPageArgs) -> anyhow::Result<ProcessPageResult
     let (item_result_tx, mut item_result_rx) = tokio::sync::mpsc::channel(2);
     let _item_process_task = async move {
         while let Some((model, tempdir, filepath)) = download_rx.recv().await {
-            let r = process_item(model.blob_sha3_256.clone(), filepath.clone(), tempdir.clone()).await;
+            let r = process_item(
+                model.blob_sha3_256.clone(),
+                filepath.clone(),
+                tempdir.clone(),
+            )
+            .await;
             item_result_tx.send((r, tempdir)).await?;
             tokio::fs::remove_file(&filepath).await?;
         }
@@ -112,7 +120,8 @@ async fn process_page(args: ProcessPageArgs) -> anyhow::Result<ProcessPageResult
         let session = ScyllaDatabaseHandle::collection_session(&_args.collection_id).await?;
         let extra = DatabaseExtraCallbacks::new(&_args.collection_id).await?;
         let mut process_page_results = ProcessPageResult::default();
-        let mut batches = ProcessItemsWriteBatches::new(&_args.collection_id, session, extra).await?;
+        let mut batches =
+            ProcessItemsWriteBatches::new(&_args.collection_id, session, extra).await?;
 
         while let Some((r, tempdir)) = item_result_rx.recv().await {
             process_page_results.item_count += 1;
@@ -127,7 +136,7 @@ async fn process_page(args: ProcessPageArgs) -> anyhow::Result<ProcessPageResult
                 }
             }
             tokio::fs::remove_dir_all(&tempdir).await?;
-        };
+        }
         batches.finalize().await?;
         anyhow::Ok(process_page_results)
     };
@@ -143,7 +152,10 @@ async fn process_page(args: ProcessPageArgs) -> anyhow::Result<ProcessPageResult
     let process_page_results = _item_save_task.await??;
 
     tokio::fs::remove_dir_all(&tempdir).await?;
-    info!("ProcessItemsPage {}/{}: done", args.collection_id, args.plan_page_id);
+    info!(
+        "ProcessItemsPage {}/{}: done",
+        args.collection_id, args.plan_page_id
+    );
     Ok(process_page_results)
 }
 
@@ -158,7 +170,11 @@ struct ProcessItemsWriteBatches {
 }
 
 impl ProcessItemsWriteBatches {
-    async fn new(collection_id: &CollectionId, session: std::sync::Arc<ScyllaDatabaseHandle>, extra: DatabaseExtraCallbacks) -> anyhow::Result<Self> {
+    async fn new(
+        collection_id: &CollectionId,
+        session: std::sync::Arc<ScyllaDatabaseHandle>,
+        extra: DatabaseExtraCallbacks,
+    ) -> anyhow::Result<Self> {
         Ok(Self {
             collection_id: collection_id.clone(),
             mime_type_rows: vec![],
@@ -170,7 +186,10 @@ impl ProcessItemsWriteBatches {
         })
     }
     async fn finalize(&mut self) -> anyhow::Result<()> {
-        info!("ProcessItemsWriteBatches: finalize, collection_id: {}", self.collection_id);
+        info!(
+            "ProcessItemsWriteBatches: finalize, collection_id: {}",
+            self.collection_id
+        );
         self.write_mime_type_rows().await?;
         self.write_tika_meta_rows().await?;
         self.write_tika_content_rows().await?;
@@ -182,7 +201,11 @@ impl ProcessItemsWriteBatches {
             return anyhow::Ok(());
         }
         let t0 = Instant::now();
-        info!("ProcessItemsWriteBatches: write_mime_type_rows: {} items, collection_id: {}",self.mime_type_rows.len(), self.collection_id);
+        info!(
+            "ProcessItemsWriteBatches: write_mime_type_rows: {} items, collection_id: {}",
+            self.mime_type_rows.len(),
+            self.collection_id
+        );
         let mut batch = FsBlobMimeTypeDbRow::batch();
         batch.append_inserts(&self.mime_type_rows);
         batch.execute(&self.session).await?;
@@ -196,7 +219,11 @@ impl ProcessItemsWriteBatches {
             return anyhow::Ok(());
         }
         let t0 = Instant::now();
-        info!("ProcessItemsWriteBatches: write_tika_meta_rows: {} items, collection_id: {}",self.tika_meta_rows.len(), self.collection_id);
+        info!(
+            "ProcessItemsWriteBatches: write_tika_meta_rows: {} items, collection_id: {}",
+            self.tika_meta_rows.len(),
+            self.collection_id
+        );
         let mut batch = BlobExtractedMetadataRow::batch();
         batch.append_inserts(&self.tika_meta_rows);
         batch.execute(&self.session).await?;
@@ -210,10 +237,20 @@ impl ProcessItemsWriteBatches {
             return anyhow::Ok(());
         }
         let t0 = Instant::now();
-        info!("ProcessItemsWriteBatches: write_tika_content_rows: {} items, collection_id: {}",self.tika_content_rows.len(), self.collection_id);
-        info!("batch size: {} rows = {} bytes", self.tika_content_rows.len(), self.tika_content_total_size);
+        info!(
+            "ProcessItemsWriteBatches: write_tika_content_rows: {} items, collection_id: {}",
+            self.tika_content_rows.len(),
+            self.collection_id
+        );
+        info!(
+            "batch size: {} rows = {} bytes",
+            self.tika_content_rows.len(),
+            self.tika_content_total_size
+        );
         let batch = BlobExtractedContentRow::batch();
-        batch.chunked_insert(&self.session, &self.tika_content_rows, 1).await?;
+        batch
+            .chunked_insert(&self.session, &self.tika_content_rows, 1)
+            .await?;
         self.extra.insert(&self.tika_content_rows).await?;
         self.tika_content_rows.clear();
         self.tika_content_total_size = 0;
@@ -231,13 +268,16 @@ impl ProcessItemsWriteBatches {
             self.write_tika_meta_rows().await?;
         }
         if let Some(tika_content_path) = item.tika_content_path {
-            let paragraphs = read_tika_content_rows(tika_content_path.clone(), item.blob_sha3_256.clone());
+            let paragraphs =
+                read_tika_content_rows(tika_content_path.clone(), item.blob_sha3_256.clone());
             pin_mut!(paragraphs);
             while let Some(row) = paragraphs.next().await {
                 let row = row?;
                 self.tika_content_total_size += row.content_length + 1024;
                 self.tika_content_rows.push(row);
-                if self.tika_content_rows.len() >= 100 || self.tika_content_total_size >= 50 *1024 * 1024 {
+                if self.tika_content_rows.len() >= 100
+                    || self.tika_content_total_size >= 50 * 1024 * 1024
+                {
                     self.write_tika_content_rows().await?;
                 }
             }
@@ -324,7 +364,10 @@ async fn process_item(
 
     let mime_type_row = FsBlobMimeTypeDbRow {
         blob_sha3_256: blob_sha3_256.clone(),
-        magic_mime: magic_mime_type,
+        magic_mime: magic_mime_type.magic_mime_type,
+        magika_ruled_mime: magic_mime_type.magika_result.magika_ruled_mime_type,
+        magika_inferred_mime: magic_mime_type.magika_result.magika_inferred_mime_type,
+        magika_score: magic_mime_type.magika_result.magika_score,
         tika_metadata_success,
         tika_content_success,
         tika_mime: tika_type.unwrap_or_default(),

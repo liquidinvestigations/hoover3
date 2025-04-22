@@ -246,6 +246,12 @@ pub struct FsBlobMimeTypeDbRow {
     pub blob_sha3_256: String,
     /// The mime type of the blob, from libmagic.
     pub magic_mime: String,
+    /// The mime type of the blob, from magika, from rules.
+    pub magika_ruled_mime: Option<String>,
+    /// The mime type of the blob, from magika, from deep learning.
+    pub magika_inferred_mime: Option<String>,
+    /// The score of the magika mime type.
+    pub magika_score: Option<f32>,
     /// The mime type of the blob, from tika.
     pub tika_mime: String,
     /// Tika metadata extraction was successful.

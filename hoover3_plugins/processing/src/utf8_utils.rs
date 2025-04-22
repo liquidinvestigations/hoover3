@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use futures::Stream;
 use text_splitter::ChunkConfig;
 
-
 fn read_utf8_file_chunked_by_bytes(
     content_path: PathBuf,
     chunk_size_bytes: i32,
@@ -38,7 +37,6 @@ impl text_splitter::ChunkSizer for ByteTextSizer {
         chunk.len()
     }
 }
-
 
 /// Reads a UTF-8 file and splits it into paragraphs under a given size in bytes.
 pub fn read_utf8_file_paragraphs(
@@ -127,10 +125,8 @@ mod tests {
         let paragraph_size_bytes = 128; // Small paragraph size
 
         // Read the file using our function
-        let paragraph_stream = read_utf8_file_paragraphs(
-            file_path.to_path_buf(),
-            paragraph_size_bytes,
-        );
+        let paragraph_stream =
+            read_utf8_file_paragraphs(file_path.to_path_buf(), paragraph_size_bytes);
         futures::pin_mut!(paragraph_stream);
 
         // Collect all paragraphs from the stream
@@ -158,6 +154,3 @@ mod tests {
         Ok(())
     }
 }
-
-
-

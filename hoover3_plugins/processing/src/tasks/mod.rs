@@ -23,7 +23,7 @@ declare_task_queue!(
 declare_task_queue!(
     ProcessingQueueSmallPage,
     "processing_small",
-    16,    // concurrent workflows
+    16,   // concurrent workflows
     64,   // max i/o threads
     4096  // MB ram worker total
 );

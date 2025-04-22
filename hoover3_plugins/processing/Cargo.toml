@@ -46,3 +46,5 @@ text-splitter = "0.25.1"
 
 lazy_static = "1.4.0"
 tracing.workspace = true
+magika = {version = "0.1.1" }
+ort = {version = "2.0.0-rc.9", features = ["download-binaries"]}

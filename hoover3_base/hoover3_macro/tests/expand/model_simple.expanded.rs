@@ -43,16 +43,6 @@ impl ::core::clone::Clone for SimpleModel {
     }
 }
 #[automatically_derived]
-impl ::core::hash::Hash for SimpleModel {
-    #[inline]
-    fn hash<__H: ::core::hash::Hasher>(&self, state: &mut __H) -> () {
-        ::core::hash::Hash::hash(&self.id, state);
-        ::core::hash::Hash::hash(&self.other_field, state);
-        ::core::hash::Hash::hash(&self.another_field, state);
-        ::core::hash::Hash::hash(&self.created_at, state)
-    }
-}
-#[automatically_derived]
 impl ::core::marker::StructuralPartialEq for SimpleModel {}
 #[automatically_derived]
 impl ::core::cmp::PartialEq for SimpleModel {
@@ -1227,7 +1217,7 @@ const _: () = {
                 table_name: "simple_model",
                 model_name: "SimpleModel",
                 docstring: "Documentation",
-                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id,\n    other_field],\n    clustering_keys = [another_field],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(\n    Debug,\n    Clone,\n    Hash,\n    PartialEq,\n    PartialOrd,\n    ::serde::Serialize,\n    ::serde::Deserialize\n)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub other_field: ::hoover3_database::charybdis::types::BigInt,\n    /// Another field\n    pub another_field: ::hoover3_database::charybdis::types::Int,\n    /// Timestamp field\n    pub created_at: ::hoover3_database::charybdis::types::Timestamp,\n}\n",
+                charybdis_code: "/// Documentation\n#[::charybdis::macros::charybdis_model(\n    table_name = simple_model,\n    partition_keys = [id,\n    other_field],\n    clustering_keys = [another_field],\n    global_secondary_indexes = [],\n    local_secondary_indexes = [],\n    static_columns = []\n)]\n#[derive(Debug, Clone, PartialEq, PartialOrd, ::serde::Serialize, ::serde::Deserialize)]\npub struct SimpleModel {\n    /// Primary key field\n    pub id: ::hoover3_database::charybdis::types::Text,\n    /// Other Field\n    pub other_field: ::hoover3_database::charybdis::types::BigInt,\n    /// Another field\n    pub another_field: ::hoover3_database::charybdis::types::Int,\n    /// Timestamp field\n    pub created_at: ::hoover3_database::charybdis::types::Timestamp,\n}\n",
                 fields: &[
                     ::hoover3_database::models::collection::ModelFieldDefinitionStatic {
                         name: "id",
