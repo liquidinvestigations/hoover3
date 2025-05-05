@@ -5,7 +5,7 @@ use dioxus_logger::tracing::{info, warn};
 
 use crate::{
     app::ServerCallHistory,
-    pages::{DashboardNavbarDropdown, DatabaseExplorerRoute},
+    pages::{DashboardNavbarDropdown, DatabaseExplorerRoute, ToolsNavbarDropdown},
     routes::Route,
     time::sleep,
 };
@@ -34,17 +34,7 @@ pub fn Navbar() -> Element {
                 li { DashboardNavbarDropdown {} }
                 // dropdown with tools
                 li {
-                    NavbarDropdown {
-                        title: "Tools",
-                        links: vec![
-                            ("DatabaseExplorer".to_string(), Route::DatabaseExplorerPage {
-                                explorer_route: DatabaseExplorerRoute::RootPage.into()
-                            }.to_string()),
-                            ("ServerCallLogPage".to_string(), Route::ServerCallLogPage {}.to_string()),
-                            ("DioxusTranslate".to_string(), Route::DioxusTranslatePage {}.to_string()),
-                            ("DockerHealth".to_string(), Route::DockerHealthPage {}.to_string()),
-                        ],
-                    }
+                    ToolsNavbarDropdown {}
                 }
                 // dropdown with admin links
                 li {

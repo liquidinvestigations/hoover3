@@ -27,7 +27,7 @@ pub fn main() {
                 use dioxus::prelude::ServeConfig;
                 // migrate
                 hoover3_server::init_server_plugins().unwrap();
-                hoover3_server::migrate_all().await.unwrap();
+                // hoover3_server::migrate_all().await.unwrap();
 
                 // Start workers. Dioxus doesn't reap threads, so if we use `spawn_worker_on_thread` here,
                 //

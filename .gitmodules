@@ -7,3 +7,6 @@
 [submodule "third-party/charybdis"]
 	path = third-party/charybdis
 	url = https://github.com/liquidinvestigations/charybdis
+[submodule "third-party/components"]
+	path = third-party/components
+	url = https://github.com/DioxusLabs/components

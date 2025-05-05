@@ -34,9 +34,9 @@ serde_json.workspace = true
 async-stream.workspace = true
 
 magic = "0.16.2"
-extractous = "0.3.0"
+# extractous = "0.3.0"
 # https://github.com/yobix-ai/extractous/issues/56
-# extractous = {git = "https://github.com/titusz/extractous.git", rev = "abf07ebe3de32598af6831b7de6538f6bac79445"}
+extractous = {git = "https://github.com/titusz/extractous.git", rev = "abf07ebe3de32598af6831b7de6538f6bac79445"}
 # extractous = {git = "https://gitee.com/mrlijing/extractous", rev = "822286cb730207397fb1d06ec26d585fe5f3a2dc"}
 anyhow.workspace = true
 
@@ -48,3 +48,4 @@ lazy_static = "1.4.0"
 tracing.workspace = true
 magika = {version = "0.1.1" }
 ort = {version = "2.0.0-rc.9", features = ["download-binaries"]}
+reqwest = "0.12"

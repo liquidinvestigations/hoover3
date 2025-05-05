@@ -297,6 +297,8 @@ pub struct DynamicQueryResponse {
     pub db_type: DatabaseServiceType,
     /// Query execution time in seconds
     pub elapsed_seconds: f64,
+    /// Serialized dataset size, in bytes
+    pub result_serialized_size_bytes: u64,
     /// Query result or error message
     pub result: Result<DynamicQueryResult, String>,
 }

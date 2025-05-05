@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, path::PathBuf};
 
 use anyhow::Context;
-use extractous::{Extractor, StreamReader};
+use extractous::{Extractor, PdfOcrStrategy, PdfParserConfig, StreamReader};
 
 /// Result of the tika extraction for a single file.
 pub struct TikaResult {
@@ -22,7 +22,7 @@ pub async fn extract_metadata(path: PathBuf, temp_dir: PathBuf) -> anyhow::Resul
 
 fn run_extract_metadata(path: PathBuf, temp_dir: PathBuf) -> anyhow::Result<TikaResult> {
     let path = path.to_str().context("invalid path")?;
-    let extractor = Extractor::new();
+    let extractor = Extractor::new().set_pdf_config(PdfParserConfig::new().set_ocr_strategy(PdfOcrStrategy::NO_OCR));
     let (content, mut metadata) = extractor.extract_file(&path)?;
     let content_length = metadata
         .remove("Content-Length")

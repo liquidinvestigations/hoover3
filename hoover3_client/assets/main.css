@@ -1,18 +1,12 @@
-.page-wrapper {
-    display:flex;
-    flex-direction:column;
-    height:99%;
+#main, body {
+    height: 100dvh;
+    width: 100dvw;
+    margin:0;
+    padding:0;
     overflow:hidden;
 }
-#main {
-    height: 99.0svh;
-    width:99.0svw;
-    /* border:  .1rem solid black; */
-    margin: .1rem;
-    padding: .1rem;
-}
 .full-height {
-    height:99%;
+    height:100%;
 }
 
 .search-grid-container {
@@ -78,10 +72,6 @@ nav {
 button {
     min-width: 5rem;
     min-height: 2rem;
-}
-
-input {
-    max-width: 80%;
 }
 
 td {

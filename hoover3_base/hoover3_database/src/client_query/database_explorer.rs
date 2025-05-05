@@ -64,11 +64,13 @@ pub async fn db_explorer_run_query(
 
     let t1 = std::time::Instant::now();
     let dt = t1.duration_since(start_time).as_secs_f64();
+    let result_serialized_size_bytes = bincode::serialize(&result)?.len() as u64;
     Ok(DynamicQueryResponse {
         db_type,
         query: sql_query.clone(),
         result,
         elapsed_seconds: dt,
+        result_serialized_size_bytes,
     })
 }
 

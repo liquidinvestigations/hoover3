@@ -106,7 +106,7 @@ pub fn HtmlTable<T: 'static + Clone + PartialEq + std::fmt::Debug + DataRowDispl
             }
 
             div {
-                class:"overflow-auto", style: "max-width: 80%;",
+                class:"overflow-auto",
                 table { class: "striped",
                     thead {
                         for k in headers.iter() {
@@ -256,18 +256,21 @@ pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
         .ok()
         .map(|r| r.rows.len())
         .unwrap_or(0);
+
+    let result_size_kb = use_memo(move || {
+        data.read().result_serialized_size_bytes / 1024
+    });
     let error_display = use_memo(move || {
         data.read()
             .result
             .as_ref()
             .err()
-            .cloned()
-            .unwrap_or("".to_string())
+            .unwrap_or(&"".to_string()).to_string()
     });
     rsx! {
         small {
             style:"display:block;width:max-content;margin:auto; border: 1px solid gray; padding: 5px;",
-            "Query returned {result_rows} rows after {time_ms}ms"
+            "Query returned {result_rows} rows ({result_size_kb} KB) after {time_ms}ms"
         }
         if let Some(result) = data.read().result.as_ref().ok() {
             DynamicTableInner{data: result.clone()}
@@ -288,7 +291,7 @@ pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
 pub fn DynamicTableInner(data: ReadOnlySignal<DynamicQueryResult>) -> Element {
     rsx! {
         div {
-            class:"overflow-auto", style: "max-width: 80vw;",
+            class:"overflow-auto",
             table { class: "striped",
                 thead {
                     for (i, k) in data.read().columns.iter().enumerate() {

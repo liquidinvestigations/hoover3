@@ -726,6 +726,33 @@ services:
     tty: true
 
 
+# ========================
+#        APACHE TIKA
+# ========================
+  tika:
+    container_name: tika
+    image: apache/tika:3.1.0.0-full
+    networks:
+      - hoover3
+    ports:
+      - 9998:9998
+    healthcheck:
+      test: [ "CMD", "wget", "-O", "/dev/null", "http://localhost:9998/tika" ]
+      interval: 15s
+      timeout: 13s
+      retries: 6
+      start_period: 4s
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 6000M
+        reservations:
+          cpus: '1'
+          memory: 500M
+    restart: unless-stopped
+
+
 
 # ====================
 # NETWORKS, VOLUMES

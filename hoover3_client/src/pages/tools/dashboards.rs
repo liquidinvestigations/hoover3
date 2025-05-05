@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::components::navbar::NavbarDropdown;
 use crate::routes::Route;
 
-fn get_dash_links() -> Vec<(String, String)> {
+fn get_dash_links_raw() -> Vec<(String, String)> {
     vec![
         ("TEMPORAL UI  ", "http://localhost:8081"),
         ("MINIO DASH   ", "http://localhost:8084"),
@@ -37,7 +37,7 @@ fn get_dash_links() -> Vec<(String, String)> {
 /// Page that displays a dashboard iframe.
 #[component]
 pub fn DashboardIframePage(id: u8) -> Element {
-    let src = get_dash_links()[id as usize].1.clone();
+    let src = get_dash_links_raw()[id as usize].1.clone();
 
     rsx! {
         iframe {
@@ -49,20 +49,27 @@ pub fn DashboardIframePage(id: u8) -> Element {
     }
 }
 
+/// Get a list of internal dashboard links.
+pub fn get_dashboard_links() -> Vec<(String, Route)> {
+    let x = get_dash_links_raw();
+    let links = x
+    .into_iter()
+    .enumerate()
+    .map(|(id, (name, _link))| {
+        (
+            name,
+            Route::DashboardIframePage { id: id as u8 },
+        )
+    })
+    .collect();
+links
+}
+
 /// Navbar dropdown that displays a list of dashboard links.
 #[component]
 pub fn DashboardNavbarDropdown() -> Element {
-    let x = get_dash_links();
-    let links = x
-        .into_iter()
-        .enumerate()
-        .map(|(id, (name, _link))| {
-            (
-                name,
-                Route::DashboardIframePage { id: id as u8 }.to_string(),
-            )
-        })
-        .collect();
+    let links = get_dashboard_links();
+    let links = links.into_iter().map(|(name, link)| (name.to_string(), link.to_string())).collect();
     rsx! {
         NavbarDropdown { title: "Dashboards", links }
     }
@@ -75,7 +82,7 @@ pub fn DashboardsHomePage() -> Element {
         h1 {
             "System Dashboards"
         }
-        for (id, (name, link)) in get_dash_links().into_iter().enumerate() {
+        for (id, (name, link)) in get_dash_links_raw().into_iter().enumerate() {
             p {
                 "{name}:"
                 Link {

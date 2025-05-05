@@ -12,7 +12,7 @@ use hoover3_types::{
 
 use crate::{
     api::{get_all_collections, query_collection_schema, scylla_row_count},
-    components::page_titles::make_page_title,
+    components::{cards::{CardGridDisplay, LinkCard}, page_titles::make_page_title},
     errors::AnyhowErrorDioxusExt,
     routes::{Route, UrlParam},
 };
@@ -133,34 +133,6 @@ pub fn DatabaseExplorerRootPage() -> Element {
     }
 }
 
-#[component]
-fn LinkCard(subtitle: String, title: String, link: Route, children: Element) -> Element {
-    rsx! {
-        Link {
-            to: link,
-            article {
-                style: "max-width:500px; min-height: 200px;",
-                {make_page_title(3, &subtitle, &title)}
-                {children}
-            }
-        }
-    }
-}
-
-#[component]
-fn CardGridDisplay(children: Element) -> Element {
-    rsx! {
-        div {
-            style: "
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-                gap: 10px;
-                min-height: 200px;
-            ",
-            {children}
-        }
-    }
-}
 
 #[component]
 fn CollectionStatsInfoCard(collection_id: CollectionId) -> Element {

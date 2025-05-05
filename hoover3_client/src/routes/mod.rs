@@ -116,14 +116,20 @@ fn DisplayError(title: String, err: String) -> Element {
 #[component]
 fn NavbarLayout() -> Element {
     rsx! {
-        div { class: "page-wrapper",
-            div { class: "container-fluid",
+        div { style: "
+            display:flex;
+            flex-direction:column;
+            height:100%;
+            overflow:hidden;
+            container-type: size;
+        ",
+            div { class: "container-fluid", style: "height: 63px;",
                 Navbar { }
             }
 
             main {
                 class: "container-fluid",
-                style: "height:99%;overflow: auto;",
+                style: "height: calc(100% - 64px); overflow: auto;",
                 ErrorBoundary {
                     handle_error: |err_ctx: ErrorContext| rsx! {
                         DisplayError{title: "Error", err: format!("{:#?}", err_ctx)}

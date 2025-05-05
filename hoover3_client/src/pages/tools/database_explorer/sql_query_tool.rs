@@ -74,15 +74,21 @@ pub fn DatabaseExplorerQueryToolPage(
     });
 
     rsx! {
-        div {
-        style: "display: grid; grid-template-columns: 1fr 6fr;",
-
+    div {
+        style: "
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            container-type: size;
+            height: 100%;
+        ",
         article {
+            style: "width: 30rem; height: 100cqh; overflow-y: auto;",
             h3 {"Jump"}
             SqlQueryToolJumpLinks {collection_id, db_type}
         }
         article {
-            style: "max-width: 80vw;",
+            style: "width: calc(100cqw - 31rem); height: 100cqh; overflow-y: auto;",
             h1 {
                 Link {
                     to: Route::DatabaseExplorerPage{
@@ -129,7 +135,8 @@ pub fn DatabaseExplorerQueryToolPage(
                     "ServerFnError: {e}"
                 }
             }
-        }}
+        }
+    }
     }
 }
 

@@ -110,6 +110,7 @@ fn _NewDatasourceFormPage(
                         "Name:"
                     }
                     input {
+                        style: "width: 80%; max-width: 85%; margin-left: 1rem; margin-right: 1rem;",
                         value: "{name}",
                         placeholder: "Datasource Name...",
                         oninput: move |evt| name.set(

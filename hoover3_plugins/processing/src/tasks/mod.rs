@@ -1,6 +1,6 @@
 //! Task definitions for the processing plugin.
 
-mod get_mime_type;
+pub mod get_mime_type;
 mod process_group;
 mod process_page;
 mod tika;
