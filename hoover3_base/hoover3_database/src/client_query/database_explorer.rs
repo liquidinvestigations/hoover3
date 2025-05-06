@@ -143,7 +143,8 @@ async fn db_explorer_run_meilisearch_query(
     })
 }
 
-fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnType> {
+
+pub(crate) fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnType> {
     match v {
         serde_json::Value::String(_) => Some(DatabaseColumnType::String),
         serde_json::Value::Number(_n) => {
@@ -170,7 +171,7 @@ fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnTy
     }
 }
 
-fn json_value_to_database_value(v: serde_json::Value) -> Option<DatabaseValue> {
+pub(crate) fn json_value_to_database_value(v: serde_json::Value) -> Option<DatabaseValue> {
     match v {
         serde_json::Value::String(s) => Some(DatabaseValue::String(s.to_string())),
         serde_json::Value::Number(n) => {

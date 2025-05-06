@@ -1,6 +1,6 @@
 //! Debug multi-threaded tika
 
-use extractous::Extractor;
+// use extractous::Extractor;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

@@ -1,3 +1,4 @@
+//! Card display and  grid display components
 use dioxus::prelude::*;
 
 use crate::{components::page_titles::make_page_title, routes::Route};

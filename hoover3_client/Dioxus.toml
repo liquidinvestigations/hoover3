@@ -27,8 +27,8 @@ script = []
 
 watch_path = [
     "src",
-    "../hoover3_taskdef/src",
-    "../hoover3_database/src",
-    "../hoover3_types/src",
-    "../tasks/filesystem_scanner/src",
+    "../hoover3_base/hoover3_taskdef/src",
+    "../hoover3_base/hoover3_database/src",
+    "../hoover3_base/hoover3_types/src",
+    "../hoover3_base/hoover3_taskdef/src",
 ]

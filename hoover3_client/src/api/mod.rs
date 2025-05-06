@@ -232,14 +232,14 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_server::api,
+    hoover3_server::api::processing_tasks,
     start_processing,
     (CollectionId, DatabaseIdentifier),
     String
 );
 
 server_wrapper!(
-    hoover3_server::api,
+    hoover3_server::api::processing_tasks,
     get_processing_status,
     (CollectionId, DatabaseIdentifier),
     UiWorkflowStatus
@@ -253,7 +253,7 @@ server_wrapper!(
 );
 
 server_wrapper!(
-    hoover3_server::api,
+    hoover3_server::api::processing_tasks,
     wait_for_processing_results,
     (CollectionId, DatabaseIdentifier),
     ProcessDatasourceTaskResult
@@ -280,4 +280,11 @@ server_wrapper!(
     DynamicQueryResponse
 );
 
-server_wrapper!(hoover3_server::api, get_server_memory_usage, (), (u32, u32));
+server_wrapper!(hoover3_server::api::processing_tasks, get_server_memory_usage, (), (u32, u32));
+
+server_wrapper!(
+    hoover3_database::client_query::search_api,
+    search_facet_query,
+    (CollectionId, String, Vec<String>, u64),
+    DynamicQueryResponse
+);

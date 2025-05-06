@@ -5,7 +5,7 @@ use dioxus_logger::tracing::{info, warn};
 
 use crate::{
     app::ServerCallHistory,
-    pages::{DashboardNavbarDropdown, DatabaseExplorerRoute, ToolsNavbarDropdown},
+    pages::{DashboardNavbarDropdown, ToolsNavbarDropdown},
     routes::Route,
     time::sleep,
 };
