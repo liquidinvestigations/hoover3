@@ -15,8 +15,10 @@ RUN java -version
 RUN chmod a+rwx /root/ && chmod -R a+rwx /root/.sdkman/
 
 RUN cargo install cargo-binstall \
-    cargo binstall cargo-watch \
-    cargo binstall dioxus-cli@0.6.2 \
-    cargo binstall cargo-nextest
+   && cargo binstall cargo-watch \
+   && cargo binstall dioxus-cli@0.6.2 \
+   && cargo binstall cargo-nextest
 
 RUN dx --version
+
+RUN PATH=$PATH:/root/.cargo/bin
