@@ -15,6 +15,7 @@
         - [ ] Zip, Rar, 7z, Tar, etc.
         - [ ] Email attachments
         - [ ] Email archives
+    - [ ] fix magika integration for docker builds
 
 - [ ] Search page
     - [ ] Left panel: Facets

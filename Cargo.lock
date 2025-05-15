@@ -3480,7 +3480,6 @@ dependencies = [
  "hoover3_types",
  "lazy_static",
  "magic",
- "magika",
  "ort",
  "reqwest",
  "scylla",
@@ -4443,18 +4442,6 @@ checksum = "eff86ae08895140d628119d407d568f3b657145ee8c265878064f717534bb3bc"
 dependencies = [
  "libc",
  "vcpkg",
-]
-
-[[package]]
-name = "magika"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "625a18519d14d40a0e73dce11a174d4f3a2b5dc277955b5bc4cdb215398a6add"
-dependencies = [
- "ndarray",
- "ort",
- "thiserror 1.0.69",
- "tokio",
 ]
 
 [[package]]

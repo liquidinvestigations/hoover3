@@ -18,47 +18,51 @@ pub struct MagikaResult {
 }
 
 pub async fn magic_get_mime_type(path: PathBuf) -> anyhow::Result<MimeTypeResult> {
-    let magika_result = run_magika(path.clone()).await?;
+    // let magika_result = run_magika(path.clone()).await?;
     let mime_type = tokio::task::spawn_blocking(move || run_magic(path)).await??;
 
     Ok(MimeTypeResult {
         magic_mime_type: mime_type,
-        magika_result,
+        magika_result: MagikaResult {
+            magika_ruled_mime_type: None,
+            magika_inferred_mime_type: None,
+            magika_score: None,
+        },
     })
 }
 
-async fn run_magika(path: PathBuf) -> anyhow::Result<MagikaResult> {
-    let cookie = magika::Session::new()?;
-    let mime_type = cookie.identify_file_async(&path).await?;
+// async fn run_magika(path: PathBuf) -> anyhow::Result<MagikaResult> {
+//     let cookie = magika::Session::new()?;
+//     let mime_type = cookie.identify_file_async(&path).await?;
 
-    let mime_type = match mime_type {
-        magika::FileType::Directory => MagikaResult {
-            magika_ruled_mime_type: Some("inode/directory".to_string()),
-            magika_inferred_mime_type: None,
-            magika_score: None,
-        },
-        magika::FileType::Symlink => MagikaResult {
-            magika_ruled_mime_type: Some("inode/symlink".to_string()),
-            magika_inferred_mime_type: None,
-            magika_score: None,
-        },
-        magika::FileType::Inferred(inferred) => MagikaResult {
-            magika_ruled_mime_type: None,
-            magika_inferred_mime_type: Some(inferred.content_type.info().mime_type.to_string()),
-            magika_score: Some(inferred.score),
-        },
-        magika::FileType::Ruled(ruled) => MagikaResult {
-            magika_ruled_mime_type: Some(ruled.content_type.info().mime_type.to_string()),
-            magika_inferred_mime_type: ruled
-                .overruled
-                .as_ref()
-                .map(|inferred| inferred.content_type.info().mime_type.to_string()),
-            magika_score: ruled.overruled.map(|inferred| inferred.score),
-        },
-    };
+//     let mime_type = match mime_type {
+//         magika::FileType::Directory => MagikaResult {
+//             magika_ruled_mime_type: Some("inode/directory".to_string()),
+//             magika_inferred_mime_type: None,
+//             magika_score: None,
+//         },
+//         magika::FileType::Symlink => MagikaResult {
+//             magika_ruled_mime_type: Some("inode/symlink".to_string()),
+//             magika_inferred_mime_type: None,
+//             magika_score: None,
+//         },
+//         magika::FileType::Inferred(inferred) => MagikaResult {
+//             magika_ruled_mime_type: None,
+//             magika_inferred_mime_type: Some(inferred.content_type.info().mime_type.to_string()),
+//             magika_score: Some(inferred.score),
+//         },
+//         magika::FileType::Ruled(ruled) => MagikaResult {
+//             magika_ruled_mime_type: Some(ruled.content_type.info().mime_type.to_string()),
+//             magika_inferred_mime_type: ruled
+//                 .overruled
+//                 .as_ref()
+//                 .map(|inferred| inferred.content_type.info().mime_type.to_string()),
+//             magika_score: ruled.overruled.map(|inferred| inferred.score),
+//         },
+//     };
 
-    Ok(mime_type)
-}
+//     Ok(mime_type)
+// }
 
 fn run_magic(path: PathBuf) -> Result<String, anyhow::Error> {
     let cookie = magic::Cookie::open(Flags::ERROR | Flags::MIME_TYPE | Flags::MIME_ENCODING)?;
