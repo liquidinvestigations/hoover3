@@ -5,7 +5,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 if ! docker ps | grep -q hoover3-worker; then
 (
-    cd docker/hoover3_devcontainer
+    cd docker/hoover3_worker
     docker build -t hoover3-worker .
 )
 (
