@@ -13,3 +13,10 @@ ENV GRAALVM_HOME=/root/.sdkman/candidates/java/23.0.1-graalce
 ENV PATH=$GRAALVM_HOME/bin:$PATH
 RUN java -version
 RUN chmod a+rwx /root/ && chmod -R a+rwx /root/.sdkman/
+
+RUN cargo install cargo-binstall \
+    cargo binstall cargo-watch \
+    cargo binstall dioxus-cli@0.6.2 \
+    cargo binstall cargo-nextest
+
+RUN dx --version
