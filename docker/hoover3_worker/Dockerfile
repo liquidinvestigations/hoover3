@@ -19,6 +19,8 @@ RUN cargo install cargo-binstall \
    && cargo binstall dioxus-cli@0.6.2 \
    && cargo binstall cargo-nextest
 
-RUN dx --version
+RUN  echo "/usr/local/lib64" > /etc/ld.so.conf.d/openssl.conf && ldconfig
 
 RUN PATH=$PATH:/root/.cargo/bin
+
+RUN dx --version
