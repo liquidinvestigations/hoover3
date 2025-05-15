@@ -5,7 +5,7 @@
 - use linux
 - put `fs.aio-max-nr = 1048576` in `/etc/sysctl.conf` and run `sysctl -p`
 - install rustup and rust stable (1.81)
-- sudo apt-get install clang libmagic1 libmagic-dev zip wget curl
+- sudo apt-get install clang libmagic1 libmagic-dev zip wget curl libssl-dev pkg-config build-essential  protobuf-compiler
 - install sdkman and then `sdk install java 23.0.1-graalce`
 - install docker
 - run ./start_docker.sh
