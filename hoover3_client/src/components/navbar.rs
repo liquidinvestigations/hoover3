@@ -108,8 +108,10 @@ fn NavbarTitleCrumbs() -> Element {
 pub fn NavbarDropdown(title: String, links: Vec<(String, String)>) -> Element {
     rsx! {
         details { class: "dropdown",
+            style: "flex-shrink: 0;",
             summary { {title} }
             ul {
+                dir:"rtl",
                 for (link_name , link) in links {
                     li { key: link.clone(),
                         Link { to: link.clone(), {link_name} }

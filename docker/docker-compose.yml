@@ -12,8 +12,8 @@ services:
     networks:
       - hoover3
     ports:
-      - 8123:8123
-      - 9000:9000
+      - 127.0.0.1:7123:8123
+      - 127.0.0.1:9000:9000
     volumes:
       - /var/lib/clickhouse
     environment:
@@ -48,7 +48,7 @@ services:
     networks:
       - hoover3
     ports:
-      - 3000:3000
+      - 127.0.0.1:3000:3000
     volumes:
       - /var/lib/clickhouse-monitoring
     deploy:
@@ -73,7 +73,7 @@ services:
     networks:
       - hoover3
     ports:
-      - 9042:9042
+      - 127.0.0.1:9042:9042
     environment:
       - MAX_HEAP_SIZE=4G
       - HEAP_NEWSIZE=512M
@@ -110,7 +110,7 @@ services:
     networks:
       - hoover3
     ports:
-      - 9200:9200
+      - 127.0.0.1:9200:9200
     volumes:
       - /var/lib/elasticsearch/data
     healthcheck:
@@ -146,7 +146,7 @@ services:
     networks:
       - hoover3
     ports:
-      - 7233:7233
+      - 127.0.0.1:7233:7233
     volumes:
       - ./docker/temporal/dynamicconfig:/etc/temporal/config/dynamicconfig
     labels:
@@ -202,7 +202,7 @@ services:
     networks:
       - hoover3
     # ports:
-      # - 8081:8080
+      # - 127.0.0.1:8081:8080
     healthcheck:
       test: ['CMD-SHELL', 'curl --silent --fail http://temporal-ui:8080/api/v1/settings? || exit 1']
       interval: 15s
@@ -228,7 +228,7 @@ services:
     container_name:  seaweed-s3
     image: chrislusf/seaweedfs:${SEAWEEDFS_VERSION}
     ports:
-      - 8333:8333
+      - 127.0.0.1:8333:8333
       # - 8082:8080
       # - 8083:9333
     entrypoint: /bin/sh -c
@@ -326,7 +326,7 @@ services:
       - /var/lib/scylla
     command: --smp 4 --memory 4G  --api-address 0.0.0.0 --overprovisioned 1
     ports:
-      - '6642:9042'
+      - '127.0.0.1:6642:9042'
     networks:
       - hoover3
     deploy:
@@ -378,7 +378,7 @@ services:
     hostname: nf-data-explorer-cass2
     container_name: nf-data-explorer-cass2
     ports:
-      - '8088:80'
+      - '127.0.0.1:8088:80'
     command: yarn start
     environment:
       - CASSANDRA_HOST=temporal-cassandra
@@ -407,7 +407,7 @@ services:
     container_name: redis
     command: ["redis-server", "--appendonly", "no", "--maxmemory", "3000mb", "--maxmemory-policy", "allkeys-lru"]
     ports:
-      - '6379:6379'
+      - '127.0.0.1:6379:6379'
     networks:
       - hoover3
     deploy:
@@ -440,7 +440,7 @@ services:
       - MEILI_MAX_INDEXING_MEMORY=5Gb
       - MEILI_MAX_INDEXING_THREADS=4
     ports:
-      - 7700:7700
+      - 127.0.0.1:7700:7700
     networks:
       - hoover3
     volumes:
@@ -507,15 +507,15 @@ services:
           cpus: '1'
           memory: 2000M
     ports:
-      - 8079:8079
+      - 127.0.0.1:8079:8079
       # - 8080:8080
-      - 8081:8081
-      - 8082:8082
-      - 8083:8083
-      - 8084:8084
-      - 8085:8085
-      - 8086:8086
-      - 8087:8087
+      - 127.0.0.1:8081:8081
+      - 127.0.0.1:8082:8082
+      - 127.0.0.1:8083:8083
+      - 127.0.0.1:8084:8084
+      - 127.0.0.1:8085:8085
+      - 127.0.0.1:8086:8086
+      - 127.0.0.1:8087:8087
     restart: unless-stopped
 
 
@@ -524,206 +524,206 @@ services:
 # ============================
 
 
-  metad0:
-    image: docker.io/vesoft/nebula-metad:${NEBULA_VERSION}
-    environment:
-      USER: root
-      TZ:   "${TZ}"
-    command:
-      - --meta_server_addrs=metad0:9559
-      - --local_ip=metad0
-      - --ws_ip=metad0
-      - --port=9559
-      - --ws_http_port=19559
-      - --data_path=/data/meta
-      - --log_dir=/logs
-      - --v=0
-      - --minloglevel=0
-      - --redirect_stdout=false
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://metad0:19559/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 90s
-    ports:
-      - 9559:9559
-      - 19559
-      - 19560
-    volumes:
-      - nebula-data-metad0:/data/meta
-      - nebula-logs-metad0:/logs
-    networks:
-      - hoover3
-    cap_add:
-      - SYS_PTRACE
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 4096M
+#   metad0:
+#     image: docker.io/vesoft/nebula-metad:${NEBULA_VERSION}
+#     environment:
+#       USER: root
+#       TZ:   "${TZ}"
+#     command:
+#       - --meta_server_addrs=metad0:9559
+#       - --local_ip=metad0
+#       - --ws_ip=metad0
+#       - --port=9559
+#       - --ws_http_port=19559
+#       - --data_path=/data/meta
+#       - --log_dir=/logs
+#       - --v=0
+#       - --minloglevel=0
+#       - --redirect_stdout=false
+#     healthcheck:
+#       test: ["CMD", "curl", "-sf", "http://metad0:19559/status"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 90s
+#     ports:
+#       - 9559:9559
+#       - 19559
+#       - 19560
+#     volumes:
+#       - nebula-data-metad0:/data/meta
+#       - nebula-logs-metad0:/logs
+#     networks:
+#       - hoover3
+#     cap_add:
+#       - SYS_PTRACE
+#     restart: unless-stopped
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 4096M
 
-  storaged0:
-    image: docker.io/vesoft/nebula-storaged:${NEBULA_VERSION}
-    environment:
-      USER: root
-      TZ:   "${TZ}"
-    command:
-      - --meta_server_addrs=metad0:9559
-      - --local_ip=storaged0
-      - --ws_ip=storaged0
-      - --port=9779
-      - --ws_http_port=19779
-      - --data_path=/data/storage
-      - --log_dir=/logs
-      - --v=0
-      - --minloglevel=0
-      - --redirect_stdout=false
-    depends_on:
-      - metad0
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://storaged0:19779/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 90s
-    ports:
-      - 9779
-      - 19779
-      - 19780
-    volumes:
-      - nebula-data-storage0:/data/storage
-      - nebula-logs-storage0:/logs
-    networks:
-      - hoover3
-    cap_add:
-      - SYS_PTRACE
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 4096M
-
-
-  graphd:
-    image: docker.io/vesoft/nebula-graphd:${NEBULA_VERSION}
-    environment:
-      USER: root
-      TZ:   "${TZ}"
-    command:
-      - --meta_server_addrs=metad0:9559
-      - --port=9669
-      - --local_ip=graphd
-      - --ws_ip=graphd
-      - --ws_http_port=19669
-      - --log_dir=/logs
-      - --v=0
-      - --minloglevel=0
-      - --redirect_stdout=false
-      - --client_idle_timeout_secs=600
-      - --session_idle_timeout_secs=600
-    depends_on:
-      - storaged0
-    healthcheck:
-      test: ["CMD", "curl", "-sf", "http://graphd:19669/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 90s
-    ports:
-      - "9669:9669"
-      - 19669
-      - 19670
-    volumes:
-      - nebula-logs-graph:/logs
-    networks:
-      - hoover3
-    cap_add:
-      - SYS_PTRACE
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 14096M
+#   storaged0:
+#     image: docker.io/vesoft/nebula-storaged:${NEBULA_VERSION}
+#     environment:
+#       USER: root
+#       TZ:   "${TZ}"
+#     command:
+#       - --meta_server_addrs=metad0:9559
+#       - --local_ip=storaged0
+#       - --ws_ip=storaged0
+#       - --port=9779
+#       - --ws_http_port=19779
+#       - --data_path=/data/storage
+#       - --log_dir=/logs
+#       - --v=0
+#       - --minloglevel=0
+#       - --redirect_stdout=false
+#     depends_on:
+#       - metad0
+#     healthcheck:
+#       test: ["CMD", "curl", "-sf", "http://storaged0:19779/status"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 90s
+#     ports:
+#       - 9779
+#       - 19779
+#       - 19780
+#     volumes:
+#       - nebula-data-storage0:/data/storage
+#       - nebula-logs-storage0:/logs
+#     networks:
+#       - hoover3
+#     cap_add:
+#       - SYS_PTRACE
+#     restart: unless-stopped
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 4096M
 
 
-  console:
-    image: docker.io/vesoft/nebula-console:v3.8
-    entrypoint: ""
-    command:
-      - sh
-      - -c
-      - |
-        for i in `seq 1 60`;do
-          var=`nebula-console -addr graphd -port 9669 -u root -p nebula -e 'ADD HOSTS "storaged0":9779,"storaged1":9779,"storaged2":9779'`;
-          if [[ $$? == 0 ]];then
-            break;
-          fi;
-          sleep 1;
-          echo "retry to add hosts.";
-        done && tail -f /dev/null;
-
-    depends_on:
-      - graphd
-    networks:
-      - hoover3
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 4096M
-
-  nebula-web:
-    image: vesoft/nebula-graph-studio:v3.10
-    build: ./nebula-studio
-    environment:
-      USER: root
-    ports:
-      - 7001:7001
-    networks:
-      - hoover3
-    depends_on:
-      graphd:
-        condition: service_healthy
-      storaged0:
-        condition: service_healthy
-      metad0:
-        condition: service_healthy
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 4096M
+#   graphd:
+#     image: docker.io/vesoft/nebula-graphd:${NEBULA_VERSION}
+#     environment:
+#       USER: root
+#       TZ:   "${TZ}"
+#     command:
+#       - --meta_server_addrs=metad0:9559
+#       - --port=9669
+#       - --local_ip=graphd
+#       - --ws_ip=graphd
+#       - --ws_http_port=19669
+#       - --log_dir=/logs
+#       - --v=0
+#       - --minloglevel=0
+#       - --redirect_stdout=false
+#       - --client_idle_timeout_secs=600
+#       - --session_idle_timeout_secs=600
+#     depends_on:
+#       - storaged0
+#     healthcheck:
+#       test: ["CMD", "curl", "-sf", "http://graphd:19669/status"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 90s
+#     ports:
+#       - "9669:9669"
+#       - 19669
+#       - 19670
+#     volumes:
+#       - nebula-logs-graph:/logs
+#     networks:
+#       - hoover3
+#     cap_add:
+#       - SYS_PTRACE
+#     restart: unless-stopped
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 14096M
 
 
-# ========================
-#        SEEKSTORM
-# ========================
-  seekstorm:
-    container_name: seekstorm
-    image: wolfgarbe/seekstorm_server:v0.12.15
-    volumes:
-      - /seekstorm_index
-      - /seekstorm_ingest
-    environment:
-      - MASTER_KEY_SECRET=1234
-    ports:
-      - 80:80
-    networks:
-      - hoover3
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 6000M
-        reservations:
-          cpus: '1'
-          memory: 2000M
-    restart: unless-stopped
-    command: /seekstorm_server local_ip="127.0.0.1" local_port=80 index_path="/seekstorm_index" ingest_path="/seekstorm_ingest"
-    # https://github.com/SeekStorm/SeekStorm/issues/39#issuecomment-2692693438
-    stdin_open: true
-    tty: true
+#   console:
+#     image: docker.io/vesoft/nebula-console:v3.8
+#     entrypoint: ""
+#     command:
+#       - sh
+#       - -c
+#       - |
+#         for i in `seq 1 60`;do
+#           var=`nebula-console -addr graphd -port 9669 -u root -p nebula -e 'ADD HOSTS "storaged0":9779,"storaged1":9779,"storaged2":9779'`;
+#           if [[ $$? == 0 ]];then
+#             break;
+#           fi;
+#           sleep 1;
+#           echo "retry to add hosts.";
+#         done && tail -f /dev/null;
+
+#     depends_on:
+#       - graphd
+#     networks:
+#       - hoover3
+#     restart: unless-stopped
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 4096M
+
+#   nebula-web:
+#     image: vesoft/nebula-graph-studio:v3.10
+#     build: ./nebula-studio
+#     environment:
+#       USER: root
+#     ports:
+#       - 7001:7001
+#     networks:
+#       - hoover3
+#     depends_on:
+#       graphd:
+#         condition: service_healthy
+#       storaged0:
+#         condition: service_healthy
+#       metad0:
+#         condition: service_healthy
+#     restart: unless-stopped
+#     deploy:
+#       resources:
+#         limits:
+#           memory: 4096M
+
+
+# # ========================
+# #        SEEKSTORM
+# # ========================
+#   seekstorm:
+#     container_name: seekstorm
+#     image: wolfgarbe/seekstorm_server:v0.12.15
+#     volumes:
+#       - /seekstorm_index
+#       - /seekstorm_ingest
+#     environment:
+#       - MASTER_KEY_SECRET=1234
+#     ports:
+#       - 80:80
+#     networks:
+#       - hoover3
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: '4'
+#           memory: 6000M
+#         reservations:
+#           cpus: '1'
+#           memory: 2000M
+#     restart: unless-stopped
+#     command: /seekstorm_server local_ip="127.0.0.1" local_port=80 index_path="/seekstorm_index" ingest_path="/seekstorm_ingest"
+#     # https://github.com/SeekStorm/SeekStorm/issues/39#issuecomment-2692693438
+#     stdin_open: true
+#     tty: true
 
 
 # ========================
@@ -735,7 +735,7 @@ services:
     networks:
       - hoover3
     ports:
-      - 9998:9998
+      - 127.0.0.1:9998:9998
     healthcheck:
       test: [ "CMD", "wget", "-O", "/dev/null", "http://localhost:9998/tika" ]
       interval: 15s

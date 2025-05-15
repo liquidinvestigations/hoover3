@@ -7,10 +7,10 @@
 
 
 - [ ] Processing
-    - [ ] Checksum all files
-    - [ ] Run libmagic and attempt other file type detection
-    - [ ] Stage each file in ramdisk and/or disk based on size
-    - [ ] Extract text from PDF, Email, etc.
+    - [x] Checksum all files
+    - [x] Run libmagic and attempt other file type detection
+    - [x] Stage each file in ramdisk and/or disk based on size
+    - [x] Extract text from PDF, Email, etc.
     - [ ] Unpack archives
         - [ ] Zip, Rar, 7z, Tar, etc.
         - [ ] Email attachments

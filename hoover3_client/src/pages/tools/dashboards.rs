@@ -16,7 +16,7 @@ fn get_dash_links_raw() -> Vec<(String, String)> {
             "REDIS",
             "http://localhost:8086/dynomite/clusters/redis/keys",
         ),
-        ("NEBULA GRAPH STUDIO  ", "http://localhost:7001/"),
+        // ("NEBULA GRAPH STUDIO  ", "http://localhost:7001/"),
         (
             "TEMPORAL DB   ",
             "http://localhost:8088/cassandra/clusters/temporal-cassandra/explore/temporal/tables",
