@@ -23,7 +23,7 @@ if ! docker ps | grep -q hoover3-worker; then
         -e HOOVER3_WORKER_TEMP_DISK_BIG=/temp_disk_big \
         -e HOOVER3_WORKER_TEMP_RAMDISK_SMALL=/temp_ramdisk_small \
         --net host \
-        --port 127.0.0.1:8080:8080 \
+        --publish 127.0.0.1:8080:8080 \
         hoover3-worker \
         sleep infinity
 )
