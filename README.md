@@ -49,7 +49,7 @@ Create / update database schemas for all databases.
 
 Run this script before starting client or worker,
 and after editing any database models or functionality.
-,
+
 #### `./start_client.sh`
 
 Start a hot-reloading client in the fullstack configuration.
