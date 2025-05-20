@@ -9,8 +9,8 @@ use hoover3_types::{db_schema::DatabaseValue, identifier::CollectionId};
 use crate::{
     api::search_facet_query,
     components::search::context::{SearchContext, SearchParams},
-    components::search::sidebar_left::SearchSidebarLeft,
     components::search::search_results::SearchResults,
+    components::search::sidebar_left::SearchSidebarLeft,
 };
 
 /// Full-screen layout for the search page.
@@ -40,14 +40,11 @@ pub fn SearchFullscreenLayout() -> Element {
 
 #[component]
 fn SearchSidebarRight() -> Element {
+    let search_params = use_context::<SearchParams>();
+    let selected_id = search_params.selected_id;
     rsx! {
         div {
-            for i in 0..100 {
-                div {
-                    "Result {i}"
-                }
-            }
-
+            {selected_id}
         }
     }
 }

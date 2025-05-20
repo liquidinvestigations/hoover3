@@ -3,15 +3,12 @@
 use dioxus::prelude::*;
 use futures_util::StreamExt;
 use hoover3_types::{
-    db_schema::{DatabaseServiceType, DynamicQueryResponse, DynamicQueryResult},
+    db_schema::{DatabaseServiceType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult},
     identifier::CollectionId,
 };
 use std::collections::HashMap;
 
-use crate::{
-    api::db_explorer_run_query,
-    components::search::context::SearchParams,
-};
+use crate::{api::search_highlight_query, components::search::context::SearchParams};
 
 /// Represents a search result with its collection ID and data
 #[derive(Clone, Debug, PartialEq)]
@@ -23,20 +20,27 @@ struct SearchResult {
 }
 
 /// Fetches search results from all selected collections
-async fn fetch_search_results(selected_collections: Vec<CollectionId>, search_q: String) -> Result<Vec<SearchResult>, ServerFnError> {
+async fn fetch_search_results(
+    selected_collections: Vec<CollectionId>,
+    search_q: String,
+) -> Result<Vec<SearchResult>, ServerFnError> {
     if selected_collections.is_empty() {
         return Ok(Vec::new());
     }
 
-    let search_q = if search_q.is_empty() { "*".to_string() } else { search_q };
+    let search_q = if search_q.is_empty() {
+        "*".to_string()
+    } else {
+        search_q
+    };
 
     // Fetch results for each collection
     let mut all_results = Vec::new();
     for collection_id in selected_collections {
-        let result = db_explorer_run_query((
+        let result = search_highlight_query((
             collection_id.clone(),
-            DatabaseServiceType::Meilisearch,
             search_q.clone(),
+            100, // hits per page
         ))
         .await?;
 
@@ -51,6 +55,7 @@ async fn fetch_search_results(selected_collections: Vec<CollectionId>, search_q:
                         }
                     }
                 }
+
                 all_results.push(SearchResult {
                     collection_id: collection_id.clone(),
                     data,
@@ -61,7 +66,6 @@ async fn fetch_search_results(selected_collections: Vec<CollectionId>, search_q:
 
     Ok(all_results)
 }
-
 
 /// Search results component.
 #[component]
@@ -141,16 +145,39 @@ pub fn SearchResults() -> Element {
     }
 }
 
-
 #[component]
 fn SearchResultDisplay(result: SearchResult) -> Element {
+    let search_params = use_context::<SearchParams>();
+    let selected_id = search_params.selected_id.read().clone();
+    let result_id = result.data.get("id").unwrap_or(&"".to_string()).clone();
+    let is_selected = selected_id == Some(result_id);
+
+    let border_color = if is_selected {
+        "#9333ea"
+    } else {
+        "transparent"
+    };
+
+    // Check if any field has highlights
+    let has_highlights = result
+        .data
+        .values()
+        .any(|v| v.contains("<b class=search-result-highlight-span>"));
+
     rsx! {
-        div { class: "search-result",
+        div {
+            class: "search-result",
             style: "
                 padding: 1rem;
-                border: 1px solid #e2e8f0;
+                border: 2px solid {border_color};
                 border-radius: 0.375rem;
+                cursor: pointer;
             ",
+            onclick: move |_| {
+                if let Some(id) = result.data.get("id") {
+                    search_params.selected_id_write.call(Some(id.clone()));
+                }
+            },
             div { class: "result-header",
                 style: "
                     font-weight: 600;
@@ -166,23 +193,39 @@ fn SearchResultDisplay(result: SearchResult) -> Element {
                     gap: 0.5rem;
                 ",
                 for (key, value) in &result.data {
-                    div { class: "result-field",
-                        style: "
-                            display: flex;
-                            gap: 0.5rem;
-                        ",
-                        span { class: "field-name",
-                            style: "
-                                font-weight: 500;
-                                color: #64748b;
-                            ",
-                            "{key}:"
-                        }
-                        span { class: "field-value",
-                            "{value}"
-                        }
+                    if !has_highlights || value.contains("<b class=search-result-highlight-span>") {
+                        SearchResultField { field_key: key.clone(), value: value.clone() }
                     }
                 }
+            }
+        }
+    }
+}
+
+#[component]
+fn SearchResultField(field_key: String, value: String) -> Element {
+    rsx! {
+        div { class: "result-field",
+            style: "
+                display: flex;
+                flex-direction: column;
+                gap: 0.25rem;
+            ",
+            span { class: "field-name",
+                style: "
+                    font-weight: 500;
+                    color: #64748b;
+                ",
+                "{field_key}:"
+            }
+            div { class: "field-value",
+                style: "
+                    max-height: 3rem;
+                    overflow-y: auto;
+                    word-wrap: break-word;
+                    white-space: pre-wrap;
+                ",
+                dangerous_inner_html: value
             }
         }
     }

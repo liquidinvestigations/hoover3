@@ -84,3 +84,7 @@ td {
 td > pre {
     max-height:15rem;
 }
+
+.search-result-highlight-span {
+    background-color: yellow;
+}

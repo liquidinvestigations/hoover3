@@ -293,3 +293,10 @@ server_wrapper!(
     (CollectionId, String, Vec<String>, u64),
     DynamicQueryResponse
 );
+
+server_wrapper!(
+    hoover3_database::client_query::search_api,
+    search_highlight_query,
+    (CollectionId, String, u64),
+    DynamicQueryResponse
+);

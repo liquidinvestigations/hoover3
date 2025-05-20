@@ -2,5 +2,5 @@
 
 pub mod context;
 pub mod layout;
-pub mod sidebar_left;
 pub mod search_results;
+pub mod sidebar_left;
