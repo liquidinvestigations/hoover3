@@ -15,8 +15,13 @@ pub use database_explorer::*;
 
 use dioxus::prelude::*;
 
-use crate::{components::{cards::{CardGridDisplay, LinkCard}, navbar::NavbarDropdown}, routes::Route};
-
+use crate::{
+    components::{
+        cards::{CardGridDisplay, LinkCard},
+        navbar::NavbarDropdown,
+    },
+    routes::Route,
+};
 
 fn tools_links() -> Vec<(String, Route)> {
     vec![
@@ -26,14 +31,8 @@ fn tools_links() -> Vec<(String, Route)> {
                 explorer_route: DatabaseExplorerRoute::RootPage {}.into(),
             },
         ),
-        (
-            "Docker Health".to_string(),
-            Route::DockerHealthPage {},
-        ),
-        (
-            "Server Call Log".to_string(),
-            Route::ServerCallLogPage {},
-        ),
+        ("Docker Health".to_string(), Route::DockerHealthPage {}),
+        ("Server Call Log".to_string(), Route::ServerCallLogPage {}),
         (
             "Dioxus Translate".to_string(),
             Route::DioxusTranslatePage {},
@@ -54,7 +53,6 @@ pub fn ToolsNavbarDropdown() -> Element {
 /// The home page for the tools.
 #[component]
 pub fn ToolsHomePage() -> Element {
-
     rsx! {
         h1 { "Tools" }
         CardGridDisplay {
@@ -78,5 +76,4 @@ pub fn ToolsHomePage() -> Element {
             }
         }
     }
-
 }

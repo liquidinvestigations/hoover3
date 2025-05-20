@@ -53,23 +53,21 @@ pub fn DashboardIframePage(id: u8) -> Element {
 pub fn get_dashboard_links() -> Vec<(String, Route)> {
     let x = get_dash_links_raw();
     let links = x
-    .into_iter()
-    .enumerate()
-    .map(|(id, (name, _link))| {
-        (
-            name,
-            Route::DashboardIframePage { id: id as u8 },
-        )
-    })
-    .collect();
-links
+        .into_iter()
+        .enumerate()
+        .map(|(id, (name, _link))| (name, Route::DashboardIframePage { id: id as u8 }))
+        .collect();
+    links
 }
 
 /// Navbar dropdown that displays a list of dashboard links.
 #[component]
 pub fn DashboardNavbarDropdown() -> Element {
     let links = get_dashboard_links();
-    let links = links.into_iter().map(|(name, link)| (name.to_string(), link.to_string())).collect();
+    let links = links
+        .into_iter()
+        .map(|(name, link)| (name.to_string(), link.to_string()))
+        .collect();
     rsx! {
         NavbarDropdown { title: "Dashboards", links }
     }

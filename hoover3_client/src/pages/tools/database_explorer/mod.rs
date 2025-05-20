@@ -12,7 +12,10 @@ use hoover3_types::{
 
 use crate::{
     api::{get_all_collections, query_collection_schema, scylla_row_count},
-    components::{cards::{CardGridDisplay, LinkCard}, page_titles::make_page_title},
+    components::{
+        cards::{CardGridDisplay, LinkCard},
+        page_titles::make_page_title,
+    },
     errors::AnyhowErrorDioxusExt,
     routes::{Route, UrlParam},
 };
@@ -132,7 +135,6 @@ pub fn DatabaseExplorerRootPage() -> Element {
         }
     }
 }
-
 
 #[component]
 fn CollectionStatsInfoCard(collection_id: CollectionId) -> Element {

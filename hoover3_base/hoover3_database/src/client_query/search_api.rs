@@ -4,32 +4,38 @@ use std::time::Instant;
 
 use hoover3_types::{
     db_schema::{
-        DatabaseColumnType, DatabaseValue,
-        DynamicQueryResult, DynamicQueryResponse, DatabaseServiceType,
+        DatabaseColumnType, DatabaseServiceType, DatabaseValue, DynamicQueryResponse,
+        DynamicQueryResult,
     },
     identifier::CollectionId,
 };
 use meilisearch_sdk::search::Selectors;
 
-use crate::db_management::{
-    DatabaseSpaceManager, MeilisearchDatabaseHandle,
-};
+use crate::db_management::{DatabaseSpaceManager, MeilisearchDatabaseHandle};
 
 use super::database_explorer::{json_value_to_database_type, json_value_to_database_value};
-
 
 /// Run a Meilisearch facet search query and return the results.
 /// This function allows searching with faceting to get aggregated results by specific fields.
 pub async fn search_facet_query(
-    (collection_id, sql_query, facet_fields, hits_per_page): (CollectionId, String, Vec<String>, u64),
+    (collection_id, search_q, facet_fields, hits_per_page): (
+        CollectionId,
+        String,
+        Vec<String>,
+        u64,
+    ),
 ) -> anyhow::Result<DynamicQueryResponse> {
     let start_time = Instant::now();
     let session = MeilisearchDatabaseHandle::collection_session(&collection_id).await?;
     let result = session
         .search()
-        .with_query(&sql_query)
+        .with_query(&search_q)
         .with_facets(Selectors::Some(
-            facet_fields.iter().map(|s| s.as_str()).collect::<Vec<_>>().as_slice()
+            facet_fields
+                .iter()
+                .map(|s| s.as_str())
+                .collect::<Vec<_>>()
+                .as_slice(),
         ))
         .with_hits_per_page(hits_per_page as usize)
         .execute::<serde_json::Value>()
@@ -69,7 +75,10 @@ pub async fn search_facet_query(
         // Add facet columns if facets are present
         if let Some(facet_dist) = &facets {
             for facet_name in facet_dist.keys() {
-                column_map.insert(format!("facet_{}", facet_name), DatabaseColumnType::Object(BTreeMap::new()));
+                column_map.insert(
+                    format!("facet_{}", facet_name),
+                    DatabaseColumnType::Object(BTreeMap::new()),
+                );
             }
         }
 
@@ -92,11 +101,20 @@ pub async fn search_facet_query(
                     if let Some(facet_dist) = &facets {
                         for (facet_name, facet_values) in facet_dist {
                             let facet_key = format!("facet_{}", facet_name);
-                            pairs.insert(facet_key, Some(DatabaseValue::Object(
-                                facet_values.iter()
-                                    .map(|(value, count)| (value.to_string(), Some(DatabaseValue::Int64(*count as i64))))
-                                    .collect()
-                            )));
+                            pairs.insert(
+                                facet_key,
+                                Some(DatabaseValue::Object(
+                                    facet_values
+                                        .iter()
+                                        .map(|(value, count)| {
+                                            (
+                                                value.to_string(),
+                                                Some(DatabaseValue::Int64(*count as i64)),
+                                            )
+                                        })
+                                        .collect(),
+                                )),
+                            );
                         }
                     }
 
@@ -125,7 +143,7 @@ pub async fn search_facet_query(
     let serialized_size = bincode::serialized_size(&query_result)?;
 
     Ok(DynamicQueryResponse {
-        query: sql_query,
+        query: search_q,
         db_type: DatabaseServiceType::Meilisearch,
         elapsed_seconds: elapsed,
         result_serialized_size_bytes: serialized_size as u64,

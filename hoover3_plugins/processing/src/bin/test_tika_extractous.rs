@@ -7,7 +7,12 @@ fn main() -> anyhow::Result<()> {
     hoover3_tracing::init_tracing();
     let data_dir = std::env::args().nth(1).unwrap();
     let files = std::fs::read_dir(data_dir).unwrap();
-    let extractor = Extractor::new().set_extract_string_max_length(1024 * 1024).set_xml_output(false).set_pdf_config(PdfParserConfig::new().set_ocr_strategy(extractous::PdfOcrStrategy::NO_OCR));
+    let extractor = Extractor::new()
+        .set_extract_string_max_length(1024 * 1024)
+        .set_xml_output(false)
+        .set_pdf_config(
+            PdfParserConfig::new().set_ocr_strategy(extractous::PdfOcrStrategy::NO_OCR),
+        );
     for file in files {
         let Ok(file) = file else {
             continue;
@@ -31,7 +36,13 @@ fn main() -> anyhow::Result<()> {
         let _ = std::io::copy(&mut text, &mut std::io::sink());
         // println!("text: {}", &text[0..20]);
         // println!("metadata: {:?}", metadata);
-        println!("{}: meta_len: {}K, file size: {}K, after {} ms", path.file_name().unwrap().to_str().unwrap(), meta_len as f32 / 1024.0, file_size / 1024, t0.elapsed().as_millis());
+        println!(
+            "{}: meta_len: {}K, file size: {}K, after {} ms",
+            path.file_name().unwrap().to_str().unwrap(),
+            meta_len as f32 / 1024.0,
+            file_size / 1024,
+            t0.elapsed().as_millis()
+        );
     }
     Ok(())
 }

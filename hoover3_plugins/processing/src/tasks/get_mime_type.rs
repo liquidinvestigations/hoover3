@@ -1,22 +1,30 @@
-// only for Rust Edition 2018, see https://doc.rust-lang.org/edition-guide/rust-2021/prelude.html
+//! Task definitions for the processing plugin.
 use std::path::PathBuf;
 
 use hoover3_taskdef::anyhow;
 use magic::cookie::Flags;
 
+/// The result of all the mime type detections.
 #[derive(Debug)]
 pub struct MimeTypeResult {
+    /// The result of the libmagic library.
     pub magic_mime_type: String,
+    /// The result of the magika library.
     pub magika_result: MagikaResult,
 }
 
+/// The result of the magika library.
 #[derive(Debug)]
 pub struct MagikaResult {
+    /// The ruled mime type of the magika library (from rule sets).
     pub magika_ruled_mime_type: Option<String>,
+    /// The inferred mime type of the magika library (from the machine learning).
     pub magika_inferred_mime_type: Option<String>,
+    /// The score of the magika library.
     pub magika_score: Option<f32>,
 }
 
+/// Get the mime type of a file using the magic libraries.
 pub async fn magic_get_mime_type(path: PathBuf) -> anyhow::Result<MimeTypeResult> {
     // let magika_result = run_magika(path.clone()).await?;
     let mime_type = tokio::task::spawn_blocking(move || run_magic(path)).await??;
@@ -84,13 +92,15 @@ mod tests {
     async fn test_magic_pdf() -> anyhow::Result<()> {
         let data_dir = get_data_root();
         let path = PathBuf::from(data_dir).join("hoover-testdata/data/no-extension/file_pdf");
-        let magic  =magic_get_mime_type(path).await?;
+        let magic = magic_get_mime_type(path).await?;
         println!("{:?}", magic);
         assert_eq!(magic.magic_mime_type, "application/pdf; charset=binary");
         assert_eq!(magic.magika_result.magika_ruled_mime_type, None);
-        assert_eq!(magic.magika_result.magika_inferred_mime_type, Some("application/pdf".to_string()));
+        assert_eq!(
+            magic.magika_result.magika_inferred_mime_type,
+            Some("application/pdf".to_string())
+        );
         assert!(magic.magika_result.magika_score.unwrap() > 0.9);
         Ok(())
     }
-
 }

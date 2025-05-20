@@ -143,7 +143,6 @@ async fn db_explorer_run_meilisearch_query(
     })
 }
 
-
 pub(crate) fn json_value_to_database_type(v: &serde_json::Value) -> Option<DatabaseColumnType> {
     match v {
         serde_json::Value::String(_) => Some(DatabaseColumnType::String),

@@ -257,15 +257,14 @@ pub fn DynamicTable(data: ReadOnlySignal<DynamicQueryResponse>) -> Element {
         .map(|r| r.rows.len())
         .unwrap_or(0);
 
-    let result_size_kb = use_memo(move || {
-        data.read().result_serialized_size_bytes / 1024
-    });
+    let result_size_kb = use_memo(move || data.read().result_serialized_size_bytes / 1024);
     let error_display = use_memo(move || {
         data.read()
             .result
             .as_ref()
             .err()
-            .unwrap_or(&"".to_string()).to_string()
+            .unwrap_or(&"".to_string())
+            .to_string()
     });
     rsx! {
         small {
