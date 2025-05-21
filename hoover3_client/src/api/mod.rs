@@ -300,3 +300,10 @@ server_wrapper!(
     (CollectionId, String, u64),
     DynamicQueryResponse
 );
+
+server_wrapper!(
+    hoover3_database::client_query::search_api,
+    get_graph_schema,
+    (),
+    hoover3_types::db_schema::GraphEdgeSchemaDynamic
+);

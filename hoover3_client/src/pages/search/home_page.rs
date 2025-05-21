@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::search::layout::SearchFullscreenLayout;
+use crate::components::search::SearchFullscreenLayout;
 
 /// Home page with main search interface.
 #[component]

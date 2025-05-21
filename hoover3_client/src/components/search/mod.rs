@@ -1,6 +1,10 @@
 //! Front-end components for the search page.
 
-pub mod context;
-pub mod layout;
-pub mod search_results;
-pub mod sidebar_left;
+
+
+mod layout;
+mod context;
+mod search_results;
+mod facets;
+mod document_preview;
+pub use layout::SearchFullscreenLayout;

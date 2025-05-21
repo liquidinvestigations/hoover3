@@ -2,10 +2,7 @@
 
 use dioxus::prelude::*;
 use futures_util::StreamExt;
-use hoover3_types::{
-    db_schema::{DatabaseServiceType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult},
-    identifier::CollectionId,
-};
+use hoover3_types::identifier::CollectionId;
 use std::collections::HashMap;
 
 use crate::{api::search_highlight_query, components::search::context::SearchParams};
@@ -93,6 +90,7 @@ pub fn SearchResults() -> Element {
 
                 let result = fetch_search_results(selected_collections, search_q).await;
                 results_signal.set(result.ok());
+                crate::time::sleep(std::time::Duration::from_millis(160)).await;
             }
         }
     });
@@ -176,6 +174,14 @@ fn SearchResultDisplay(result: SearchResult) -> Element {
             onclick: move |_| {
                 if let Some(id) = result.data.get("id") {
                     search_params.selected_id_write.call(Some(id.clone()));
+                    search_params.selected_collection_id_write.call(Some(result.collection_id.clone()));
+
+                    // Set the table type if available
+                    if let Some(table_type) = result.data.get("table") {
+                        search_params.selected_table_type_write.call(Some(table_type.clone()));
+                    } else {
+                        search_params.selected_table_type_write.call(None);
+                    }
                 }
             },
             div { class: "result-header",

@@ -3,8 +3,7 @@
 use async_std::stream::StreamExt;
 use dioxus::prelude::*;
 use hoover3_types::{
-    collection::CollectionUiRow,
-    db_schema::{DatabaseServiceType, DatabaseValue, DynamicQueryResponse, DynamicQueryResult},
+    db_schema::{DatabaseValue, DynamicQueryResult},
     identifier::CollectionId,
 };
 use std::collections::HashMap;
@@ -12,21 +11,6 @@ use std::collections::HashMap;
 use crate::api::{get_all_collections, search_facet_query};
 use crate::components::search::context::SearchParams;
 
-/// Component with left sidebar
-#[component]
-pub fn SearchSidebarLeft() -> Element {
-    rsx! {
-        div { class: "sidebar-left-container",
-            style: "
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-            ",
-            CollectionSelector {}
-            FacetsList {}
-        }
-    }
-}
 
 /// Represents an aggregated facet value across multiple collections
 #[derive(Clone, Debug, PartialEq)]
@@ -60,7 +44,7 @@ impl AggregatedFacets {
 }
 
 #[component]
-fn CollectionSelector() -> Element {
+pub fn CollectionSelector() -> Element {
     let search_params = use_context::<SearchParams>();
     let collections_res = use_resource(move || async move { get_all_collections(()).await });
 
@@ -282,7 +266,7 @@ fn aggregate_facets(results: Vec<DynamicQueryResult>) -> AggregatedFacets {
 }
 
 #[component]
-fn FacetsList() -> Element {
+pub fn FacetsList() -> Element {
     let search_params = use_context::<SearchParams>();
     let mut facets_signal = use_signal(|| None::<Vec<DynamicQueryResult>>);
 
@@ -307,7 +291,7 @@ fn FacetsList() -> Element {
 
                 let result = fetch_facets(selected_collections, search_q).await;
                 facets_signal.set(result.ok());
-                crate::time::sleep(std::time::Duration::from_millis(60)).await;
+                crate::time::sleep(std::time::Duration::from_millis(160)).await;
             }
         }
     });

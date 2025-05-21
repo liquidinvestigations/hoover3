@@ -5,13 +5,14 @@ use std::time::Instant;
 use hoover3_types::{
     db_schema::{
         DatabaseColumnType, DatabaseServiceType, DatabaseValue, DynamicQueryResponse,
-        DynamicQueryResult,
+        DynamicQueryResult, GraphEdgeSchemaDynamic,
     },
     identifier::CollectionId,
 };
 use meilisearch_sdk::search::Selectors;
 
 use crate::db_management::{DatabaseSpaceManager, MeilisearchDatabaseHandle};
+use crate::models::collection::get_graph_edges_types_from_inventory;
 
 use super::database_explorer::{json_value_to_database_type, json_value_to_database_value};
 
@@ -185,7 +186,7 @@ pub async fn search_highlight_query(
     } else {
         // Process hits to get column types
         let mut column_map = std::collections::BTreeMap::new();
-        for (hit, highlight) in hits.iter().zip(highlights.iter()) {
+        for (hit, _highlight) in hits.iter().zip(highlights.iter()) {
             let hit = &hit.result;
             if let serde_json::Value::Object(obj) = hit {
                 for (k, _v) in obj.iter() {
@@ -209,51 +210,48 @@ pub async fn search_highlight_query(
         }
 
         // Process rows including both original and highlighted data
-        let rows = hits
-            .into_iter()
-            .zip(highlights.into_iter())
-            .map(|(r, highlight)| {
-                let mut original_pairs = BTreeMap::new();
-                let mut highlight_pairs = BTreeMap::new();
+        let mut rows = Vec::new();
+        for (r, highlight) in hits.into_iter().zip(highlights.into_iter()) {
+            let mut original_pairs = BTreeMap::new();
+            let mut highlight_pairs = BTreeMap::new();
 
-                // Process original data
-                if let serde_json::Value::Object(o) = r.result {
-                    for (k, v) in o {
-                        original_pairs.insert(k, json_value_to_database_value(v));
+            // Process original data
+            if let serde_json::Value::Object(o) = r.result {
+                for (k, v) in o {
+                    original_pairs.insert(k, json_value_to_database_value(v));
+                }
+            }
+
+            // Process highlight data
+            if let Some(highlight_obj) = highlight {
+                for (k, v) in highlight_obj {
+                    // Only include fields that have highlighting markup
+                    if v.to_string()
+                        .contains("<b class=search-result-highlight-span>")
+                    {
+                        let v = v.to_string();
+                        let v = tokio::task::spawn_blocking(move || trim_response_value(v)).await?;
+                        highlight_pairs.insert(k, Some(DatabaseValue::String(v.to_string())));
                     }
                 }
+            }
 
-                // Process highlight data
-                if let Some(highlight_obj) = highlight {
-                    for (k, v) in highlight_obj {
-                        // Only include fields that have highlighting markup
-                        if v.to_string()
-                            .contains("<b class=search-result-highlight-span>")
-                        {
-                            let v = v.to_string();
-                            let v = trim_response_value(&v);
-                            highlight_pairs.insert(k, Some(DatabaseValue::String(v.to_string())));
-                        }
-                    }
+            // Combine both into a single row, prioritizing highlighted fields
+            let mut combined_pairs = BTreeMap::new();
+            for column in column_map.keys() {
+                if let Some(value) = highlight_pairs.get(column) {
+                    combined_pairs.insert(column.clone(), value.clone());
+                } else if let Some(value) = original_pairs.get(column) {
+                    combined_pairs.insert(column.clone(), value.clone());
+                } else {
+                    combined_pairs.insert(column.clone(), None);
                 }
+            }
 
-                // Combine both into a single row, prioritizing highlighted fields
-                let mut combined_pairs = BTreeMap::new();
-                for column in column_map.keys() {
-                    if let Some(value) = highlight_pairs.get(column) {
-                        combined_pairs.insert(column.clone(), value.clone());
-                    } else if let Some(value) = original_pairs.get(column) {
-                        combined_pairs.insert(column.clone(), value.clone());
-                    } else {
-                        combined_pairs.insert(column.clone(), None);
-                    }
-                }
-
-                let mut pairs = combined_pairs.into_iter().collect::<Vec<_>>();
-                pairs.sort_by_key(|(_k, _v)| column_pos.get(&(_k.clone())).unwrap_or(&0));
-                pairs.into_iter().map(|(_k, v)| v).collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+            let mut pairs = combined_pairs.into_iter().collect::<Vec<_>>();
+            pairs.sort_by_key(|(_k, _v)| column_pos.get(&(_k.clone())).unwrap_or(&0));
+            rows.push(pairs.into_iter().map(|(_k, v)| v).collect::<Vec<_>>());
+        }
 
         DynamicQueryResult {
             columns: column_map.into_iter().collect::<Vec<_>>(),
@@ -274,7 +272,8 @@ pub async fn search_highlight_query(
     })
 }
 
-fn trim_response_value(value: &str) -> String {
+fn trim_response_value(value: String) -> String {
+    let value = &value;
     // If no highlight markup, return as-is
     if !value.contains("<b class=search-result-highlight-span>") {
         return value.to_string();
@@ -354,3 +353,11 @@ fn trim_response_value(value: &str) -> String {
 
     result
 }
+
+/// Get the graph schema from the inventory of edge types.
+/// Returns a GraphEdgeSchemaDynamic object containing information about all edge types.
+pub async fn get_graph_schema(_:()) -> anyhow::Result<GraphEdgeSchemaDynamic> {
+    let graph_schema = get_graph_edges_types_from_inventory();
+    Ok((*graph_schema).clone())
+}
+
